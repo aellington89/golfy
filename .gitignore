@@ -22,3 +22,13 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Flutter
+**/android/.gradle/
+**/android/app/build/
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.apk
+*.aab
