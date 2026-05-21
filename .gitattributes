@@ -4,6 +4,15 @@
 * text=auto
 
 ###############################################################################
+# Flutter writes its Windows plugin glue with LF on all platforms.
+# Pin LF so core.autocrlf=true on Windows doesn't repeatedly flag them as
+# "modified" after every `flutter pub get`.
+###############################################################################
+app/windows/flutter/generated_plugin_registrant.cc text eol=lf
+app/windows/flutter/generated_plugin_registrant.h  text eol=lf
+app/windows/flutter/generated_plugins.cmake        text eol=lf
+
+###############################################################################
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by
