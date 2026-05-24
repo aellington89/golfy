@@ -1,13 +1,20 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'daos/course_dao.dart';
+import 'daos/dashboard_dao.dart';
+import 'daos/hole_result_dao.dart';
+import 'daos/round_dao.dart';
 import 'tables/courses.dart';
 import 'tables/hole_results.dart';
 import 'tables/rounds.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Courses, Rounds, HoleResults])
+@DriftDatabase(
+  tables: [Courses, Rounds, HoleResults],
+  daos: [CourseDao, RoundDao, HoleResultDao, DashboardDao],
+)
 class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase() : super(driftDatabase(name: 'golfy'));
 

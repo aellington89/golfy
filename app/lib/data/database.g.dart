@@ -1881,6 +1881,10 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     'idx_holes_round',
     'CREATE INDEX idx_holes_round ON hole_results (round_id)',
   );
+  late final CourseDao courseDao = CourseDao(this as GolfyDatabase);
+  late final RoundDao roundDao = RoundDao(this as GolfyDatabase);
+  late final HoleResultDao holeResultDao = HoleResultDao(this as GolfyDatabase);
+  late final DashboardDao dashboardDao = DashboardDao(this as GolfyDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
