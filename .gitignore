@@ -1,34 +1,55 @@
-# venv
-.venv/
-venv/
-
-# python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# editors / OS
+# ── Editors / IDEs ─────────────────────────────────────────────────────────
 .vscode/
 .vs/
 .idea/
+*.iml
 *.swp
+*.swo
+
+# ── OS metadata ────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# local data
+# ── Local data / runtime SQLite ────────────────────────────────────────────
+# The app writes its database under %USERPROFILE%/.golfy/golfy.db (Windows)
+# and ~/.golfy/golfy.db on other platforms — never inside the repo. These
+# rules catch any stray local dump or test scratch DB.
 *.db
 *.sqlite
 *.sqlite3
 
-# Flutter
+# ── Flutter / Dart build artefacts ─────────────────────────────────────────
+# Most of these are also listed in app/.gitignore (Flutter's standard
+# template). Duplicated at the root so a build run from anywhere is safe.
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/build/
+**/.pub-cache/
+**/.pub/
+**/coverage/
+
+# Android build outputs
 **/android/.gradle/
 **/android/app/build/
-build/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
 *.apk
 *.aab
+
+# iOS / macOS (not currently targeted but cheap to ignore)
+**/ios/Flutter/.last_build_id
+**/Pods/
+
+# Windows build outputs
+**/windows/flutter/ephemeral/
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json
+
+# ── Legacy Python virtualenv (kept for safety — venvs from the PySide6
+#    scaffold may still exist on existing checkouts) ─────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
