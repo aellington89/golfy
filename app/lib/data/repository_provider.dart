@@ -19,6 +19,12 @@ final coursesStreamProvider = StreamProvider<List<Course>>((ref) {
   return ref.watch(repositoryProvider).watchCourses();
 });
 
+/// Reactive list of courses, ordered alphabetically by name. Used by the
+/// course picker UI.
+final coursesByNameStreamProvider = StreamProvider<List<Course>>((ref) {
+  return ref.watch(repositoryProvider).watchCoursesByName();
+});
+
 /// Reactive list of rounds joined with their course name, newest first.
 final roundsStreamProvider = StreamProvider<List<RoundWithCourse>>((ref) {
   return ref.watch(repositoryProvider).watchRounds();

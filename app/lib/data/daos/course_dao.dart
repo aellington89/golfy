@@ -24,4 +24,12 @@ class CourseDao extends DatabaseAccessor<GolfyDatabase> with _$CourseDaoMixin {
           ]))
         .watch();
   }
+
+  /// Reactive list of every course, ordered alphabetically by name only.
+  /// Used by the course picker UI, which presents one flat list across games.
+  Stream<List<Course>> watchAllByName() {
+    return (select(courses)
+          ..orderBy([(c) => OrderingTerm.asc(c.name)]))
+        .watch();
+  }
 }

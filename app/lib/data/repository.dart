@@ -20,6 +20,8 @@ class GolfyRepository {
 
   Stream<List<Course>> watchCourses() => _db.courseDao.watchAll();
 
+  Stream<List<Course>> watchCoursesByName() => _db.courseDao.watchAllByName();
+
   // ── Rounds ─────────────────────────────────────────────────────────────
 
   Future<int> insertRound(RoundsCompanion round) =>

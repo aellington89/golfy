@@ -69,4 +69,39 @@ void main() {
       await sub.cancel();
     });
   });
+
+  group('CourseDao.watchAllByName', () {
+    test('emits empty list when no rows', () async {
+      final first = await db.courseDao.watchAllByName().first;
+      expect(first, isEmpty);
+    });
+
+    test('orders strictly by name across game titles', () async {
+      await fx.insertCourse(name: 'Bandon', gameTitle: 'EA Sports PGA Tour');
+      await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA Tour 2K25');
+      await fx.insertCourse(name: 'Pebble', gameTitle: 'EA Sports PGA Tour');
+
+      final rows = await db.courseDao.watchAllByName().first;
+      expect(
+        rows.map((c) => c.name).toList(),
+        ['Augusta', 'Bandon', 'Pebble'],
+      );
+    });
+
+    test('re-emits after an insert', () async {
+      final stream = db.courseDao.watchAllByName();
+      final results = <List<Course>>[];
+      final sub = stream.listen(results.add);
+
+      await Future<void>.delayed(Duration.zero);
+      await fx.insertCourse(name: 'A');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(results.length, greaterThanOrEqualTo(2));
+      expect(results.first, isEmpty);
+      expect(results.last.map((c) => c.name).toList(), ['A']);
+
+      await sub.cancel();
+    });
+  });
 }
