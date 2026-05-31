@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
+import '../../shell/tab_index_provider.dart';
 import 'active_round_provider.dart';
 import 'new_round_dialog.dart';
 
@@ -103,6 +104,10 @@ class _RoundRow extends ConsumerWidget {
         }
       },
       child: ListTile(
+        onTap: () {
+          ref.read(activeRoundIdProvider.notifier).set(round.round.id);
+          ref.read(tabIndexProvider.notifier).set(1);
+        },
         title: Text(
           '${round.courseName} — Round ${round.round.roundNumber}',
         ),

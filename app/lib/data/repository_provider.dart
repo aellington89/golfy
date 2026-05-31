@@ -30,6 +30,20 @@ final roundsStreamProvider = StreamProvider<List<RoundWithCourse>>((ref) {
   return ref.watch(repositoryProvider).watchRounds();
 });
 
+/// Reactive lookup of a single [RoundWithCourse] by id, derived from
+/// [roundsStreamProvider]. Emits `null` if no round with the given id is
+/// in the list. Sharing the underlying stream avoids a second DB watcher
+/// for the Hole Entry header.
+final roundWithCourseProvider =
+    StreamProvider.family<RoundWithCourse?, int>((ref, roundId) {
+  return ref.watch(repositoryProvider).watchRounds().map((rounds) {
+    for (final r in rounds) {
+      if (r.round.id == roundId) return r;
+    }
+    return null;
+  });
+});
+
 /// Reactive list of hole_results for a specific round, ordered by hole
 /// number. Family parameter is the round id.
 final holeResultsStreamProvider =

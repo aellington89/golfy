@@ -12,6 +12,7 @@ import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 import 'package:golfy_app/features/rounds/rounds_screen.dart';
+import 'package:golfy_app/shell/tab_index_provider.dart';
 
 void main() {
   late GolfyDatabase db;
@@ -160,6 +161,25 @@ void main() {
       () => db.roundDao.watchAllWithCourse().first,
     );
     expect(rounds, isEmpty);
+  });
+
+  testWidgets(
+      'tapping a round row sets activeRoundId and switches to Hole Entry tab',
+      (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [makeRound(id: 42, courseName: 'Pebble')]);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(RoundsScreen)),
+    );
+    expect(container.read(activeRoundIdProvider), isNull);
+    expect(container.read(tabIndexProvider), 0);
+
+    await tester.tap(find.textContaining('Pebble'));
+    await tester.pump();
+
+    expect(container.read(activeRoundIdProvider), 42);
+    expect(container.read(tabIndexProvider), 1);
   });
 
   testWidgets('swipe-to-delete with cancel keeps the row', (tester) async {
