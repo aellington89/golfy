@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class HoleEntryScreen extends StatelessWidget {
+import '../rounds/active_round_provider.dart';
+
+class HoleEntryScreen extends ConsumerWidget {
   const HoleEntryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final activeRoundId = ref.watch(activeRoundIdProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Golfy')),
       body: Center(
@@ -15,7 +19,9 @@ class HoleEntryScreen extends StatelessWidget {
             Text('Hole Entry', style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text(
-              'Per-hole data entry form will live here.',
+              activeRoundId == null
+                  ? 'Per-hole data entry form will live here.'
+                  : 'Round #$activeRoundId — entry form arrives with #10.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

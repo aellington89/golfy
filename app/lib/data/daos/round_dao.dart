@@ -3,13 +3,14 @@ import 'package:drift/drift.dart';
 import '../database.dart';
 import '../models/round_with_course.dart';
 import '../tables/courses.dart';
+import '../tables/hole_results.dart';
 import '../tables/rounds.dart';
 
 part 'round_dao.g.dart';
 
 /// DAO for the `rounds` table plus the rounds-with-course-name join used by
 /// the rounds list screen.
-@DriftAccessor(tables: [Rounds, Courses])
+@DriftAccessor(tables: [Rounds, Courses, HoleResults])
 class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
   RoundDao(super.db);
 
@@ -29,13 +30,24 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
     return (delete(rounds)..where((r) => r.id.equals(id))).go();
   }
 
-  /// Reactive list of every round joined with its course's name. Ordered
-  /// newest first by date, breaking ties by descending row id so the most
-  /// recently inserted round wins on the same date.
+  /// Reactive list of every round joined with its course's name and the
+  /// count of hole_results rows attached to it. Ordered newest first by
+  /// date, breaking ties by descending row id so the most recently inserted
+  /// round wins on the same date.
+  ///
+  /// Uses a `LEFT OUTER JOIN` to `hole_results` so rounds with no holes
+  /// entered still appear (with `holesEntered = 0`).
   Stream<List<RoundWithCourse>> watchAllWithCourse() {
+    final holeCount = holeResults.id.count();
     final query = select(rounds).join([
       innerJoin(courses, courses.id.equalsExp(rounds.courseId)),
+      leftOuterJoin(
+        holeResults,
+        holeResults.roundId.equalsExp(rounds.id),
+      ),
     ])
+      ..addColumns([holeCount])
+      ..groupBy([rounds.id])
       ..orderBy([
         OrderingTerm.desc(rounds.date),
         OrderingTerm.desc(rounds.id),
@@ -46,6 +58,7 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
           .map((row) => RoundWithCourse(
                 round: row.readTable(rounds),
                 courseName: row.readTable(courses).name,
+                holesEntered: row.read(holeCount) ?? 0,
               ))
           .toList();
     });

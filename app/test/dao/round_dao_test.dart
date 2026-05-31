@@ -108,5 +108,59 @@ void main() {
       final rows = await db.roundDao.watchAllWithCourse().first;
       expect(rows.map((r) => r.round.id).toList(), [r2, r3, r1]);
     });
+
+    test('holesEntered is 0 for a round with no hole_results', () async {
+      final cid = await fx.insertCourse();
+      await fx.insertRound(cid);
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.holesEntered, 0);
+    });
+
+    test('holesEntered counts partial hole_results', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      for (var h = 1; h <= 12; h++) {
+        await fx.upsertHole(rid, h);
+      }
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.holesEntered, 12);
+    });
+
+    test('holesEntered reaches 18 for a complete round', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      for (var h = 1; h <= 18; h++) {
+        await fx.upsertHole(rid, h);
+      }
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.holesEntered, 18);
+    });
+
+    test('holesEntered is per-round, not summed across rounds', () async {
+      final cid = await fx.insertCourse();
+      final r1 = await fx.insertRound(cid, date: '2026-04-01');
+      final r2 = await fx.insertRound(cid, date: '2026-05-01');
+      await fx.upsertHole(r1, 1);
+      await fx.upsertHole(r1, 2);
+      await fx.upsertHole(r2, 1);
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      final byId = {for (final r in rows) r.round.id: r.holesEntered};
+      expect(byId[r1], 2);
+      expect(byId[r2], 1);
+    });
+
+    test('holesEntered re-emits when a hole is upserted', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      final stream = db.roundDao.watchAllWithCourse();
+
+      final first = await stream.first;
+      expect(first.single.holesEntered, 0);
+
+      await fx.upsertHole(rid, 1);
+      final second = await stream.first;
+      expect(second.single.holesEntered, 1);
+    });
   });
 }
