@@ -7,6 +7,7 @@ import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
 import 'active_round_provider.dart';
 import 'new_round_dialog.dart';
+import 'scorecard/scorecard_screen.dart';
 
 class RoundsScreen extends ConsumerWidget {
   const RoundsScreen({super.key});
@@ -112,9 +113,27 @@ class _RoundRow extends ConsumerWidget {
           '${round.courseName} — Round ${round.round.roundNumber}',
         ),
         subtitle: Text(formattedDate),
-        trailing: Text(
-          '${round.holesEntered}/18',
-          style: theme.textTheme.bodyMedium,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${round.holesEntered}/18',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: ValueKey('scorecard_button_${round.round.id}'),
+              icon: const Icon(Icons.scoreboard_outlined),
+              tooltip: 'View scorecard',
+              onPressed: () {
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ScorecardScreen(roundId: round.round.id),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

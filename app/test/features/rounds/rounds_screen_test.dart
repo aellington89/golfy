@@ -12,6 +12,7 @@ import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 import 'package:golfy_app/features/rounds/rounds_screen.dart';
+import 'package:golfy_app/features/rounds/scorecard/scorecard_screen.dart';
 import 'package:golfy_app/shell/tab_index_provider.dart';
 
 void main() {
@@ -180,6 +181,45 @@ void main() {
 
     expect(container.read(activeRoundIdProvider), 42);
     expect(container.read(tabIndexProvider), 1);
+  });
+
+  testWidgets(
+      'tapping the scorecard icon opens the scorecard without resuming',
+      (tester) async {
+    // Own the container explicitly and dispose it in a tearDown (real async)
+    // so the scorecard's live drift streams drain their close timers without
+    // tripping the fake-async pending-timer check.
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        roundsStreamProvider.overrideWith((ref) => roundsController.stream),
+        coursesByNameStreamProvider
+            .overrideWith((ref) => coursesController.stream),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: RoundsScreen()),
+      ),
+    );
+    roundsController.add([makeRound(id: 7, courseName: 'Pebble')]);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('scorecard_button_7')));
+    await tester.pump();
+    // Let the scorecard's hole stream deliver before settling the transition.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScorecardScreen), findsOneWidget);
+    // The icon opens the read-only view; it must NOT trigger tap-to-resume.
+    expect(container.read(tabIndexProvider), 0);
+    expect(container.read(activeRoundIdProvider), isNull);
   });
 
   testWidgets('swipe-to-delete with cancel keeps the row', (tester) async {
