@@ -6,6 +6,7 @@ import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
 import 'active_round_provider.dart';
+import 'delete_round.dart';
 import 'new_round_dialog.dart';
 import 'scorecard/scorecard_screen.dart';
 
@@ -95,15 +96,9 @@ class _RoundRow extends ConsumerWidget {
         color: theme.colorScheme.errorContainer,
         child: Icon(Icons.delete, color: theme.colorScheme.onErrorContainer),
       ),
-      confirmDismiss: (_) => _confirmDelete(context),
-      onDismissed: (_) async {
-        final repo = ref.read(repositoryProvider);
-        final activeId = ref.read(activeRoundIdProvider);
-        await repo.deleteRound(round.round.id);
-        if (activeId == round.round.id) {
-          ref.read(activeRoundIdProvider.notifier).clear();
-        }
-      },
+      confirmDismiss: (_) =>
+          confirmDeleteRound(context, courseName: round.courseName),
+      onDismissed: (_) => deleteRoundAndClearActive(ref, round.round.id),
       child: ListTile(
         onTap: () {
           ref.read(activeRoundIdProvider.notifier).set(round.round.id);
@@ -145,28 +140,5 @@ class _RoundRow extends ConsumerWidget {
     } catch (_) {
       return iso;
     }
-  }
-
-  Future<bool?> _confirmDelete(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete round?'),
-        content: Text(
-          'This will permanently delete the round at ${round.courseName} '
-          'and any hole data entered for it.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
   }
 }

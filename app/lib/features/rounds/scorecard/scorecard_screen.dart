@@ -6,6 +6,7 @@ import '../../../data/models/round_with_course.dart';
 import '../../../data/repository_provider.dart';
 import '../../../shell/tab_index_provider.dart';
 import '../active_round_provider.dart';
+import '../delete_round.dart';
 import 'hole_scorecard_card.dart';
 import 'scorecard_totals_card.dart';
 
@@ -32,7 +33,10 @@ class ScorecardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: _ScorecardTitle(roundAsync: roundAsync),
-        actions: [_EditButton(roundId: roundId)],
+        actions: [
+          _DeleteButton(roundId: roundId),
+          _EditButton(roundId: roundId),
+        ],
       ),
       body: holesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -122,6 +126,34 @@ class _EditButton extends ConsumerWidget {
         ref.read(activeRoundIdProvider.notifier).set(roundId);
         ref.read(tabIndexProvider.notifier).set(1);
         Navigator.of(context).pop();
+      },
+    );
+  }
+}
+
+/// Confirms, then deletes this round (cascade-deleting its hole_results) and
+/// pops back to the Rounds list. Clears [activeRoundIdProvider] when this was
+/// the active round. Shares its confirmation dialog and delete logic with the
+/// Rounds list row via [confirmDeleteRound] / [deleteRoundAndClearActive].
+class _DeleteButton extends ConsumerWidget {
+  const _DeleteButton({required this.roundId});
+
+  final int roundId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      key: const ValueKey('scorecard_delete_button'),
+      icon: const Icon(Icons.delete_outline),
+      tooltip: 'Delete round',
+      onPressed: () async {
+        final courseName =
+            ref.read(roundWithCourseProvider(roundId)).value?.courseName;
+        final confirmed =
+            await confirmDeleteRound(context, courseName: courseName);
+        if (!confirmed) return;
+        await deleteRoundAndClearActive(ref, roundId);
+        if (context.mounted) Navigator.of(context).pop();
       },
     );
   }

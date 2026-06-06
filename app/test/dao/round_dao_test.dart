@@ -78,6 +78,17 @@ void main() {
       await db.roundDao.deleteById(rid);
       expect(await db.holeResultDao.countForRound(rid), 0);
     });
+
+    test('leaves the parent course intact (no upward cascade)', () async {
+      // AC #5 (#12): deleting the only round for a course must NOT remove the
+      // course. The rounds → courses FK is RESTRICT, so a round delete never
+      // propagates upward; only hole_results cascade down.
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      await db.roundDao.deleteById(rid);
+      final courses = await db.courseDao.watchAll().first;
+      expect(courses.map((c) => c.id), contains(cid));
+    });
   });
 
   group('RoundDao.watchAllWithCourse', () {

@@ -236,4 +236,93 @@ void main() {
     expect(container.read(tabIndexProvider), 1);
     expect(find.byType(ScorecardScreen), findsNothing);
   });
+
+  testWidgets(
+      'Delete confirms, removes the round + holes, clears active id, and pops',
+      (tester) async {
+    final rid = await seedRound();
+    for (var h = 1; h <= 3; h++) {
+      await fx.upsertHole(rid, h);
+    }
+    final container = makeContainer();
+    addTearDown(container.dispose);
+    container.read(activeRoundIdProvider.notifier).set(rid);
+
+    // Push the scorecard over a launcher so pop() has somewhere to land.
+    resizeTall(tester);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ScorecardScreen(roundId: rid),
+                    ),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('open'));
+    await settle(tester);
+    expect(find.byType(ScorecardScreen), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('scorecard_delete_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete round?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    // Real async: let the in-memory delete + stream re-emit run before settling.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Popped back to the launcher; round + holes gone; active id cleared.
+    expect(find.byType(ScorecardScreen), findsNothing);
+    expect(container.read(activeRoundIdProvider), isNull);
+
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds, isEmpty);
+    final holes = await tester.runAsync(
+      () => db.holeResultDao.countForRound(rid),
+    );
+    expect(holes, 0);
+  });
+
+  testWidgets('Delete cancel keeps the round and stays on the scorecard',
+      (tester) async {
+    final rid = await seedRound();
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    resizeTall(tester);
+    await tester.pumpWidget(wrap(container, rid));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const ValueKey('scorecard_delete_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete round?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScorecardScreen), findsOneWidget);
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds, hasLength(1));
+  });
 }
