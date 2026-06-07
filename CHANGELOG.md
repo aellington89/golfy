@@ -8,6 +8,21 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+Phase 4 polish — the app now respects the system dark / light setting and every
+screen has a proper empty state.
+
+### Added
+- System-driven dark / light theme: the app follows the OS appearance setting
+  via `ThemeMode.system`, with light and dark schemes built from the shared
+  deep-purple seed. No in-app toggle for v0.1.0 ([#16]).
+- Icon-led empty states on the Rounds and Dashboard screens, unified with Hole
+  Entry's through a reusable `EmptyState` widget ([#16]).
+
+### Changed
+- Score-to-par colours are now brightness-aware — the green / amber bands shift
+  to lighter shades on a dark scheme so they stay legible on a dark surface
+  ([#16]).
+
 ## [0.0.2] - 2026-06-06
 
 Phase 2 (round management + hole-by-hole entry) and Phase 3 (lifetime
@@ -81,4 +96,5 @@ Phase 1 — data layer and navigation shell.
 [#12]: https://github.com/aellington89/golfy/issues/12
 [#13]: https://github.com/aellington89/golfy/issues/13
 [#14]: https://github.com/aellington89/golfy/issues/14
+[#16]: https://github.com/aellington89/golfy/issues/16
 [#22]: https://github.com/aellington89/golfy/issues/22

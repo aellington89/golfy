@@ -96,6 +96,7 @@ void main() {
       find.text('No rounds yet. Tap + to start your first round.'),
       findsOneWidget,
     );
+    expect(find.byIcon(Icons.golf_course_outlined), findsOneWidget);
   });
 
   testWidgets(

@@ -61,7 +61,11 @@ void main() {
     await tester.pumpWidget(wrap(container));
     await tester.pumpAndSettle();
 
-    expect(find.text('No active round'), findsOneWidget);
+    expect(
+      find.text('No active round. Go to Rounds to start one.'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.flag_outlined), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Go to Rounds'), findsOneWidget);
   });
 

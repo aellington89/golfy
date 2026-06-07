@@ -68,7 +68,11 @@ void main() {
     await tester.pumpWidget(wrap(container));
     await settle(tester);
 
-    expect(find.text('Play a round to see your stats.'), findsOneWidget);
+    expect(
+      find.text('Play a round to see your stats here.'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.insights_outlined), findsOneWidget);
     expect(find.byKey(const ValueKey('stat_rounds_played')), findsNothing);
   });
 
@@ -160,5 +164,12 @@ void main() {
     expect(textOfKey(tester, 'stat_best_round'), '-2');
     expect(textOfKey(tester, 'stat_avg_vs_par'), '-2.0'); // -2 total / 1 round
     expect(find.text('Augusta · May 25, 2026'), findsOneWidget);
+
+    // Under par is green here too — the same band as the rounds list and
+    // scorecard, not the theme's primary (#16 colour unification).
+    Color? colorOfKey(String key) =>
+        tester.widget<Text>(find.byKey(ValueKey(key))).style?.color;
+    expect(colorOfKey('stat_best_round'), Colors.green.shade700);
+    expect(colorOfKey('stat_avg_vs_par'), Colors.green.shade700);
   });
 }

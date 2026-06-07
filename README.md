@@ -87,7 +87,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 150 passing tests
+flutter test                           # 167 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
@@ -119,7 +119,7 @@ Phases:
 - **Phase 1** ✓ Data + scaffold (v0.0.1)
 - **Phase 2** ✓ Round management + hole-by-hole entry (v0.0.2)
 - **Phase 3** ✓ Lifetime stats dashboard (v0.0.2)
-- **Phase 4** Polish — app icon, broader error handling, per-hole yardage entry ([#22](https://github.com/aellington89/golfy/issues/22))
+- **Phase 4** Polish (in progress) — system dark/light theme + empty states ([#16](https://github.com/aellington89/golfy/issues/16)); app icon, broader error handling, and per-hole yardage entry ([#22](https://github.com/aellington89/golfy/issues/22)) still to come
 
 ## History
 

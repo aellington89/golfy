@@ -6,6 +6,7 @@ import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
+import '../../widgets/empty_state.dart';
 import '../rounds/active_round_provider.dart';
 import 'hole_card.dart';
 import 'hole_draft.dart';
@@ -343,42 +344,15 @@ class _NoActiveRound extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Hole Entry')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.flag_outlined,
-                size: 56,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No active round',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Start a round from the Rounds tab to begin entering holes.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(tabIndexProvider.notifier).set(0),
-                icon: const Icon(Icons.list_alt),
-                label: const Text('Go to Rounds'),
-              ),
-            ],
-          ),
+      body: EmptyState(
+        icon: Icons.flag_outlined,
+        message: 'No active round. Go to Rounds to start one.',
+        action: FilledButton.icon(
+          onPressed: () => ref.read(tabIndexProvider.notifier).set(0),
+          icon: const Icon(Icons.list_alt),
+          label: const Text('Go to Rounds'),
         ),
       ),
     );
