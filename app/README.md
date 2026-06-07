@@ -47,22 +47,31 @@ app/lib/
 │   ├── daos/                      # CourseDao, RoundDao, HoleResultDao, DashboardDao
 │   └── models/                    # RoundWithCourse, DashboardStats value classes
 ├── features/
-│   ├── rounds/                    # rounds list screen (placeholder)
-│   ├── hole_entry/                # hole-by-hole entry screen (placeholder)
-│   └── dashboard/                 # lifetime stats screen (placeholder)
-├── shell/                         # AppShell with bottom navigation
+│   ├── courses/                   # CoursePicker bottom sheet + AddCourseDialog
+│   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
+│   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
+│   ├── hole_entry/                # 18-card per-hole entry form + in-memory HoleDraft
+│   ├── dashboard/                 # lifetime-stats screen
+│   └── stats/                     # pure score/stat formatters + score-to-par colour bands
+├── shell/                         # AppShell + tabIndexProvider (bottom-nav state)
 ├── app.dart                       # MaterialApp + theme
 └── main.dart                      # runApp + ProviderScope
 
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
 ├── widget_test.dart               # AppShell smoke test
-└── dao/
-    ├── _fixtures.dart             # shared in-memory DB fixtures
-    ├── course_dao_test.dart
-    ├── round_dao_test.dart
-    ├── hole_result_dao_test.dart
-    └── dashboard_dao_test.dart    # aggregation correctness against a seeded fixture
+├── dao/
+│   ├── _fixtures.dart             # shared in-memory DB fixtures
+│   ├── course_dao_test.dart
+│   ├── round_dao_test.dart
+│   ├── hole_result_dao_test.dart
+│   └── dashboard_dao_test.dart    # aggregation correctness against a seeded fixture
+└── features/                      # widget tests + pure-formatter unit tests (mirrors lib/features/)
+    ├── courses/                   # course_picker, add_course_dialog
+    ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
+    ├── hole_entry/                # hole_entry_screen, hole_card
+    ├── dashboard/                 # dashboard_screen
+    └── stats/                     # score_format, score_color, stat_format
 ```
 
 ## Architecture notes
@@ -83,14 +92,30 @@ app/test/
   - `upDownSuccess` requires `upDownAttempt`
   - `sandSave` requires `bunkerVisited`
   - `par == 3` requires `fairwayHit == null` (par-3s have no fairway)
+- **Navigation is state, not a `Navigator` stack.** The bottom bar renders the
+  tab named by [`tabIndexProvider`](lib/shell/tab_index_provider.dart); flows
+  like "create a round → open Hole Entry" just set the index.
+  [`activeRoundIdProvider`](lib/features/rounds/active_round_provider.dart) holds
+  the round currently open on the Hole Entry tab — set on create or tap-to-resume,
+  cleared on Finish Round or delete.
+- **Hole Entry edits stay in memory until saved.** Each hole is a
+  [`HoleDraft`](lib/features/hole_entry/hole_draft.dart) kept across `PageView`
+  swipes; **Save Hole** upserts it via `HoleResultDao`. Course-yardage fields are
+  stamped with placeholder defaults until
+  [#22](https://github.com/aellington89/golfy/issues/22) adds real yardage entry.
+- **Presentation logic is pure and shared.** [`features/stats/`](lib/features/stats/)
+  holds widget-free helpers — `score_format` / `stat_format` (formatting) and
+  `scoreToParColor` (colour bands) — so the rounds list, scorecard, and dashboard
+  format and colour scores identically and unit-test without pumping a widget.
 
 ## Testing
 
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything
+flutter test                           # everything (150 tests)
 flutter test test/dao                  # DAO suites only
+flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
 ```
 
@@ -98,6 +123,13 @@ The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
 and asserts each lifetime stat against pre-computed expected values — see
 [`test/dao/dashboard_dao_test.dart`](test/dao/dashboard_dao_test.dart) for the
 fixture spec.
+
+> **Reactivity is covered at the DAO level, not in widget tests.** Widget tests
+> pump a screen against a seeded in-memory database and assert the first frame —
+> they do **not** drive live drift `.watch()` updates. Asserting a stream-driven
+> rebuild inside `flutter_test` deadlocks the test binding and can leave
+> `sqlite3.dll` locked on Windows, so verify reactive behaviour in the DAO suites
+> instead.
 
 ## Generated files
 

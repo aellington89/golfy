@@ -6,6 +6,7 @@ part of 'round_dao.dart';
 mixin _$RoundDaoMixin on DatabaseAccessor<GolfyDatabase> {
   $CoursesTable get courses => attachedDatabase.courses;
   $RoundsTable get rounds => attachedDatabase.rounds;
+  $HoleResultsTable get holeResults => attachedDatabase.holeResults;
   RoundDaoManager get managers => RoundDaoManager(this);
 }
 
@@ -16,4 +17,6 @@ class RoundDaoManager {
       $$CoursesTableTableManager(_db.attachedDatabase, _db.courses);
   $$RoundsTableTableManager get rounds =>
       $$RoundsTableTableManager(_db.attachedDatabase, _db.rounds);
+  $$HoleResultsTableTableManager get holeResults =>
+      $$HoleResultsTableTableManager(_db.attachedDatabase, _db.holeResults);
 }

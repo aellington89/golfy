@@ -78,6 +78,17 @@ void main() {
       await db.roundDao.deleteById(rid);
       expect(await db.holeResultDao.countForRound(rid), 0);
     });
+
+    test('leaves the parent course intact (no upward cascade)', () async {
+      // AC #5 (#12): deleting the only round for a course must NOT remove the
+      // course. The rounds → courses FK is RESTRICT, so a round delete never
+      // propagates upward; only hole_results cascade down.
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      await db.roundDao.deleteById(rid);
+      final courses = await db.courseDao.watchAll().first;
+      expect(courses.map((c) => c.id), contains(cid));
+    });
   });
 
   group('RoundDao.watchAllWithCourse', () {
@@ -107,6 +118,122 @@ void main() {
 
       final rows = await db.roundDao.watchAllWithCourse().first;
       expect(rows.map((r) => r.round.id).toList(), [r2, r3, r1]);
+    });
+
+    test('holesEntered is 0 for a round with no hole_results', () async {
+      final cid = await fx.insertCourse();
+      await fx.insertRound(cid);
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.holesEntered, 0);
+    });
+
+    test('holesEntered counts partial hole_results', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      for (var h = 1; h <= 12; h++) {
+        await fx.upsertHole(rid, h);
+      }
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.holesEntered, 12);
+    });
+
+    test('holesEntered reaches 18 for a complete round', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      for (var h = 1; h <= 18; h++) {
+        await fx.upsertHole(rid, h);
+      }
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.holesEntered, 18);
+    });
+
+    test('holesEntered is per-round, not summed across rounds', () async {
+      final cid = await fx.insertCourse();
+      final r1 = await fx.insertRound(cid, date: '2026-04-01');
+      final r2 = await fx.insertRound(cid, date: '2026-05-01');
+      await fx.upsertHole(r1, 1);
+      await fx.upsertHole(r1, 2);
+      await fx.upsertHole(r2, 1);
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      final byId = {for (final r in rows) r.round.id: r.holesEntered};
+      expect(byId[r1], 2);
+      expect(byId[r2], 1);
+    });
+
+    test('holesEntered re-emits when a hole is upserted', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      final stream = db.roundDao.watchAllWithCourse();
+
+      final first = await stream.first;
+      expect(first.single.holesEntered, 0);
+
+      await fx.upsertHole(rid, 1);
+      final second = await stream.first;
+      expect(second.single.holesEntered, 1);
+    });
+
+    test('totals sum score and par across the entered holes', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // Two par-4 holes, bogey each: score 10, par 8, +2 to par.
+      await fx.upsertHole(rid, 1, par: 4, score: 5);
+      await fx.upsertHole(rid, 2, par: 4, score: 5);
+
+      final row = (await db.roundDao.watchAllWithCourse().first).single;
+      expect(row.totalScore, 10);
+      expect(row.totalPar, 8);
+      expect(row.relativeToPar, 2);
+    });
+
+    test('totals are zero for a round with no hole_results', () async {
+      final cid = await fx.insertCourse();
+      await fx.insertRound(cid);
+      final row = (await db.roundDao.watchAllWithCourse().first).single;
+      expect(row.totalScore, 0);
+      expect(row.totalPar, 0);
+      expect(row.relativeToPar, 0);
+      expect(row.holesEntered, 0);
+    });
+
+    test('totals cover only the entered holes of a partial round', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // 12 holes, one under par each: par 48 / score 36 → -12 to par.
+      for (var h = 1; h <= 12; h++) {
+        await fx.upsertHole(rid, h, par: 4, score: 3);
+      }
+      final row = (await db.roundDao.watchAllWithCourse().first).single;
+      expect(row.holesEntered, 12);
+      expect(row.totalScore, 36);
+      expect(row.totalPar, 48);
+      expect(row.relativeToPar, -12);
+    });
+
+    test('totals are per-round, not summed across rounds', () async {
+      final cid = await fx.insertCourse();
+      final r1 = await fx.insertRound(cid, date: '2026-04-01');
+      final r2 = await fx.insertRound(cid, date: '2026-05-01');
+      await fx.upsertHole(r1, 1, par: 4, score: 6); // +2
+      await fx.upsertHole(r1, 2, par: 4, score: 4); // E
+      await fx.upsertHole(r2, 1, par: 4, score: 3); // -1
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      final byId = {for (final r in rows) r.round.id: r};
+      expect(byId[r1]!.relativeToPar, 2);
+      expect(byId[r2]!.relativeToPar, -1);
+    });
+
+    test('relativeToPar re-emits when a hole is upserted', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      final stream = db.roundDao.watchAllWithCourse();
+
+      expect((await stream.first).single.relativeToPar, 0);
+
+      await fx.upsertHole(rid, 1, par: 4, score: 5);
+      expect((await stream.first).single.relativeToPar, 1);
     });
   });
 }

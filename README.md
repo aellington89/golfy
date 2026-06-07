@@ -18,31 +18,41 @@ data as the source of truth, then derives every round-level and lifetime
 statistic from it. That means a new stat is always one query away, not a
 schema migration.
 
-The first phase (this pre-release) ships the data layer and a navigation shell;
-the next phases fill in the three screens.
+The data layer landed first (v0.0.1); this release wires up all three screens —
+round management, hole-by-hole entry, and the lifetime dashboard — on top of it.
 
-## Status — v0.0.1 pre-release
+## Status — v0.0.2 pre-release
 
-Phase 1 of the [roadmap](https://github.com/aellington89/golfy/issues/1) is
-complete:
+Phases 2 and 3 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
+are complete — every screen in the 3-tab shell is now live on top of the v0.0.1
+data layer:
 
-| Phase 1 | Issue | What it delivered |
+| Feature | Issue | What it delivered |
 |---|---|---|
-| Flutter project init | [#3](https://github.com/aellington89/golfy/issues/3) | Cross-platform scaffold targeting Android + Windows |
-| Build-artefact ignores | [#4](https://github.com/aellington89/golfy/issues/4) | `.gitignore` covers Flutter, Dart, Android, Windows outputs |
-| Data model | [#5](https://github.com/aellington89/golfy/issues/5) | drift tables: `courses`, `rounds`, `hole_results` with FKs, CHECKs, unique indexes |
-| DAO + query layer | [#6](https://github.com/aellington89/golfy/issues/6) | `CourseDao`, `RoundDao`, `HoleResultDao`, `DashboardDao`, `GolfyRepository`, Riverpod providers, 53 passing tests |
-| App shell | [#7](https://github.com/aellington89/golfy/issues/7) | 3-tab bottom navigation (Rounds / Hole Entry / Dashboard) with placeholder screens |
+| Course picker + add-course | [#8](https://github.com/aellington89/golfy/issues/8) | Reusable `CoursePicker` bottom sheet and `AddCourseDialog` with a duplicate pre-check |
+| Rounds list + new round | [#9](https://github.com/aellington89/golfy/issues/9) | Reactive rounds list, swipe-to-delete, and a new-round dialog that jumps to Hole Entry |
+| Hole Entry | [#10](https://github.com/aellington89/golfy/issues/10) | 18-card swipeable per-hole form with in-memory drafts, quick-nav chips, and tap-to-resume |
+| Read-only scorecard | [#11](https://github.com/aellington89/golfy/issues/11) | Per-round scorecard (18 holes + totals) with hand-off to Hole Entry for edits |
+| Delete-round confirmation | [#12](https://github.com/aellington89/golfy/issues/12) | Shared confirm-delete used by the rounds list and a scorecard delete action |
+| Dashboard lifetime stats | [#13](https://github.com/aellington89/golfy/issues/13) | Scoring / distribution / accuracy / around-the-green cards, with an empty state |
+| Score-vs-par row labels | [#14](https://github.com/aellington89/golfy/issues/14) | Colour-coded score-to-par badges on rounds-list rows, unified with the scorecard |
 
-What is **not** yet wired up: the three screens are placeholders. Round
-creation, hole-by-hole entry, and dashboard rendering all land in Phase 2
-(issues [#11](https://github.com/aellington89/golfy/issues/11)–[#13](https://github.com/aellington89/golfy/issues/13)).
+Phase 1 (data model, DAOs, repository, and app shell — issues
+[#3](https://github.com/aellington89/golfy/issues/3)–[#7](https://github.com/aellington89/golfy/issues/7))
+shipped in **v0.0.1**. See [`CHANGELOG.md`](CHANGELOG.md) for the full release
+history.
+
+What is **not** yet captured: per-hole course-yardage columns (yards, drive /
+approach distance, tee club) are deliberately deferred to
+[#22](https://github.com/aellington89/golfy/issues/22). Phase 4 polish — app
+icon and broader error handling — is still open.
 
 ## Stack
 
 - **Flutter** (Dart) — single codebase for Android + Windows
 - **drift** (typed SQLite ORM) — generated schema, reactive streams, in-memory testing
 - **Riverpod 3** — dependency injection and reactive state
+- **intl** — locale-aware date formatting in the UI
 - **SQLite** — embedded local-only storage; no network, no sync
 
 The database file lives at `~/.golfy/golfy.db` (Windows:
@@ -77,7 +87,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 53 passing tests
+flutter test                           # 150 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
@@ -106,10 +116,10 @@ The full roadmap is tracked as a GitHub epic — see
 Phases:
 
 - **Phase 0** ✓ Framework decision (Flutter over PySide6)
-- **Phase 1** ✓ Data + scaffold (this release)
-- **Phase 2** Round management + hole-by-hole entry
-- **Phase 3** Lifetime stats dashboard
-- **Phase 4** Polish (empty states, error handling, app icon)
+- **Phase 1** ✓ Data + scaffold (v0.0.1)
+- **Phase 2** ✓ Round management + hole-by-hole entry (v0.0.2)
+- **Phase 3** ✓ Lifetime stats dashboard (v0.0.2)
+- **Phase 4** Polish — app icon, broader error handling, per-hole yardage entry ([#22](https://github.com/aellington89/golfy/issues/22))
 
 ## History
 
@@ -118,7 +128,7 @@ it became clear the project would never reach Android from that stack, so the
 framework was re-chosen via
 [issue #2](https://github.com/aellington89/golfy/issues/2) and the codebase
 was rebuilt in Flutter. The original Python sources were kept as a schema
-reference through Phase 1 and removed for this release; the canonical schema
+reference through Phase 1 and removed in v0.0.1; the canonical schema
 now lives in `app/lib/data/tables/`.
 
 ## License
