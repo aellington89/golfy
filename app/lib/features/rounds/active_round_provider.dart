@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The id of the round currently being viewed / edited on the Hole Entry
-/// tab. Set when a round is created (or, later, when the user resumes one
-/// from the rounds list) and read by [HoleEntryScreen] to decide between
-/// the empty state and the per-hole form (#10).
+/// tab. Set when a round is created or resumed (by tapping a row in the
+/// rounds list) and read by [HoleEntryScreen] to decide between the empty
+/// state and the per-hole form (#10).
 ///
 /// `null` means "no active round" — Hole Entry then shows #16's empty state.
 class ActiveRoundId extends Notifier<int?> {
