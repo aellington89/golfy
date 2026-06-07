@@ -224,6 +224,122 @@ void main() {
     });
   });
 
+  group('DashboardDao.watchStats — GIR%', () {
+    test('girPct is 1.0 when every hole is a GIR', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      for (var h = 1; h <= 4; h++) {
+        await fx.upsertHole(rid, h, gir: true);
+      }
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.girPct, closeTo(1.0, 1e-9));
+    });
+
+    test('girPct is 0.0 (not null) when no hole is a GIR', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      for (var h = 1; h <= 4; h++) {
+        await fx.upsertHole(rid, h, gir: false);
+      }
+      final stats = await db.dashboardDao.watchStats().first;
+      // Denominator is COUNT(*), so with holes present this is a real 0.0 —
+      // never a divide-by-zero null.
+      expect(stats.girPct, closeTo(0.0, 1e-9));
+    });
+  });
+
+  group('DashboardDao.watchStats — score vs. par', () {
+    // The under-par case (avgScoreVsPar = -1.0) is covered by the rich fixture.
+    test('avgScoreVsPar is 0.0 for an exactly even-par round', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // 9 holes, score == par everywhere → SUM(score - par) = 0 over 1 round.
+      for (var h = 1; h <= 9; h++) {
+        await fx.upsertHole(rid, h, par: 4, score: 4);
+      }
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.avgScoreVsPar, closeTo(0.0, 1e-9));
+      expect(stats.avgScorePerRound, closeTo(36.0, 1e-9));
+    });
+
+    test('avgScoreVsPar is positive for an over-par round', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // 9 holes, one over par each → SUM(score - par) = 9 over 1 round.
+      for (var h = 1; h <= 9; h++) {
+        await fx.upsertHole(rid, h, par: 4, score: 5);
+      }
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.avgScoreVsPar, closeTo(9.0, 1e-9));
+    });
+  });
+
+  group('DashboardDao.watchStats — division by zero', () {
+    test('fairwayHitPct is null when every hole is a par-3', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // Par-3s carry a null fairwayHit, so the fairway denominator
+      // (SUM(fairway_hit IS NOT NULL)) is 0 → NULLIF → null. A distinct NULLIF
+      // path from the up/down zero-attempts case above.
+      for (var h = 1; h <= 3; h++) {
+        await fx.upsertHole(rid, h, par: 3, score: 3, fairwayHit: null);
+      }
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.fairwayHitPct, isNull);
+      // Sanity: holes exist, so COUNT(*)-denominated stats are present.
+      expect(stats.girPct, isNotNull);
+    });
+  });
+
+  group('DashboardDao.watchStats — score distribution', () {
+    test('surfaces eagle (≤ -2) through triple-bogey (+3) buckets, ordered',
+        () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // One hole per (score - par) bucket from -2 to +3, all par-4.
+      await fx.upsertHole(rid, 1, par: 4, score: 2); // -2 eagle
+      await fx.upsertHole(rid, 2, par: 4, score: 3); // -1 birdie
+      await fx.upsertHole(rid, 3, par: 4, score: 4); //  0 par
+      await fx.upsertHole(rid, 4, par: 4, score: 5); // +1 bogey
+      await fx.upsertHole(rid, 5, par: 4, score: 6); // +2 double
+      await fx.upsertHole(rid, 6, par: 4, score: 7); // +3 triple
+
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.scoreDistribution, [
+        const ScoreBucket(scoreVsPar: -2, count: 1),
+        const ScoreBucket(scoreVsPar: -1, count: 1),
+        const ScoreBucket(scoreVsPar: 0, count: 1),
+        const ScoreBucket(scoreVsPar: 1, count: 1),
+        const ScoreBucket(scoreVsPar: 2, count: 1),
+        const ScoreBucket(scoreVsPar: 3, count: 1),
+      ]);
+    });
+  });
+
+  group('DashboardDao.watchStats — best round', () {
+    test('breaks a to-par tie by most recent date and returns exactly one',
+        () async {
+      final cid = await fx.insertCourse();
+      // Two rounds tied at even par on different dates, plus a more recent but
+      // worse round. Best-round SQL is `ORDER BY to_par ASC, date DESC LIMIT 1`.
+      final earlyTie = await fx.insertRound(cid, date: '2026-05-01');
+      final laterTie = await fx.insertRound(cid, date: '2026-05-20');
+      final worseRecent = await fx.insertRound(cid, date: '2026-05-25');
+      for (var h = 1; h <= 3; h++) {
+        await fx.upsertHole(earlyTie, h, par: 4, score: 4); // to_par 0
+        await fx.upsertHole(laterTie, h, par: 4, score: 4); // to_par 0
+        await fx.upsertHole(worseRecent, h, par: 4, score: 5); // to_par +3
+      }
+
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.bestRound, isNotNull);
+      // Lowest to_par wins (0 beats +3, so the most-recent round loses); the
+      // 0-tie is then broken by the later date → laterTie.
+      expect(stats.bestRound!.roundId, laterTie);
+      expect(stats.bestRound!.toPar, 0);
+    });
+  });
+
   group('DashboardDao.watchStats — reactivity', () {
     test('re-emits after a hole insert', () async {
       final cid = await fx.insertCourse();
