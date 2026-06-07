@@ -23,7 +23,7 @@ round management, hole-by-hole entry, and the lifetime dashboard — on top of i
 
 ## Status — v0.0.2 pre-release
 
-Phases 2 and 3 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
+Phases 2 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
 are complete — every screen in the 3-tab shell is now live on top of the v0.0.1
 data layer:
 
@@ -44,7 +44,7 @@ history.
 
 What is **not** yet captured: per-hole course-yardage columns (yards, drive /
 approach distance, tee club) are deliberately deferred to
-[#22](https://github.com/aellington89/golfy/issues/22). Phase 4 polish — app
+[#22](https://github.com/aellington89/golfy/issues/22). Phase 3 & 4 polish — app
 icon and broader error handling — is still open.
 
 ## Stack
