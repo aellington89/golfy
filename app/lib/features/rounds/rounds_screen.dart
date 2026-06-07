@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
+import '../stats/score_color.dart';
+import '../stats/score_format.dart';
 import 'active_round_provider.dart';
 import 'delete_round.dart';
 import 'new_round_dialog.dart';
@@ -111,6 +113,17 @@ class _RoundRow extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (round.holesEntered > 0) ...[
+              Text(
+                formatRelativeToPar(round.relativeToPar),
+                key: ValueKey('round_score_${round.round.id}'),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: scoreToParColor(round.relativeToPar, theme.colorScheme),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
             Text(
               '${round.holesEntered}/18',
               style: theme.textTheme.bodyMedium,

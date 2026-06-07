@@ -70,6 +70,8 @@ void main() {
     String date = '2026-05-25',
     int roundNumber = 1,
     int holesEntered = 0,
+    int totalScore = 0,
+    int totalPar = 0,
   }) {
     return RoundWithCourse(
       round: Round(
@@ -80,6 +82,8 @@ void main() {
       ),
       courseName: courseName,
       holesEntered: holesEntered,
+      totalScore: totalScore,
+      totalPar: totalPar,
     );
   }
 
@@ -99,12 +103,82 @@ void main() {
       (tester) async {
     await tester.pumpWidget(wrap());
     await emitRounds(tester, [
-      makeRound(date: '2026-05-25', roundNumber: 2, holesEntered: 12),
+      makeRound(
+        date: '2026-05-25',
+        roundNumber: 2,
+        holesEntered: 12,
+        totalScore: 50,
+        totalPar: 48,
+      ),
     ]);
 
     expect(find.text('Pebble — Round 2'), findsOneWidget);
     expect(find.text('May 25, 2026'), findsOneWidget);
     expect(find.text('12/18'), findsOneWidget);
+  });
+
+  testWidgets('row shows a +N score badge for an over-par round',
+      (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [
+      makeRound(id: 3, holesEntered: 18, totalScore: 75, totalPar: 72),
+    ]);
+
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('round_score_3'))).data,
+      '+3',
+    );
+  });
+
+  testWidgets('row shows E for an even-par round', (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [
+      makeRound(id: 4, holesEntered: 18, totalScore: 72, totalPar: 72),
+    ]);
+
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('round_score_4'))).data,
+      'E',
+    );
+  });
+
+  testWidgets('row shows -N and a green badge for an under-par round',
+      (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [
+      makeRound(id: 5, holesEntered: 18, totalScore: 70, totalPar: 72),
+    ]);
+
+    final badge = tester.widget<Text>(
+      find.byKey(const ValueKey('round_score_5')),
+    );
+    expect(badge.data, '-2');
+    expect(badge.style?.color, Colors.green.shade700);
+  });
+
+  testWidgets('partial round shows the score for entered holes only',
+      (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [
+      makeRound(id: 6, holesEntered: 12, totalScore: 50, totalPar: 48),
+    ]);
+
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('round_score_6'))).data,
+      '+2',
+    );
+    // X/18 still communicates the round is incomplete.
+    expect(find.text('12/18'), findsOneWidget);
+  });
+
+  testWidgets('empty round shows no score badge, just 0/18', (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [
+      makeRound(id: 7, holesEntered: 0),
+    ]);
+
+    expect(find.byKey(const ValueKey('round_score_7')), findsNothing);
+    expect(find.text('0/18'), findsOneWidget);
   });
 
   testWidgets('FAB opens the New Round dialog', (tester) async {

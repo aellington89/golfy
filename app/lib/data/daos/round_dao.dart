@@ -30,15 +30,20 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
     return (delete(rounds)..where((r) => r.id.equals(id))).go();
   }
 
-  /// Reactive list of every round joined with its course's name and the
-  /// count of hole_results rows attached to it. Ordered newest first by
+  /// Reactive list of every round joined with its course's name, the count of
+  /// hole_results rows attached to it, and the summed score / par across those
+  /// holes (for the rounds-list score-vs-par label). Ordered newest first by
   /// date, breaking ties by descending row id so the most recently inserted
   /// round wins on the same date.
   ///
   /// Uses a `LEFT OUTER JOIN` to `hole_results` so rounds with no holes
-  /// entered still appear (with `holesEntered = 0`).
+  /// entered still appear (with `holesEntered = 0`); their `SUM`s are SQL NULL,
+  /// coerced to `0` (the UI suppresses the score label when `holesEntered == 0`
+  /// rather than rendering a misleading `E`).
   Stream<List<RoundWithCourse>> watchAllWithCourse() {
     final holeCount = holeResults.id.count();
+    final scoreSum = holeResults.score.sum();
+    final parSum = holeResults.par.sum();
     final query = select(rounds).join([
       innerJoin(courses, courses.id.equalsExp(rounds.courseId)),
       leftOuterJoin(
@@ -46,7 +51,7 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
         holeResults.roundId.equalsExp(rounds.id),
       ),
     ])
-      ..addColumns([holeCount])
+      ..addColumns([holeCount, scoreSum, parSum])
       ..groupBy([rounds.id])
       ..orderBy([
         OrderingTerm.desc(rounds.date),
@@ -59,6 +64,8 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
                 round: row.readTable(rounds),
                 courseName: row.readTable(courses).name,
                 holesEntered: row.read(holeCount) ?? 0,
+                totalScore: row.read(scoreSum) ?? 0,
+                totalPar: row.read(parSum) ?? 0,
               ))
           .toList();
     });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/database.dart';
+import '../../stats/score_color.dart';
 import '../../stats/score_format.dart';
 
 /// Column totals for a round, aggregated from the entered holes only.
@@ -96,12 +97,8 @@ class ScorecardTotalsCard extends StatelessWidget {
     final girText = empty ? _dash : '${t.gir}/${t.holesEntered}';
     final upDownText = empty ? _dash : '${t.upDownMade}/${t.upDownAttempts}';
 
-    Color? relColor;
-    if (!empty && t.relativeToPar > 0) {
-      relColor = theme.colorScheme.error;
-    } else if (!empty && t.relativeToPar < 0) {
-      relColor = theme.colorScheme.primary;
-    }
+    final relColor =
+        empty ? null : scoreToParColor(t.relativeToPar, theme.colorScheme);
 
     return Card(
       child: Padding(

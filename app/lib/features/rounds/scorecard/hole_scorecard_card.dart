@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/database.dart';
+import '../../stats/score_color.dart';
 import '../../stats/score_format.dart';
 
 /// One row of the read-only scorecard: a [Card] summarising a single hole.
@@ -30,15 +31,8 @@ class HoleScorecardCard extends StatelessWidget {
     final relText = r == null ? _dash : formatScoreToPar(r.score, r.par);
     final scoreText = r == null ? _dash : 'Score ${r.score}';
 
-    Color? relColor;
-    if (r != null) {
-      final diff = r.score - r.par;
-      if (diff > 0) {
-        relColor = theme.colorScheme.error;
-      } else if (diff < 0) {
-        relColor = theme.colorScheme.primary;
-      }
-    }
+    final relColor =
+        r == null ? null : scoreToParColor(r.score - r.par, theme.colorScheme);
 
     final fairwayText = r == null
         ? _dash
