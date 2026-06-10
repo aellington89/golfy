@@ -18,34 +18,33 @@ data as the source of truth, then derives every round-level and lifetime
 statistic from it. That means a new stat is always one query away, not a
 schema migration.
 
-The data layer landed first (v0.0.1); this release wires up all three screens —
-round management, hole-by-hole entry, and the lifetime dashboard — on top of it.
+The data layer landed first (v0.0.1), then all three screens — round
+management, hole-by-hole entry, and the lifetime dashboard (v0.0.2). This
+release (v0.0.3) polishes them to a finished feel: system theming, empty states
+everywhere, and editing of completed rounds.
 
-## Status — v0.0.2 pre-release
+## Status — v0.0.3
 
-Phase 2 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
-is complete — every screen in the 3-tab shell is now live on top of the v0.0.1
-data layer:
+Phase 3 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
+is complete — the v0.0.2 feature set is now polished to a finished feel, with
+quality tests, system theming, and editing of completed rounds:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
-| Course picker + add-course | [#8](https://github.com/aellington89/golfy/issues/8) | Reusable `CoursePicker` bottom sheet and `AddCourseDialog` with a duplicate pre-check |
-| Rounds list + new round | [#9](https://github.com/aellington89/golfy/issues/9) | Reactive rounds list, swipe-to-delete, and a new-round dialog that jumps to Hole Entry |
-| Hole Entry | [#10](https://github.com/aellington89/golfy/issues/10) | 18-card swipeable per-hole form with in-memory drafts, quick-nav chips, and tap-to-resume |
-| Read-only scorecard | [#11](https://github.com/aellington89/golfy/issues/11) | Per-round scorecard (18 holes + totals) with hand-off to Hole Entry for edits |
-| Delete-round confirmation | [#12](https://github.com/aellington89/golfy/issues/12) | Shared confirm-delete used by the rounds list and a scorecard delete action |
-| Dashboard lifetime stats | [#13](https://github.com/aellington89/golfy/issues/13) | Scoring / distribution / accuracy / around-the-green cards, with an empty state |
-| Score-vs-par row labels | [#14](https://github.com/aellington89/golfy/issues/14) | Colour-coded score-to-par badges on rounds-list rows, unified with the scorecard |
+| Dashboard stat-query tests | [#15](https://github.com/aellington89/golfy/issues/15) | Unit coverage for every lifetime-stat aggregation, incl. division-by-zero, par-3 fairway exclusion, and best-round ties |
+| Empty states, theming & colour | [#16](https://github.com/aellington89/golfy/issues/16) | Icon-led empty states via a shared `EmptyState` widget, system dark/light theme, and brightness-aware score colours (input validation shipped earlier in v0.0.2) |
+| Edit a completed round | [#17](https://github.com/aellington89/golfy/issues/17) | Re-open any round from its scorecard with all 18 holes pre-filled; in-place upsert and a contextual Finish / Done action |
 
-Phase 1 (data model, DAOs, repository, and app shell — issues
-[#3](https://github.com/aellington89/golfy/issues/3)–[#7](https://github.com/aellington89/golfy/issues/7))
-shipped in **v0.0.1**. See [`CHANGELOG.md`](CHANGELOG.md) for the full release
-history.
+Phase 2 (course/round management, hole entry, scorecard, and the lifetime
+dashboard — issues [#8](https://github.com/aellington89/golfy/issues/8)–[#14](https://github.com/aellington89/golfy/issues/14))
+shipped in **v0.0.2**, and Phase 1 (data model, DAOs, repository, and app shell
+— issues [#3](https://github.com/aellington89/golfy/issues/3)–[#7](https://github.com/aellington89/golfy/issues/7))
+in **v0.0.1**. See [`CHANGELOG.md`](CHANGELOG.md) for the full release history.
 
 What is **not** yet captured: per-hole course-yardage columns (yards, drive /
 approach distance, tee club) are deliberately deferred to
-[#22](https://github.com/aellington89/golfy/issues/22). Phase 3 (quality & polish)
-is underway and Phase 4 (release) is still open.
+[#22](https://github.com/aellington89/golfy/issues/22). With Phase 3 done,
+Phase 4 (release) — CI debug-APK builds and the v0.1.0 checklist — is next.
 
 ## Stack
 
@@ -118,7 +117,7 @@ Phases:
 - **Phase 0** ✓ Decision — Flutter over PySide6
 - **Phase 1** ✓ Foundation — data model, DAOs, and app shell (v0.0.1)
 - **Phase 2** ✓ Core features — course/round management, hole entry, scorecard, and the lifetime dashboard (v0.0.2)
-- **Phase 3** Quality & polish (in progress) — dashboard stat-query tests ([#15](https://github.com/aellington89/golfy/issues/15)), empty states + input validation + dark/light theme ([#16](https://github.com/aellington89/golfy/issues/16)), and editing a completed round's holes ([#17](https://github.com/aellington89/golfy/issues/17))
+- **Phase 3** ✓ Quality & polish (v0.0.3) — dashboard stat-query tests ([#15](https://github.com/aellington89/golfy/issues/15)), empty states + input validation + dark/light theme ([#16](https://github.com/aellington89/golfy/issues/16)), and editing a completed round's holes ([#17](https://github.com/aellington89/golfy/issues/17))
 - **Phase 4** Release — CI debug-APK builds ([#18](https://github.com/aellington89/golfy/issues/18)), the v0.1.0 release checklist ([#19](https://github.com/aellington89/golfy/issues/19)), debug-id build config ([#23](https://github.com/aellington89/golfy/issues/23)), and schema-migration + keystore hardening ([#24](https://github.com/aellington89/golfy/issues/24))
 
 ## History
