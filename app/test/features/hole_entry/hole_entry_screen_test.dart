@@ -107,7 +107,7 @@ void main() {
   });
 
   testWidgets(
-      'after all 18 holes are saved, Finish FAB appears and resets the shell',
+      're-opening a complete round shows a "Done" FAB that resets the shell',
       (tester) async {
     final seed = await seedRound();
     for (var h = 1; h <= 18; h++) {
@@ -125,6 +125,10 @@ void main() {
 
     expect(find.text('Holes saved: 18 / 18'), findsOneWidget);
     expect(find.byKey(const ValueKey('finish_round')), findsOneWidget);
+    // The round arrived already complete (the edit flow), so the FAB reads
+    // "Done" rather than "Finish Round".
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Finish Round'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('finish_round')));
     await tester.pumpAndSettle();
@@ -226,5 +230,158 @@ void main() {
     expect(rows, hasLength(1));
     expect(rows!.single.score, 5);
     expect(find.text('Holes saved: 1 / 18'), findsOneWidget);
+  });
+
+  testWidgets(
+      'editing a saved round pre-fills its cards with the persisted values',
+      (tester) async {
+    final seed = await seedRound();
+    // Distinctive, non-default values so a pre-filled card is unmistakable.
+    await fx.upsertHole(seed.roundId, 1,
+        par: 5, score: 6, putts: 3, gir: true, fairwayHit: false);
+    await fx.upsertHole(seed.roundId, 2,
+        par: 3, score: 2, putts: 1, fairwayHit: null);
+
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Hole 1's card shows its saved score (6) and putts (3), tagged "Saved".
+    expect(
+      find.descendant(
+        of: find.descendant(
+          of: find.byKey(const ValueKey('hole_card_1')),
+          matching: find.byKey(const ValueKey('score')),
+        ),
+        matching: find.text('6'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.descendant(
+          of: find.byKey(const ValueKey('hole_card_1')),
+          matching: find.byKey(const ValueKey('putts')),
+        ),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('hole_card_1')),
+        matching: find.text('Saved'),
+      ),
+      findsOneWidget,
+    );
+
+    // A second card pre-fills too — jump to hole 2 and check its score (2).
+    await tester.tap(find.byKey(const ValueKey('hole_chip_2')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.descendant(
+          of: find.byKey(const ValueKey('hole_card_2')),
+          matching: find.byKey(const ValueKey('score')),
+        ),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'editing a pre-saved hole upserts the same row with the new value',
+      (tester) async {
+    final seed = await seedRound();
+    final savedId = await fx.upsertHole(seed.roundId, 1, score: 5);
+
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Pre-filled to the saved score and marked "Saved".
+    expect(
+      find.descendant(
+        of: find.descendant(
+          of: find.byKey(const ValueKey('hole_card_1')),
+          matching: find.byKey(const ValueKey('score')),
+        ),
+        matching: find.text('5'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Saved'), findsOneWidget);
+
+    // Bump the score; the card flips to "Unsaved" until saved again.
+    await tester.tap(find.byKey(const ValueKey('Score_inc')));
+    await tester.pump();
+    expect(find.text('Unsaved'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // The same row was updated in place (id preserved) — not duplicated.
+    final rows = await tester
+        .runAsync(() => db.holeResultDao.watchForRound(seed.roundId).first);
+    expect(rows, hasLength(1));
+    expect(rows!.single.id, savedId);
+    expect(rows.single.score, 6);
+
+    // Counter stays at 1 and the card is "Saved" again.
+    expect(find.text('Holes saved: 1 / 18'), findsOneWidget);
+    expect(find.text('Saved'), findsOneWidget);
+  });
+
+  testWidgets(
+      'completing the final hole during entry shows a "Finish Round" FAB',
+      (tester) async {
+    final seed = await seedRound();
+    // Holes 2..18 saved before mount (17 total); hole 1 — shown first — is the
+    // one still missing, so the round is not complete on entry.
+    for (var h = 2; h <= 18; h++) {
+      await fx.upsertHole(seed.roundId, h);
+    }
+
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Holes saved: 17 / 18'), findsOneWidget);
+    expect(find.byKey(const ValueKey('finish_round')), findsNothing);
+
+    // Saving the missing hole 1 (shown by default) reaches 18/18 in-session,
+    // so the FAB must read "Finish Round" — not "Done".
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Holes saved: 18 / 18'), findsOneWidget);
+    expect(find.byKey(const ValueKey('finish_round')), findsOneWidget);
+    expect(find.text('Finish Round'), findsOneWidget);
+    expect(find.text('Done'), findsNothing);
   });
 }
