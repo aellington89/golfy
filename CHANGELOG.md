@@ -8,7 +8,7 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
-Phase 4 polish — the app now respects the system dark / light setting and every
+Phase 3 polish — the app now respects the system dark / light setting and every
 screen has a proper empty state.
 
 ### Added
