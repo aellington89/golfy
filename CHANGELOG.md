@@ -30,8 +30,8 @@ re-opened from its scorecard and edited.
 
 ## [0.0.2] - 2026-06-06
 
-Phase 2 (round management + hole-by-hole entry) and Phase 3 (lifetime
-dashboard). Every screen in the 3-tab shell is now functional on top of the
+Phase 2 (core features) — round management, hole-by-hole entry, and the lifetime
+dashboard. Every screen in the 3-tab shell is now functional on top of the
 v0.0.1 data layer.
 
 ### Added
