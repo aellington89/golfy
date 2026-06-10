@@ -6,9 +6,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
-## [Unreleased]
+## [0.0.3] - 2026-06-09
 
-Phase 3 polish plus round editing — the app now respects the system dark / light
+Phase 3 (quality & polish) — the app now respects the system dark / light
 setting, every screen has a proper empty state, and a completed round can be
 re-opened from its scorecard and edited.
 
@@ -85,7 +85,7 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.0.2...HEAD
+[0.0.3]: https://github.com/aellington89/golfy/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/aellington89/golfy/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/aellington89/golfy/releases/tag/v0.0.1
 [#2]: https://github.com/aellington89/golfy/issues/2
