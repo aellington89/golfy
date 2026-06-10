@@ -6,6 +6,7 @@ import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
+import '../../widgets/empty_state.dart';
 import '../rounds/active_round_provider.dart';
 import 'hole_card.dart';
 import 'hole_draft.dart';
@@ -40,6 +41,17 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   /// be cleared.
   int? _draftsRoundId;
 
+  /// Whether the round was already complete (18/18 saved) the first time
+  /// its hole stream emitted this session. Drives the Finish FAB label:
+  /// re-opening a finished round from the scorecard's Edit action reads
+  /// "Done", whereas completing the 18th hole during first entry reads
+  /// "Finish Round". Hole rows are only ever upserted (never deleted), so a
+  /// complete round stays complete — this entry-time snapshot is stable.
+  /// Captured once per round (guarded by [_initialCountCaptured]) and reset
+  /// in [_resetForRound].
+  bool _wasCompleteOnEntry = false;
+  bool _initialCountCaptured = false;
+
   /// Currently-visible page index (0-based). Kept in sync via
   /// [PageView.onPageChanged] for swipe gestures and updated eagerly in
   /// [_goToPage] so the chip strip highlights the target as soon as the
@@ -60,6 +72,8 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
       _pageController.jumpToPage(0);
     }
     _draftsRoundId = roundId;
+    _wasCompleteOnEntry = false;
+    _initialCountCaptured = false;
   }
 
   void _goToPage(int page) {
@@ -134,6 +148,15 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
         savedByHole[h.holeNumber] = h;
       }
       _seedFromSaved(savedByHole);
+      // Snapshot whether the round arrived already complete, so the Finish
+      // FAB can read "Done" for an edit of a finished round vs. "Finish
+      // Round" for a first-time completion. Gated on the post-frame reset
+      // having synced `_draftsRoundId`, so we never capture the pre-reset
+      // frame's stale round identity.
+      if (!_initialCountCaptured && _draftsRoundId == activeRoundId) {
+        _initialCountCaptured = true;
+        _wasCompleteOnEntry = savedByHole.length == _holeCount;
+      }
     });
 
     final savedCount = savedByHole.length;
@@ -153,8 +176,8 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
           ? FloatingActionButton.extended(
               key: const ValueKey('finish_round'),
               onPressed: _finishRound,
-              icon: const Icon(Icons.flag),
-              label: const Text('Finish Round'),
+              icon: Icon(_wasCompleteOnEntry ? Icons.check : Icons.flag),
+              label: Text(_wasCompleteOnEntry ? 'Done' : 'Finish Round'),
             )
           : null,
       body: PageView.builder(
@@ -343,42 +366,15 @@ class _NoActiveRound extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Hole Entry')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.flag_outlined,
-                size: 56,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No active round',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Start a round from the Rounds tab to begin entering holes.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(tabIndexProvider.notifier).set(0),
-                icon: const Icon(Icons.list_alt),
-                label: const Text('Go to Rounds'),
-              ),
-            ],
-          ),
+      body: EmptyState(
+        icon: Icons.flag_outlined,
+        message: 'No active round. Go to Rounds to start one.',
+        action: FilledButton.icon(
+          onPressed: () => ref.read(tabIndexProvider.notifier).set(0),
+          icon: const Icon(Icons.list_alt),
+          label: const Text('Go to Rounds'),
         ),
       ),
     );

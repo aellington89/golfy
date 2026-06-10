@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
+import '../../widgets/empty_state.dart';
 import '../stats/score_color.dart';
 import '../stats/score_format.dart';
 import 'active_round_provider.dart';
@@ -35,7 +36,12 @@ class RoundsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Failed to load rounds: $e')),
         data: (rounds) {
-          if (rounds.isEmpty) return const _EmptyState();
+          if (rounds.isEmpty) {
+            return const EmptyState(
+              icon: Icons.golf_course_outlined,
+              message: 'No rounds yet. Tap + to start your first round.',
+            );
+          }
           return ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: rounds.length,
@@ -54,27 +60,6 @@ class RoundsScreen extends ConsumerWidget {
     await showDialog<int>(
       context: context,
       builder: (_) => NewRoundDialog(existingRounds: rounds),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Text(
-          'No rounds yet. Tap + to start your first round.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
     );
   }
 }

@@ -23,8 +23,8 @@ round management, hole-by-hole entry, and the lifetime dashboard — on top of i
 
 ## Status — v0.0.2 pre-release
 
-Phases 2 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
-are complete — every screen in the 3-tab shell is now live on top of the v0.0.1
+Phase 2 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
+is complete — every screen in the 3-tab shell is now live on top of the v0.0.1
 data layer:
 
 | Feature | Issue | What it delivered |
@@ -44,8 +44,8 @@ history.
 
 What is **not** yet captured: per-hole course-yardage columns (yards, drive /
 approach distance, tee club) are deliberately deferred to
-[#22](https://github.com/aellington89/golfy/issues/22). Phase 3 & 4 polish — app
-icon and broader error handling — is still open.
+[#22](https://github.com/aellington89/golfy/issues/22). Phase 3 (quality & polish)
+is underway and Phase 4 (release) is still open.
 
 ## Stack
 
@@ -87,7 +87,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 150 passing tests
+flutter test                           # 170 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
@@ -115,11 +115,11 @@ The full roadmap is tracked as a GitHub epic — see
 [issue #1](https://github.com/aellington89/golfy/issues/1) for the live list.
 Phases:
 
-- **Phase 0** ✓ Framework decision (Flutter over PySide6)
-- **Phase 1** ✓ Data + scaffold (v0.0.1)
-- **Phase 2** ✓ Round management + hole-by-hole entry (v0.0.2)
-- **Phase 3** ✓ Lifetime stats dashboard (v0.0.2)
-- **Phase 4** Polish — app icon, broader error handling, per-hole yardage entry ([#22](https://github.com/aellington89/golfy/issues/22))
+- **Phase 0** ✓ Decision — Flutter over PySide6
+- **Phase 1** ✓ Foundation — data model, DAOs, and app shell (v0.0.1)
+- **Phase 2** ✓ Core features — course/round management, hole entry, scorecard, and the lifetime dashboard (v0.0.2)
+- **Phase 3** Quality & polish (in progress) — dashboard stat-query tests ([#15](https://github.com/aellington89/golfy/issues/15)), empty states + input validation + dark/light theme ([#16](https://github.com/aellington89/golfy/issues/16)), and editing a completed round's holes ([#17](https://github.com/aellington89/golfy/issues/17))
+- **Phase 4** Release — CI debug-APK builds ([#18](https://github.com/aellington89/golfy/issues/18)), the v0.1.0 release checklist ([#19](https://github.com/aellington89/golfy/issues/19)), debug-id build config ([#23](https://github.com/aellington89/golfy/issues/23)), and schema-migration + keystore hardening ([#24](https://github.com/aellington89/golfy/issues/24))
 
 ## History
 

@@ -54,24 +54,27 @@ app/lib/
 │   ├── dashboard/                 # lifetime-stats screen
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
 ├── shell/                         # AppShell + tabIndexProvider (bottom-nav state)
-├── app.dart                       # MaterialApp + theme
+├── widgets/                       # shared presentational widgets (EmptyState)
+├── app.dart                       # MaterialApp + light/dark theme (ThemeMode.system)
 └── main.dart                      # runApp + ProviderScope
 
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
 ├── widget_test.dart               # AppShell smoke test
+├── app_theme_test.dart            # light/dark theme + system-brightness switching
 ├── dao/
 │   ├── _fixtures.dart             # shared in-memory DB fixtures
 │   ├── course_dao_test.dart
 │   ├── round_dao_test.dart
 │   ├── hole_result_dao_test.dart
 │   └── dashboard_dao_test.dart    # aggregation correctness against a seeded fixture
-└── features/                      # widget tests + pure-formatter unit tests (mirrors lib/features/)
-    ├── courses/                   # course_picker, add_course_dialog
-    ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
-    ├── hole_entry/                # hole_entry_screen, hole_card
-    ├── dashboard/                 # dashboard_screen
-    └── stats/                     # score_format, score_color, stat_format
+├── features/                      # widget tests + pure-formatter unit tests (mirrors lib/features/)
+│   ├── courses/                   # course_picker, add_course_dialog
+│   ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
+│   ├── hole_entry/                # hole_entry_screen, hole_card
+│   ├── dashboard/                 # dashboard_screen
+│   └── stats/                     # score_format, score_color, stat_format
+└── widgets/                       # shared-widget tests (empty_state)
 ```
 
 ## Architecture notes
@@ -107,13 +110,20 @@ app/test/
   holds widget-free helpers — `score_format` / `stat_format` (formatting) and
   `scoreToParColor` (colour bands) — so the rounds list, scorecard, and dashboard
   format and colour scores identically and unit-test without pumping a widget.
+  `scoreToParColor` reads the scheme's `Brightness` so its green / amber bands
+  stay legible in dark mode.
+- **Theme is system-driven.** [`app.dart`](lib/app.dart) builds light + dark
+  `ThemeData` from one deep-purple seed and sets `themeMode: ThemeMode.system`;
+  there's no in-app toggle. Empty screens use the shared
+  [`EmptyState`](lib/widgets/empty_state.dart) widget (icon + message + optional
+  action) — reuse it rather than hand-rolling a centered column.
 
 ## Testing
 
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (150 tests)
+flutter test                           # everything (167 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only

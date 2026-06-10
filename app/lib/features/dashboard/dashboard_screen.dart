@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../data/models/dashboard_stats.dart';
 import '../../data/repository_provider.dart';
+import '../../widgets/empty_state.dart';
+import '../stats/score_color.dart';
 import '../stats/score_format.dart';
 import '../stats/stat_format.dart';
 
@@ -27,7 +29,12 @@ class DashboardScreen extends ConsumerWidget {
         data: (stats) {
           // roundsPlayed counts DISTINCT round_id in hole_results, so a round
           // with no holes entered still reads 0 — i.e. "nothing to show yet".
-          if (stats.roundsPlayed == 0) return const _EmptyState();
+          if (stats.roundsPlayed == 0) {
+            return const EmptyState(
+              icon: Icons.insights_outlined,
+              message: 'Play a round to see your stats here.',
+            );
+          }
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             children: [
@@ -38,29 +45,6 @@ class DashboardScreen extends ConsumerWidget {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-/// Shown until at least one round has holes entered. Mirrors the Rounds list
-/// empty state; copy comes from issue #13 / #16.
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Text(
-          'Play a round to see your stats.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
       ),
     );
   }
@@ -136,15 +120,17 @@ class _ScoringSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     // Colour the average to match its displayed value: round to one decimal
-    // first so a value that renders as "E" stays neutral.
+    // first so a value that renders as "E" stays neutral. The over/under
+    // bands come from scoreToParColor so the dashboard agrees with the rounds
+    // list and scorecard — under par is green, not the theme's primary.
     final avgVsPar = stats.avgScoreVsPar;
     final avgVsParRounded =
         avgVsPar == null ? null : (avgVsPar * 10).round() / 10;
     Color? avgVsParColor;
     if (avgVsParRounded != null && avgVsParRounded > 0) {
-      avgVsParColor = theme.colorScheme.error;
+      avgVsParColor = scoreToParColor(2, theme.colorScheme);
     } else if (avgVsParRounded != null && avgVsParRounded < 0) {
-      avgVsParColor = theme.colorScheme.primary;
+      avgVsParColor = scoreToParColor(-1, theme.colorScheme);
     }
 
     return _StatSection(
@@ -194,12 +180,8 @@ class _BestRoundRow extends StatelessWidget {
       );
     }
 
-    Color? color;
-    if (best.toPar > 0) {
-      color = theme.colorScheme.error;
-    } else if (best.toPar < 0) {
-      color = theme.colorScheme.primary;
-    }
+    // Same green / amber / red bands as the rounds list and scorecard.
+    final color = scoreToParColor(best.toPar, theme.colorScheme);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
