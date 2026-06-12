@@ -5,6 +5,7 @@
 > Flutter for Android phones and Windows desktop from a single codebase.
 
 [![status](https://img.shields.io/badge/status-pre--release-orange)](https://github.com/aellington89/golfy/releases)
+[![CI](https://github.com/aellington89/golfy/actions/workflows/flutter-build.yml/badge.svg)](https://github.com/aellington89/golfy/actions/workflows/flutter-build.yml)
 [![flutter](https://img.shields.io/badge/flutter-3.x-blue)](https://flutter.dev)
 [![license](https://img.shields.io/badge/license-private-lightgrey)](#license)
 
