@@ -150,3 +150,19 @@ don't have to run `build_runner` before running tests.
 If you see a `*.g.dart` diff after editing a table or DAO, that's expected —
 run `dart run build_runner build` and commit the regenerated file alongside
 your source change.
+
+## Continuous integration
+
+Every push and pull request to `master` runs
+[`.github/workflows/flutter-build.yml`](../.github/workflows/flutter-build.yml):
+
+- **Linux job** — `flutter analyze`, the full `flutter test` suite, and
+  `flutter build apk --debug`, with the APK uploaded as a workflow artifact. The
+  runner installs `libsqlite3-dev` so drift's `NativeDatabase` tests can load
+  SQLite, and the committed `*.g.dart` files mean CI never runs `build_runner`.
+- **Windows job** — `flutter build windows --debug` (build-only; the test suite
+  runs once, on the Linux job).
+
+The Flutter SDK is **pinned** (`flutter-version: 3.44.0`) for reproducible runs —
+bump it in the workflow in lockstep with local Flutter upgrades, keeping it at or
+above the Dart SDK floor in [`pubspec.yaml`](pubspec.yaml).

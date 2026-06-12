@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
+## [Unreleased]
+
+### Added
+- Continuous integration via GitHub Actions: every push and pull request to
+  `master` runs the test suite and builds a debug Android APK on Linux, plus a
+  Windows desktop build, with the build outputs uploaded as workflow artifacts
+  ([#18]).
+
 ## [0.0.3] - 2026-06-09
 
 Phase 3 (quality & polish) — the app now respects the system dark / light
@@ -85,6 +93,7 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.0.3...HEAD
 [0.0.3]: https://github.com/aellington89/golfy/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/aellington89/golfy/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/aellington89/golfy/releases/tag/v0.0.1
@@ -103,4 +112,5 @@ Phase 1 — data layer and navigation shell.
 [#14]: https://github.com/aellington89/golfy/issues/14
 [#16]: https://github.com/aellington89/golfy/issues/16
 [#17]: https://github.com/aellington89/golfy/issues/17
+[#18]: https://github.com/aellington89/golfy/issues/18
 [#22]: https://github.com/aellington89/golfy/issues/22

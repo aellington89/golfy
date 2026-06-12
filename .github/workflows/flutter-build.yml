@@ -1,0 +1,90 @@
+# .github/workflows/flutter-build.yml
+name: Flutter Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: flutter-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:                          # Linux: tests + Android debug APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app    # all run: steps execute in app/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Android/Gradle toolchain)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0   # matches local; guarantees Dart >= 3.12
+          channel: stable
+          cache: true               # caches SDK + pub packages
+
+      - name: Install native sqlite3 (drift NativeDatabase in tests)
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze              # optional; remove if pre-existing infos block CI
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          # path is workspace-root-relative (NOT affected by working-directory)
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+
+  build-windows:                  # Windows desktop build (build-only; tests run on Linux)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build Windows (debug)
+        run: flutter build windows --debug
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-windows-debug
+          # confirm path on first run; recent Flutter emits to .../x64/runner/Debug
+          path: app/build/windows/x64/runner/Debug/
+          if-no-files-found: error
