@@ -14,6 +14,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   Windows desktop build, with the build outputs uploaded as workflow artifacts
   ([#18]).
 
+### Changed
+- Debug / `flutter run` builds now install under their own
+  `com.golfy.golfy_app.debug` application ID — with a `-debug` version suffix and
+  a "(debug)" launcher label — so development data sandboxes to a separate
+  app-private database and the debug build can coexist with a release install on
+  one device. This also removes the `INSTALL_FAILED_UPDATE_INCOMPATIBLE` data
+  loss when a signed release later replaces a `flutter run` build ([#23]).
+
 ## [0.0.3] - 2026-06-09
 
 Phase 3 (quality & polish) — the app now respects the system dark / light
@@ -114,3 +122,4 @@ Phase 1 — data layer and navigation shell.
 [#17]: https://github.com/aellington89/golfy/issues/17
 [#18]: https://github.com/aellington89/golfy/issues/18
 [#22]: https://github.com/aellington89/golfy/issues/22
+[#23]: https://github.com/aellington89/golfy/issues/23

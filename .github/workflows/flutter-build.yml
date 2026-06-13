@@ -52,6 +52,13 @@ jobs:
       - name: Build debug APK
         run: flutter build apk --debug
 
+      - name: Assert debug application ID    # #23: debug must carry the .debug suffix
+        run: |
+          AAPT=$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -name aapt2 | sort -V | tail -1)
+          PKG=$("$AAPT" dump badging build/app/outputs/flutter-apk/app-debug.apk | grep -oP "package: name='\K[^']+")
+          echo "Debug APK package: $PKG"
+          test "$PKG" = "com.golfy.golfy_app.debug"
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

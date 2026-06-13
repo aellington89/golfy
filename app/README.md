@@ -34,6 +34,13 @@ flutter run -d <android-device-id>      # Android debug build (flutter devices t
 dart run build_runner watch             # regenerate on file change
 ```
 
+On Android, debug builds (`flutter run`, `flutter build apk --debug`) install as
+`com.golfy.golfy_app.debug` with a "(debug)" launcher label, while
+`flutter build apk --release` installs the canonical `com.golfy.golfy_app`. The
+two sandbox to separate databases and install side-by-side; if you still have a
+pre-suffix combined debug install, clear it once with
+`adb uninstall com.golfy.golfy_app`.
+
 ## Project layout
 
 ```
