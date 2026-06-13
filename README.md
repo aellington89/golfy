@@ -55,8 +55,13 @@ Phase 4 (release) — CI debug-APK builds and the v0.1.0 checklist — is next.
 - **intl** — locale-aware date formatting in the UI
 - **SQLite** — embedded local-only storage; no network, no sync
 
-The database file lives at `~/.golfy/golfy.db` (Windows:
-`%USERPROFILE%\.golfy\golfy.db`). Nothing is ever sent over the network.
+The database is a single SQLite file, `golfy.sqlite`, kept in the app's private
+documents directory — nothing is ever sent over the network. On Android each
+build variant sandboxes to its own database under its application ID: the
+release build at `…/com.golfy.golfy_app/…` and the debug build at
+`…/com.golfy.golfy_app.debug/…`, so development data never mixes with a real
+install ([#23](https://github.com/aellington89/golfy/issues/23)). On Windows both
+build modes share `%USERPROFILE%\Documents\golfy.sqlite`.
 
 ## Data model
 

@@ -23,6 +23,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Default launcher label; the debug build type overrides it below.
+        manifestPlaceholders["appLabel"] = "golfy_app"
     }
 
     buildTypes {
@@ -30,6 +32,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+        }
+        debug {
+            // Give debug / `flutter run` builds their own application ID so dev
+            // data sandboxes to a separate app-private database and the debug
+            // build can coexist with a real release install on one device (#23).
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            manifestPlaceholders["appLabel"] = "golfy_app (debug)"
         }
     }
 }
