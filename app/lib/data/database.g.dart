@@ -354,6 +354,17 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _migrationCanaryMeta = const VerificationMeta(
+    'migrationCanary',
+  );
+  @override
+  late final GeneratedColumn<String> migrationCanary = GeneratedColumn<String>(
+    'migration_canary',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -365,6 +376,7 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
     windSpeedMph,
     difficulty,
     notes,
+    migrationCanary,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -439,6 +451,15 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('migration_canary')) {
+      context.handle(
+        _migrationCanaryMeta,
+        migrationCanary.isAcceptableOrUnknown(
+          data['migration_canary']!,
+          _migrationCanaryMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -488,6 +509,10 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      migrationCanary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}migration_canary'],
+      ),
     );
   }
 
@@ -507,6 +532,12 @@ class Round extends DataClass implements Insertable<Round> {
   final int? windSpeedMph;
   final String? difficulty;
   final String? notes;
+
+  /// Inert column added in schema v2 to prove the drift migration pipeline
+  /// end to end (#24). It carries no behaviour and is intentionally nullable so
+  /// the upgrade is a plain `addColumn`. A later real migration (e.g. #22) may
+  /// drop it.
+  final String? migrationCanary;
   const Round({
     required this.id,
     required this.date,
@@ -517,6 +548,7 @@ class Round extends DataClass implements Insertable<Round> {
     this.windSpeedMph,
     this.difficulty,
     this.notes,
+    this.migrationCanary,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -539,6 +571,9 @@ class Round extends DataClass implements Insertable<Round> {
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || migrationCanary != null) {
+      map['migration_canary'] = Variable<String>(migrationCanary);
     }
     return map;
   }
@@ -564,6 +599,9 @@ class Round extends DataClass implements Insertable<Round> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      migrationCanary: migrationCanary == null && nullToAbsent
+          ? const Value.absent()
+          : Value(migrationCanary),
     );
   }
 
@@ -582,6 +620,7 @@ class Round extends DataClass implements Insertable<Round> {
       windSpeedMph: serializer.fromJson<int?>(json['windSpeedMph']),
       difficulty: serializer.fromJson<String?>(json['difficulty']),
       notes: serializer.fromJson<String?>(json['notes']),
+      migrationCanary: serializer.fromJson<String?>(json['migrationCanary']),
     );
   }
   @override
@@ -597,6 +636,7 @@ class Round extends DataClass implements Insertable<Round> {
       'windSpeedMph': serializer.toJson<int?>(windSpeedMph),
       'difficulty': serializer.toJson<String?>(difficulty),
       'notes': serializer.toJson<String?>(notes),
+      'migrationCanary': serializer.toJson<String?>(migrationCanary),
     };
   }
 
@@ -610,6 +650,7 @@ class Round extends DataClass implements Insertable<Round> {
     Value<int?> windSpeedMph = const Value.absent(),
     Value<String?> difficulty = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> migrationCanary = const Value.absent(),
   }) => Round(
     id: id ?? this.id,
     date: date ?? this.date,
@@ -620,6 +661,9 @@ class Round extends DataClass implements Insertable<Round> {
     windSpeedMph: windSpeedMph.present ? windSpeedMph.value : this.windSpeedMph,
     difficulty: difficulty.present ? difficulty.value : this.difficulty,
     notes: notes.present ? notes.value : this.notes,
+    migrationCanary: migrationCanary.present
+        ? migrationCanary.value
+        : this.migrationCanary,
   );
   Round copyWithCompanion(RoundsCompanion data) {
     return Round(
@@ -638,6 +682,9 @@ class Round extends DataClass implements Insertable<Round> {
           ? data.difficulty.value
           : this.difficulty,
       notes: data.notes.present ? data.notes.value : this.notes,
+      migrationCanary: data.migrationCanary.present
+          ? data.migrationCanary.value
+          : this.migrationCanary,
     );
   }
 
@@ -652,7 +699,8 @@ class Round extends DataClass implements Insertable<Round> {
           ..write('weather: $weather, ')
           ..write('windSpeedMph: $windSpeedMph, ')
           ..write('difficulty: $difficulty, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('migrationCanary: $migrationCanary')
           ..write(')'))
         .toString();
   }
@@ -668,6 +716,7 @@ class Round extends DataClass implements Insertable<Round> {
     windSpeedMph,
     difficulty,
     notes,
+    migrationCanary,
   );
   @override
   bool operator ==(Object other) =>
@@ -681,7 +730,8 @@ class Round extends DataClass implements Insertable<Round> {
           other.weather == this.weather &&
           other.windSpeedMph == this.windSpeedMph &&
           other.difficulty == this.difficulty &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.migrationCanary == this.migrationCanary);
 }
 
 class RoundsCompanion extends UpdateCompanion<Round> {
@@ -694,6 +744,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
   final Value<int?> windSpeedMph;
   final Value<String?> difficulty;
   final Value<String?> notes;
+  final Value<String?> migrationCanary;
   const RoundsCompanion({
     this.id = const Value.absent(),
     this.date = const Value.absent(),
@@ -704,6 +755,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     this.windSpeedMph = const Value.absent(),
     this.difficulty = const Value.absent(),
     this.notes = const Value.absent(),
+    this.migrationCanary = const Value.absent(),
   });
   RoundsCompanion.insert({
     this.id = const Value.absent(),
@@ -715,6 +767,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     this.windSpeedMph = const Value.absent(),
     this.difficulty = const Value.absent(),
     this.notes = const Value.absent(),
+    this.migrationCanary = const Value.absent(),
   }) : date = Value(date),
        courseId = Value(courseId);
   static Insertable<Round> custom({
@@ -727,6 +780,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     Expression<int>? windSpeedMph,
     Expression<String>? difficulty,
     Expression<String>? notes,
+    Expression<String>? migrationCanary,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -738,6 +792,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
       if (windSpeedMph != null) 'wind_speed_mph': windSpeedMph,
       if (difficulty != null) 'difficulty': difficulty,
       if (notes != null) 'notes': notes,
+      if (migrationCanary != null) 'migration_canary': migrationCanary,
     });
   }
 
@@ -751,6 +806,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     Value<int?>? windSpeedMph,
     Value<String?>? difficulty,
     Value<String?>? notes,
+    Value<String?>? migrationCanary,
   }) {
     return RoundsCompanion(
       id: id ?? this.id,
@@ -762,6 +818,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
       windSpeedMph: windSpeedMph ?? this.windSpeedMph,
       difficulty: difficulty ?? this.difficulty,
       notes: notes ?? this.notes,
+      migrationCanary: migrationCanary ?? this.migrationCanary,
     );
   }
 
@@ -795,6 +852,9 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (migrationCanary.present) {
+      map['migration_canary'] = Variable<String>(migrationCanary.value);
+    }
     return map;
   }
 
@@ -809,7 +869,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
           ..write('weather: $weather, ')
           ..write('windSpeedMph: $windSpeedMph, ')
           ..write('difficulty: $difficulty, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('migrationCanary: $migrationCanary')
           ..write(')'))
         .toString();
   }
@@ -2166,6 +2227,7 @@ typedef $$RoundsTableCreateCompanionBuilder =
       Value<int?> windSpeedMph,
       Value<String?> difficulty,
       Value<String?> notes,
+      Value<String?> migrationCanary,
     });
 typedef $$RoundsTableUpdateCompanionBuilder =
     RoundsCompanion Function({
@@ -2178,6 +2240,7 @@ typedef $$RoundsTableUpdateCompanionBuilder =
       Value<int?> windSpeedMph,
       Value<String?> difficulty,
       Value<String?> notes,
+      Value<String?> migrationCanary,
     });
 
 final class $$RoundsTableReferences
@@ -2266,6 +2329,11 @@ class $$RoundsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get migrationCanary => $composableBuilder(
+    column: $table.migrationCanary,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2367,6 +2435,11 @@ class $$RoundsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get migrationCanary => $composableBuilder(
+    column: $table.migrationCanary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CoursesTableOrderingComposer get courseId {
     final $$CoursesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2429,6 +2502,11 @@ class $$RoundsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get migrationCanary => $composableBuilder(
+    column: $table.migrationCanary,
+    builder: (column) => column,
+  );
 
   $$CoursesTableAnnotationComposer get courseId {
     final $$CoursesTableAnnotationComposer composer = $composerBuilder(
@@ -2516,6 +2594,7 @@ class $$RoundsTableTableManager
                 Value<int?> windSpeedMph = const Value.absent(),
                 Value<String?> difficulty = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> migrationCanary = const Value.absent(),
               }) => RoundsCompanion(
                 id: id,
                 date: date,
@@ -2526,6 +2605,7 @@ class $$RoundsTableTableManager
                 windSpeedMph: windSpeedMph,
                 difficulty: difficulty,
                 notes: notes,
+                migrationCanary: migrationCanary,
               ),
           createCompanionCallback:
               ({
@@ -2538,6 +2618,7 @@ class $$RoundsTableTableManager
                 Value<int?> windSpeedMph = const Value.absent(),
                 Value<String?> difficulty = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> migrationCanary = const Value.absent(),
               }) => RoundsCompanion.insert(
                 id: id,
                 date: date,
@@ -2548,6 +2629,7 @@ class $$RoundsTableTableManager
                 windSpeedMph: windSpeedMph,
                 difficulty: difficulty,
                 notes: notes,
+                migrationCanary: migrationCanary,
               ),
           withReferenceMapper: (p0) => p0
               .map(

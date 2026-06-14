@@ -13,6 +13,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   `master` runs the test suite and builds a debug Android APK on Linux, plus a
   Windows desktop build, with the build outputs uploaded as workflow artifacts
   ([#18]).
+- Drift schema-migration harness: a step-based `onUpgrade`, committed per-version
+  schema snapshots under `app/drift_schemas/`, generated migration test helpers,
+  and a `migration_test.dart` suite that validates each upgrade and that data
+  survives it — plus a documented workflow for future schema changes ([#24]).
+- Release signing configuration: `android/key.properties` drives a real release
+  `signingConfig` (falling back to debug signing when absent), with a committed
+  `key.properties.example` template and docs noting the keystore is
+  upgrade-critical and must be retained ([#24]).
 
 ### Changed
 - Debug / `flutter run` builds now install under their own
@@ -21,6 +29,9 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   app-private database and the debug build can coexist with a release install on
   one device. This also removes the `INSTALL_FAILED_UPDATE_INCOMPATIBLE` data
   loss when a signed release later replaces a `flutter run` build ([#23]).
+- Bumped the drift `schemaVersion` to 2, adding an inert `rounds.migration_canary`
+  column, to exercise the new migration pipeline end to end before the first real
+  schema change ([#24]).
 
 ## [0.0.3] - 2026-06-09
 
@@ -123,3 +134,4 @@ Phase 1 — data layer and navigation shell.
 [#18]: https://github.com/aellington89/golfy/issues/18
 [#22]: https://github.com/aellington89/golfy/issues/22
 [#23]: https://github.com/aellington89/golfy/issues/23
+[#24]: https://github.com/aellington89/golfy/issues/24

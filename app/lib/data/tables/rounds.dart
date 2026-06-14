@@ -16,6 +16,12 @@ class Rounds extends Table {
   TextColumn get difficulty => text().nullable()();
   TextColumn get notes => text().nullable()();
 
+  /// Inert column added in schema v2 to prove the drift migration pipeline
+  /// end to end (#24). It carries no behaviour and is intentionally nullable so
+  /// the upgrade is a plain `addColumn`. A later real migration (e.g. #22) may
+  /// drop it.
+  TextColumn get migrationCanary => text().nullable()();
+
   @override
   List<Set<Column>> get uniqueKeys => [
         {date, courseId, roundNumber},

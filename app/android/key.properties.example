@@ -1,0 +1,26 @@
+# Release signing configuration for the Android app.
+#
+# Copy this file to `key.properties` (same directory), fill in real values, and
+# keep BOTH the keystore (*.jks) and `key.properties` out of version control
+# (already covered by android/.gitignore). When `key.properties` is absent the
+# release build falls back to debug signing, so this template is only needed to
+# produce a real, distributable signed build.
+#
+# Generate a keystore once with:
+#   keytool -genkey -v -keystore golfy-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias golfy
+#
+# !! UPGRADE-CRITICAL !!  Back up the keystore file and these credentials
+# securely. The SAME keystore must sign every future release — a different
+# signing certificate blocks in-place `adb install -r` updates and forces an
+# uninstall that wipes all user data. See the "Release signing" sections in
+# README.md and app/README.md.
+
+# Password for the keystore file.
+storePassword=changeme
+# Password for the key alias (often the same as storePassword).
+keyPassword=changeme
+# The alias passed to keytool via -alias.
+keyAlias=golfy
+# Path to the keystore. Absolute, or relative to the android/ directory.
+# On Windows use forward slashes, e.g. C:/Users/you/keys/golfy-release.jks
+storeFile=/path/to/golfy-release.jks
