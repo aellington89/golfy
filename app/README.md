@@ -130,7 +130,7 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (170 tests)
+flutter test                           # everything (173 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
@@ -157,6 +157,79 @@ don't have to run `build_runner` before running tests.
 If you see a `*.g.dart` diff after editing a table or DAO, that's expected —
 run `dart run build_runner build` and commit the regenerated file alongside
 your source change.
+
+## Database migrations
+
+The drift schema is versioned by `GolfyDatabase.schemaVersion`, and each version
+is captured as a committed JSON snapshot under [`drift_schemas/`](drift_schemas)
+so migrations can be generated and tested. The step-based `onUpgrade` in
+[`database.dart`](lib/data/database.dart) is wired through the generated
+[`schema_versions.dart`](lib/data/schema_versions.dart), and
+[`test/migration_test.dart`](test/migration_test.dart) proves every upgrade.
+
+To change the schema (add/alter a column, table, or index):
+
+1. **Snapshot the current schema first**, before editing, so the *old* version
+   is recorded:
+   ```powershell
+   dart run drift_dev schema dump lib/data/database.dart drift_schemas/
+   ```
+2. **Make the change** under `lib/data/tables/`, **bump** `schemaVersion` in
+   `database.dart`, then regenerate drift code:
+   ```powershell
+   dart run build_runner build
+   ```
+3. **Snapshot the new schema**:
+   ```powershell
+   dart run drift_dev schema dump lib/data/database.dart drift_schemas/
+   ```
+4. **Regenerate the migration helpers** (runtime step helper + test verifiers):
+   ```powershell
+   dart run drift_dev schema steps drift_schemas/ lib/data/schema_versions.dart
+   dart run drift_dev schema generate --data-classes --companions drift_schemas/ test/generated_migrations/
+   ```
+5. **Add the step** to `onUpgrade` in `database.dart`, e.g.:
+   ```dart
+   from2To3: (m, schema) async {
+     await m.addColumn(schema.holeResults, schema.holeResults.someColumn);
+   },
+   ```
+6. **Extend** `test/migration_test.dart` with a `migrateAndValidate(db, N)` case
+   (plus a data-preservation case for anything that transforms existing rows),
+   then run `flutter test test/migration_test.dart`.
+
+The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
+`test/generated_migrations/` are **committed**, like the other generated files.
+
+> The v2 schema carries an inert `rounds.migration_canary` column — a throwaway
+> added to prove this pipeline end to end
+> ([#24](https://github.com/aellington89/golfy/issues/24)). A later real
+> migration may drop it.
+
+## Release signing
+
+Debug builds are signed with the local Android debug key. **Release** builds are
+signed with a real keystore configured via `android/key.properties` (git-ignored).
+When that file is absent — CI, a fresh clone, or `flutter run --release` — the
+release build falls back to debug signing, so it still succeeds; it just isn't
+distributable.
+
+To produce a real signed release build:
+
+1. Generate a keystore once (then guard it — see the warning):
+   ```powershell
+   keytool -genkey -v -keystore golfy-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias golfy
+   ```
+2. Copy [`android/key.properties.example`](android/key.properties.example) to
+   `android/key.properties` and fill in the alias, passwords, and `storeFile`.
+3. `flutter build apk --release` now signs with that keystore — verify with
+   `apksigner verify --print-certs <apk>`.
+
+> **The release keystore is upgrade-critical.** Android only allows an in-place
+> update (`adb install -r`, store updates) when the new build is signed with the
+> **same** certificate. Lose or rotate the keystore and every existing install
+> must be uninstalled first — wiping all user data. Back up `golfy-release.jks`
+> **and** `key.properties` somewhere durable and reuse them for every release.
 
 ## Continuous integration
 

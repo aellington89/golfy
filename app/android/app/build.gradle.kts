@@ -1,7 +1,22 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing is configured via `android/key.properties` (kept out of
+// version control). When that file is absent — CI, a fresh clone, or
+// `flutter run --release` without the keystore — the release build falls back
+// to debug signing so it still succeeds. The real keystore is upgrade-critical:
+// it must be backed up and reused for every release, or in-place updates break
+// and users lose their data (#24, #19).
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -27,11 +42,29 @@ android {
         manifestPlaceholders["appLabel"] = "golfy_app"
     }
 
+    signingConfigs {
+        create("release") {
+            // Populated from key.properties when present; left empty otherwise
+            // (the release build type falls back to debug signing below).
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sign with the real release keystore when configured (key.properties),
+            // otherwise fall back to debug signing so CI and `flutter run --release`
+            // keep working without the secret keystore.
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
             // Give debug / `flutter run` builds their own application ID so dev

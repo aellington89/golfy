@@ -92,10 +92,17 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 170 passing tests
+flutter test                           # 173 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
+
+> **Releasing to Android?** Release builds are signed with a retained,
+> **upgrade-critical** keystore — see
+> [Release signing](app/README.md#release-signing). A different signing
+> certificate on a later release blocks in-place updates and forces an
+> uninstall that wipes user data, so the keystore must be backed up and reused
+> for every release.
 
 ## Repository layout
 

@@ -5,6 +5,7 @@ import 'daos/course_dao.dart';
 import 'daos/dashboard_dao.dart';
 import 'daos/hole_result_dao.dart';
 import 'daos/round_dao.dart';
+import 'schema_versions.dart';
 import 'tables/courses.dart';
 import 'tables/hole_results.dart';
 import 'tables/rounds.dart';
@@ -21,11 +22,17 @@ class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
+        onUpgrade: stepByStep(
+          // v1 -> v2: add the inert migration-canary column to `rounds` (#24).
+          from1To2: (m, schema) async {
+            await m.addColumn(schema.rounds, schema.rounds.migrationCanary);
+          },
+        ),
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
