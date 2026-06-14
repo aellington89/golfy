@@ -231,6 +231,16 @@ To produce a real signed release build:
 > must be uninstalled first — wiping all user data. Back up `golfy-release.jks`
 > **and** `key.properties` somewhere durable and reuse them for every release.
 
+### CI release builds
+
+The [`release.yml`](../.github/workflows/release.yml) workflow rebuilds this
+signing config on the runner from four repository secrets —
+`ANDROID_KEYSTORE_BASE64` (the base64-encoded `.jks`), `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_PASSWORD`, and `ANDROID_KEY_ALIAS` — so a `v*` tag push produces a
+signed APK without the keystore ever entering the repo. **These secrets are not a
+backup:** keep the offline copy of `golfy-release.jks` and its passwords, since
+losing them blocks every future in-place update.
+
 ## Continuous integration
 
 Every push and pull request to `master` runs
@@ -242,6 +252,15 @@ Every push and pull request to `master` runs
   SQLite, and the committed `*.g.dart` files mean CI never runs `build_runner`.
 - **Windows job** — `flutter build windows --debug` (build-only; the test suite
   runs once, on the Linux job).
+
+Releases are handled by a separate workflow,
+[`.github/workflows/release.yml`](../.github/workflows/release.yml): pushing a
+`v*.*.*` tag runs the test suite, builds a **signed** release APK from the
+`ANDROID_*` secrets (see [Release signing](#release-signing)), asserts it is
+release-signed and under 20 MB, and attaches it to a **draft** GitHub Release to
+publish after on-device validation. A manual `workflow_dispatch` run does the
+same build but uploads the APK as an artifact instead of creating a Release — use
+it to dry-run the signing pipeline before tagging.
 
 The Flutter SDK is **pinned** (`flutter-version: 3.44.0`) for reproducible runs —
 bump it in the workflow in lockstep with local Flutter upgrades, keeping it at or

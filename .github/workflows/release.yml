@@ -1,0 +1,100 @@
+# .github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']        # e.g. v0.1.0 -> build + verify + draft GitHub Release
+  workflow_dispatch:        # dry-run: build + verify + upload artifact, no Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write           # create the GitHub Release
+
+jobs:
+  release:                        # Linux: tests + signed Android release APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app    # all run: steps execute in app/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Android/Gradle toolchain)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0   # matches local + flutter-build.yml
+          channel: stable
+          cache: true
+
+      - name: Install native sqlite3 (drift NativeDatabase in tests)
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Test gate
+        run: flutter test
+
+      - name: Write release signing config from secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "ERROR: ANDROID_KEYSTORE_BASE64 secret is empty — cannot sign release"; exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/golfy-release.jks"
+          # android/key.properties == rootProject.file("key.properties") read by build.gradle.kts
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n' \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" "$RUNNER_TEMP/golfy-release.jks" \
+            > android/key.properties
+
+      - name: Build signed release APK
+        run: flutter build apk --release
+
+      - name: Verify release build, signature, and size
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk   # confirm path on first run
+          BT=$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -maxdepth 1 -type d | sort -V | tail -1)
+          PKG=$("$BT/aapt2" dump badging "$APK" | grep -oP "package: name='\K[^']+")
+          echo "Release APK package: $PKG"
+          test "$PKG" = "com.golfy.golfy_app"   # #23: release must NOT carry the .debug suffix
+          CERTS=$("$BT/apksigner" verify --print-certs "$APK")
+          echo "$CERTS"
+          if echo "$CERTS" | grep -q "CN=Android Debug"; then
+            echo "ERROR: release APK is debug-signed — keystore secret missing/invalid"; exit 1
+          fi
+          SIZE=$(stat -c%s "$APK")
+          echo "APK size: $((SIZE / 1024 / 1024)) MB"
+          test "$SIZE" -lt 20971520              # < 20 MB (issue #19 criterion)
+          cp "$APK" "build/golfy-${GITHUB_REF_NAME}.apk"
+
+      - name: Upload APK artifact (dry-run only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: golfy-release-apk
+          # path is workspace-root-relative (NOT affected by working-directory)
+          path: app/build/golfy-*.apk
+          if-no-files-found: error
+
+      - name: Create draft GitHub Release (tag push only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true                 # publish after on-device validation
+          prerelease: false           # v0.1.0 is the first stable release
+          generate_release_notes: true
+          name: Golfy ${{ github.ref_name }}
+          files: app/build/golfy-${{ github.ref_name }}.apk
