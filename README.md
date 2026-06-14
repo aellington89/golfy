@@ -4,7 +4,7 @@
 > EA Sports PGA Tour, and similar titles) — not real-world golf. Built with
 > Flutter for Android phones and Windows desktop from a single codebase.
 
-[![status](https://img.shields.io/badge/status-pre--release-orange)](https://github.com/aellington89/golfy/releases)
+[![status](https://img.shields.io/badge/status-stable-brightgreen)](https://github.com/aellington89/golfy/releases)
 [![CI](https://github.com/aellington89/golfy/actions/workflows/flutter-build.yml/badge.svg)](https://github.com/aellington89/golfy/actions/workflows/flutter-build.yml)
 [![flutter](https://img.shields.io/badge/flutter-3.x-blue)](https://flutter.dev)
 [![license](https://img.shields.io/badge/license-private-lightgrey)](#license)
@@ -20,32 +20,37 @@ statistic from it. That means a new stat is always one query away, not a
 schema migration.
 
 The data layer landed first (v0.0.1), then all three screens — round
-management, hole-by-hole entry, and the lifetime dashboard (v0.0.2). This
-release (v0.0.3) polishes them to a finished feel: system theming, empty states
-everywhere, and editing of completed rounds.
+management, hole-by-hole entry, and the lifetime dashboard (v0.0.2), polished to
+a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
+completed rounds). **v0.1.0** is the first stable release: a signed APK you can
+sideload and upgrade in place.
 
-## Status — v0.0.3
+## Status — v0.1.0
 
-Phase 3 of the [roadmap](https://github.com/aellington89/golfy/issues/1)
-is complete — the v0.0.2 feature set is now polished to a finished feel, with
-quality tests, system theming, and editing of completed rounds:
+Phase 4 of the [roadmap](https://github.com/aellington89/golfy/issues/1) is
+complete — **v0.1.0 is Golfy's first stable release**: a signed Android APK,
+built and published by CI, that upgrades in place over future versions:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
-| Dashboard stat-query tests | [#15](https://github.com/aellington89/golfy/issues/15) | Unit coverage for every lifetime-stat aggregation, incl. division-by-zero, par-3 fairway exclusion, and best-round ties |
-| Empty states, theming & colour | [#16](https://github.com/aellington89/golfy/issues/16) | Icon-led empty states via a shared `EmptyState` widget, system dark/light theme, and brightness-aware score colours (input validation shipped earlier in v0.0.2) |
-| Edit a completed round | [#17](https://github.com/aellington89/golfy/issues/17) | Re-open any round from its scorecard with all 18 holes pre-filled; in-place upsert and a contextual Finish / Done action |
+| Debug-APK CI | [#18](https://github.com/aellington89/golfy/issues/18) | Every push/PR to `master` runs the tests and builds a debug APK plus a Windows desktop build as artifacts |
+| Debug build isolation | [#23](https://github.com/aellington89/golfy/issues/23) | Debug builds install under a `.debug` application ID so dev data sandboxes away from a real install |
+| Migrations & signing | [#24](https://github.com/aellington89/golfy/issues/24) | Step-based drift schema migrations (data survives upgrades) and a retained, upgrade-critical release keystore |
+| Signed-APK release | [#19](https://github.com/aellington89/golfy/issues/19) | A `v*` tag builds, verifies, and publishes a signed release APK to a draft GitHub Release |
 
-Phase 2 (course/round management, hole entry, scorecard, and the lifetime
-dashboard — issues [#8](https://github.com/aellington89/golfy/issues/8)–[#14](https://github.com/aellington89/golfy/issues/14))
-shipped in **v0.0.2**, and Phase 1 (data model, DAOs, repository, and app shell
-— issues [#3](https://github.com/aellington89/golfy/issues/3)–[#7](https://github.com/aellington89/golfy/issues/7))
+Earlier phases: Phase 3 polish — quality tests, system theming, and round
+editing (issues [#15](https://github.com/aellington89/golfy/issues/15)–[#17](https://github.com/aellington89/golfy/issues/17))
+— shipped in **v0.0.3**; Phase 2 core features
+([#8](https://github.com/aellington89/golfy/issues/8)–[#14](https://github.com/aellington89/golfy/issues/14))
+in **v0.0.2**; and Phase 1 data layer + app shell
+([#3](https://github.com/aellington89/golfy/issues/3)–[#7](https://github.com/aellington89/golfy/issues/7))
 in **v0.0.1**. See [`CHANGELOG.md`](CHANGELOG.md) for the full release history.
 
-What is **not** yet captured: per-hole course-yardage columns (yards, drive /
-approach distance, tee club) are deliberately deferred to
-[#22](https://github.com/aellington89/golfy/issues/22). With Phase 3 done,
-Phase 4 (release) — CI debug-APK builds and the v0.1.0 checklist — is next.
+What is **not** yet captured: importing the historical
+[`golf_stats.xlsx`](https://github.com/aellington89/golfy/issues/20) data, and
+per-hole course-yardage columns (yards, drive / approach distance, tee club —
+[#22](https://github.com/aellington89/golfy/issues/22)). Both are open for a
+future release.
 
 ## Stack
 
@@ -102,7 +107,9 @@ flutter run -d <android-device-id>     # Android
 > [Release signing](app/README.md#release-signing). A different signing
 > certificate on a later release blocks in-place updates and forces an
 > uninstall that wipes user data, so the keystore must be backed up and reused
-> for every release.
+> for every release. Releases are cut by pushing a `v*` tag: CI builds the signed
+> APK and drafts a GitHub Release — see
+> [Continuous integration](app/README.md#continuous-integration).
 
 ## Repository layout
 
@@ -131,7 +138,7 @@ Phases:
 - **Phase 1** ✓ Foundation — data model, DAOs, and app shell (v0.0.1)
 - **Phase 2** ✓ Core features — course/round management, hole entry, scorecard, and the lifetime dashboard (v0.0.2)
 - **Phase 3** ✓ Quality & polish (v0.0.3) — dashboard stat-query tests ([#15](https://github.com/aellington89/golfy/issues/15)), empty states + input validation + dark/light theme ([#16](https://github.com/aellington89/golfy/issues/16)), and editing a completed round's holes ([#17](https://github.com/aellington89/golfy/issues/17))
-- **Phase 4** Release — CI debug-APK builds ([#18](https://github.com/aellington89/golfy/issues/18)), the v0.1.0 release checklist ([#19](https://github.com/aellington89/golfy/issues/19)), debug-id build config ([#23](https://github.com/aellington89/golfy/issues/23)), and schema-migration + keystore hardening ([#24](https://github.com/aellington89/golfy/issues/24))
+- **Phase 4** ✓ Release (v0.1.0) — CI debug-APK builds ([#18](https://github.com/aellington89/golfy/issues/18)), debug-id build config ([#23](https://github.com/aellington89/golfy/issues/23)), schema-migration + keystore hardening ([#24](https://github.com/aellington89/golfy/issues/24)), and the signed-APK release pipeline ([#19](https://github.com/aellington89/golfy/issues/19))
 
 ## History
 

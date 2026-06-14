@@ -8,7 +8,18 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-14
+
+Phase 4 (release) — Golfy's first stable release. Pushing a `v*` tag now builds,
+verifies, and publishes a **signed** Android APK via CI, completing the release
+pipeline atop the migration-safe upgrades and retained keystore from v0.0.x.
+
 ### Added
+- Tag-triggered release workflow (`.github/workflows/release.yml`): a `v*.*.*`
+  tag builds a signed release APK, asserts it is release-signed (not debug) and
+  under 20 MB, and attaches it to a **draft** GitHub Release to publish after
+  on-device validation; `workflow_dispatch` runs the same build as an artifact
+  dry-run ([#19]).
 - Continuous integration via GitHub Actions: every push and pull request to
   `master` runs the test suite and builds a debug Android APK on Linux, plus a
   Windows desktop build, with the build outputs uploaded as workflow artifacts
@@ -112,7 +123,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/aellington89/golfy/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/aellington89/golfy/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/aellington89/golfy/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/aellington89/golfy/releases/tag/v0.0.1
@@ -132,6 +144,7 @@ Phase 1 — data layer and navigation shell.
 [#16]: https://github.com/aellington89/golfy/issues/16
 [#17]: https://github.com/aellington89/golfy/issues/17
 [#18]: https://github.com/aellington89/golfy/issues/18
+[#19]: https://github.com/aellington89/golfy/issues/19
 [#22]: https://github.com/aellington89/golfy/issues/22
 [#23]: https://github.com/aellington89/golfy/issues/23
 [#24]: https://github.com/aellington89/golfy/issues/24
