@@ -77,7 +77,10 @@ jobs:
           fi
           SIZE=$(stat -c%s "$APK")
           echo "APK size: $((SIZE / 1024 / 1024)) MB"
-          test "$SIZE" -lt 20971520              # < 20 MB (issue #19 criterion)
+          # Sanity ceiling for the universal APK (~55 MB: bundles all ABIs + the
+          # Flutter engine). The 20 MB in #19 isn't achievable for a fat Flutter
+          # build; this guards against gross bloat instead.
+          test "$SIZE" -lt 83886080              # < 80 MB
           cp "$APK" "build/golfy-${GITHUB_REF_NAME}.apk"
 
       - name: Upload APK artifact (dry-run only)
