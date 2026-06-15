@@ -15,22 +15,6 @@ class CourseDao extends DatabaseAccessor<GolfyDatabase> with _$CourseDaoMixin {
   Future<int> insert(CoursesCompanion course) =>
       into(courses).insert(course);
 
-  /// Returns the id of the course identified by (`name`, `gameTitle`),
-  /// inserting it first if it does not yet exist. Idempotent — re-running
-  /// against an existing course returns the same id without creating a
-  /// duplicate (relies on the schema-level UNIQUE(name, gameTitle) and
-  /// `INSERT OR IGNORE`). Both `name` and `gameTitle` must be set on the
-  /// companion. Used by the bulk importer.
-  Future<int> getOrCreate(CoursesCompanion course) async {
-    await into(courses).insert(course, mode: InsertMode.insertOrIgnore);
-    final row = await (select(courses)
-          ..where((c) =>
-              c.name.equals(course.name.value) &
-              c.gameTitle.equals(course.gameTitle.value)))
-        .getSingle();
-    return row.id;
-  }
-
   /// Reactive list of every course, ordered by game title then course name.
   Stream<List<Course>> watchAll() {
     return (select(courses)

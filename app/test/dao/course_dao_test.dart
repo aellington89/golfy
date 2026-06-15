@@ -104,42 +104,4 @@ void main() {
       await sub.cancel();
     });
   });
-
-  group('CourseDao.getOrCreate', () {
-    CoursesCompanion company({
-      String name = 'Pebble',
-      String game = 'PGA 2K25',
-    }) =>
-        CoursesCompanion.insert(name: name, gameTitle: game);
-
-    test('inserts when absent and returns a positive id', () async {
-      final id = await db.courseDao.getOrCreate(company());
-      expect(id, isPositive);
-      expect(await db.courseDao.watchAll().first, hasLength(1));
-    });
-
-    test('returns the same id and creates no duplicate when present',
-        () async {
-      final first = await db.courseDao.getOrCreate(company());
-      final second = await db.courseDao.getOrCreate(company());
-      expect(second, first);
-      expect(await db.courseDao.watchAll().first, hasLength(1));
-    });
-
-    test('returns the id of a course inserted earlier via insert()', () async {
-      final inserted =
-          await fx.insertCourse(name: 'Pebble', gameTitle: 'PGA 2K25');
-      final got = await db.courseDao.getOrCreate(company());
-      expect(got, inserted);
-    });
-
-    test('distinguishes courses that share a name across game titles',
-        () async {
-      final a = await db.courseDao.getOrCreate(company(game: 'PGA 2K25'));
-      final b =
-          await db.courseDao.getOrCreate(company(game: 'EA Sports PGA Tour'));
-      expect(b, isNot(a));
-      expect(await db.courseDao.watchAll().first, hasLength(2));
-    });
-  });
 }

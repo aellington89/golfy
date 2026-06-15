@@ -8,14 +8,9 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
-### Added
-- One-time historical-data import tooling for `golf_stats.xlsx` ([#33]): a
-  standalone Dart converter under [`tools/import/`](tools/import/) that turns the
-  "Per Hole Tracker" sheet into a `golfy_import.json` payload (grouping rows into
-  rounds by date / course / round number), plus reusable `CourseDao.getOrCreate`
-  and `RoundDao.getOrCreate` helpers that make a bulk import idempotent. The
-  in-app upload action used to load the payload on-device is a temporary
-  migration aid, removed once the import is confirmed.
+- Imported the historical `golf_stats.xlsx` data on-device via a one-time
+  migration tool (built and then removed under [#33]); the shipping app is
+  unchanged by it — no import UI and no migration code retained.
 
 ## [0.1.0] - 2026-06-14
 
