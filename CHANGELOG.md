@@ -8,6 +8,15 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+- One-time historical-data import tooling for `golf_stats.xlsx` ([#33]): a
+  standalone Dart converter under [`tools/import/`](tools/import/) that turns the
+  "Per Hole Tracker" sheet into a `golfy_import.json` payload (grouping rows into
+  rounds by date / course / round number), plus reusable `CourseDao.getOrCreate`
+  and `RoundDao.getOrCreate` helpers that make a bulk import idempotent. The
+  in-app upload action used to load the payload on-device is a temporary
+  migration aid, removed once the import is confirmed.
+
 ## [0.1.0] - 2026-06-14
 
 Phase 4 (release) — Golfy's first stable release. Pushing a `v*` tag now builds,
@@ -148,3 +157,4 @@ Phase 1 — data layer and navigation shell.
 [#22]: https://github.com/aellington89/golfy/issues/22
 [#23]: https://github.com/aellington89/golfy/issues/23
 [#24]: https://github.com/aellington89/golfy/issues/24
+[#33]: https://github.com/aellington89/golfy/issues/33

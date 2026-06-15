@@ -1,0 +1,17 @@
+name: golfy_import_tool
+description: >-
+  One-time converter from golf_stats.xlsx ("Per Hole Tracker" sheet) to
+  golfy_import.json, ingested by Golfy's temporary in-app importer (issue #33).
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  args: ^2.5.0
+  excel: ^4.0.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0

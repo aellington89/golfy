@@ -18,6 +18,25 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
   /// must reference an existing course (FK RESTRICT).
   Future<int> insert(RoundsCompanion round) => into(rounds).insert(round);
 
+  /// Returns the id of the round identified by (`date`, `courseId`,
+  /// `roundNumber`), inserting it first if it does not yet exist. Idempotent —
+  /// re-running returns the same id without creating a duplicate (relies on the
+  /// schema-level UNIQUE(date, courseId, roundNumber) and `INSERT OR IGNORE`).
+  /// `date` and `courseId` must be set; an absent `roundNumber` is treated as
+  /// the schema default of `1`. Used by the bulk importer.
+  Future<int> getOrCreate(RoundsCompanion round) async {
+    await into(rounds).insert(round, mode: InsertMode.insertOrIgnore);
+    final roundNumber =
+        round.roundNumber.present ? round.roundNumber.value : 1;
+    final row = await (select(rounds)
+          ..where((r) =>
+              r.date.equals(round.date.value) &
+              r.courseId.equals(round.courseId.value) &
+              r.roundNumber.equals(roundNumber)))
+        .getSingle();
+    return row.id;
+  }
+
   /// Looks up a single round by id. Returns null if no row matches.
   Future<Round?> getById(int id) {
     return (select(rounds)..where((r) => r.id.equals(id))).getSingleOrNull();

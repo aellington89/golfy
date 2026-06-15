@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -234,6 +235,54 @@ void main() {
 
       await fx.upsertHole(rid, 1, par: 4, score: 5);
       expect((await stream.first).single.relativeToPar, 1);
+    });
+  });
+
+  group('RoundDao.getOrCreate', () {
+    test('inserts when absent and returns a positive id', () async {
+      final cid = await fx.insertCourse();
+      final id = await db.roundDao.getOrCreate(
+        RoundsCompanion.insert(date: '2026-04-01', courseId: cid),
+      );
+      expect(id, isPositive);
+    });
+
+    test('returns the same id and creates no duplicate when present',
+        () async {
+      final cid = await fx.insertCourse();
+      final companion =
+          RoundsCompanion.insert(date: '2026-04-01', courseId: cid);
+      final first = await db.roundDao.getOrCreate(companion);
+      final second = await db.roundDao.getOrCreate(companion);
+      expect(second, first);
+      expect(await db.roundDao.watchAllWithCourse().first, hasLength(1));
+    });
+
+    test('matches a round created earlier via insert()', () async {
+      final cid = await fx.insertCourse();
+      final inserted = await fx.insertRound(cid, date: '2026-04-01');
+      final got = await db.roundDao.getOrCreate(
+        RoundsCompanion.insert(date: '2026-04-01', courseId: cid),
+      );
+      expect(got, inserted);
+    });
+
+    test('distinguishes rounds by roundNumber on the same date and course',
+        () async {
+      final cid = await fx.insertCourse();
+      // Omitted roundNumber falls back to the schema default of 1.
+      final r1 = await db.roundDao.getOrCreate(
+        RoundsCompanion.insert(date: '2026-04-01', courseId: cid),
+      );
+      final r2 = await db.roundDao.getOrCreate(
+        RoundsCompanion.insert(
+          date: '2026-04-01',
+          courseId: cid,
+          roundNumber: const Value(2),
+        ),
+      );
+      expect(r2, isNot(r1));
+      expect(await db.roundDao.watchAllWithCourse().first, hasLength(2));
     });
   });
 }

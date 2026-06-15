@@ -46,11 +46,12 @@ in **v0.0.2**; and Phase 1 data layer + app shell
 ([#3](https://github.com/aellington89/golfy/issues/3)–[#7](https://github.com/aellington89/golfy/issues/7))
 in **v0.0.1**. See [`CHANGELOG.md`](CHANGELOG.md) for the full release history.
 
-What is **not** yet captured: importing the historical
-[`golf_stats.xlsx`](https://github.com/aellington89/golfy/issues/20) data, and
-per-hole course-yardage columns (yards, drive / approach distance, tee club —
-[#22](https://github.com/aellington89/golfy/issues/22)). Both are open for a
-future release.
+The historical [`golf_stats.xlsx`](https://github.com/aellington89/golfy/issues/20)
+data was imported once, on-device, via a standalone converter
+([`tools/import/`](tools/import/), [#33](https://github.com/aellington89/golfy/issues/33));
+by design no import UI ships in the app. Still **not** captured: per-hole
+course-yardage columns (yards, drive / approach distance, tee club —
+[#22](https://github.com/aellington89/golfy/issues/22)), open for a future release.
 
 ## Stack
 
