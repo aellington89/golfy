@@ -13,6 +13,13 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   unchanged by it — no import UI and no migration code retained.
 
 ### Added
+- Event tracking: a round can now belong to a named **event** (tournament,
+  league, charity scramble, casual outing). Pick or create one from a typeahead
+  in the New Round dialog; the Rounds list groups rounds under per-event headers
+  (casual rounds fall under "No event"), and each event header shows — and lets
+  you edit — a structured result (finishing position, a tie, or missed cut).
+  Adds an `events` table and a nullable `rounds.event_id` foreign key
+  (`SET NULL` on delete) at schema v3 ([#35]).
 - Score-distribution card now shows each category's share of total holes as a
   prominent percentage above the raw count ([#39]).
 
@@ -157,4 +164,5 @@ Phase 1 — data layer and navigation shell.
 [#23]: https://github.com/aellington89/golfy/issues/23
 [#24]: https://github.com/aellington89/golfy/issues/24
 [#33]: https://github.com/aellington89/golfy/issues/33
+[#35]: https://github.com/aellington89/golfy/issues/35
 [#39]: https://github.com/aellington89/golfy/issues/39

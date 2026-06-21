@@ -1,9 +1,9 @@
-// Drift schema migration tests (#24).
+// Drift schema migration tests (#24, extended for #35).
 //
 // These prove the step-based `onUpgrade` harness end to end against drift's
 // generated schema snapshots in `test/generated_migrations/`:
-//   * the v1 -> v2 migration produces the expected schema,
-//   * data written at v1 survives the upgrade, and
+//   * each `vN -> vN+1` migration produces the expected schema,
+//   * data written at an old version survives the upgrade, and
 //   * a freshly created database matches the generated definitions.
 //
 // When the schema changes: bump `schemaVersion`, dump a new snapshot, add the
@@ -16,6 +16,7 @@ import 'package:golfy_app/data/database.dart';
 
 import 'generated_migrations/schema.dart';
 import 'generated_migrations/schema_v1.dart' as v1;
+import 'generated_migrations/schema_v2.dart' as v2;
 
 void main() {
   late SchemaVerifier verifier;
@@ -63,6 +64,50 @@ void main() {
     expect(round.date, '2026-05-19');
     expect(round.courseId, courseId);
     expect(round.migrationCanary, isNull);
+  });
+
+  test('migrates the schema from v2 to v3', () async {
+    final connection = await verifier.startAt(2);
+    final db = GolfyDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    // Opens the db (running `onUpgrade`) and asserts the resulting sqlite
+    // schema — including the new events table and the rounds.event_id column
+    // and index — matches the generated v3 snapshot.
+    await verifier.migrateAndValidate(db, 3);
+  });
+
+  test('migration preserves data written at v2', () async {
+    final schema = await verifier.schemaAt(2);
+
+    // Seed a course + round through the v2-shaped database (no events table,
+    // no event_id column).
+    final oldDb = v2.DatabaseAtV2(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v2.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    await oldDb.into(oldDb.rounds).insert(
+          v2.RoundsCompanion.insert(date: '2026-05-19', courseId: courseId),
+        );
+    await oldDb.close();
+
+    // Migrate the same underlying database with the real app schema (v3).
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 3);
+
+    // The pre-existing round survives; its new event_id is null, and the new
+    // events table exists and starts empty.
+    final round = await db.select(db.rounds).getSingle();
+    expect(round.date, '2026-05-19');
+    expect(round.courseId, courseId);
+    expect(round.eventId, isNull);
+
+    final events = await db.select(db.events).get();
+    expect(events, isEmpty);
   });
 
   test('a freshly created database matches the generated schema', () async {

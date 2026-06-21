@@ -222,6 +222,8 @@ class _AppBarTitle extends StatelessWidget {
     final round = roundAsync.value;
     if (round == null) return const Text('Hole Entry');
     final dateLabel = _formatDate(round.round.date);
+    final eventName = round.event?.name;
+    final subtitle = eventName == null ? dateLabel : '$dateLabel · $eventName';
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,8 +234,9 @@ class _AppBarTitle extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         Text(
-          dateLabel,
+          subtitle,
           style: Theme.of(context).textTheme.bodySmall,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

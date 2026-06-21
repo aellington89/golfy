@@ -22,16 +22,21 @@ void main() {
             CoursesCompanion.insert(name: name, gameTitle: gameTitle),
           );
 
+  Future<int> insertEvent({String name = 'Club Championship'}) =>
+      db.into(db.events).insert(EventsCompanion.insert(name: name));
+
   Future<int> insertRound(
     int courseId, {
     String date = '2026-05-19',
     int roundNumber = 1,
+    int? eventId,
   }) =>
       db.into(db.rounds).insert(
             RoundsCompanion.insert(
               date: date,
               courseId: courseId,
               roundNumber: Value(roundNumber),
+              eventId: Value(eventId),
             ),
           );
 
@@ -135,6 +140,31 @@ void main() {
         (db.delete(db.courses)..where((c) => c.id.equals(cid))).go(),
         throwsA(isA<Exception>()),
       );
+    });
+  });
+
+  group('events', () {
+    test('UNIQUE(name) rejects a duplicate name', () async {
+      await insertEvent(name: 'Club Championship');
+      await expectLater(
+        insertEvent(name: 'Club Championship'),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('deleting an event SET NULLs its rounds (no cascade delete)',
+        () async {
+      final cid = await insertCourse();
+      final eid = await insertEvent();
+      final rid = await insertRound(cid, eventId: eid);
+
+      await (db.delete(db.events)..where((e) => e.id.equals(eid))).go();
+
+      // The round survives with its event link cleared.
+      final round =
+          await (db.select(db.rounds)..where((r) => r.id.equals(rid)))
+              .getSingle();
+      expect(round.eventId, isNull);
     });
   });
 

@@ -49,14 +49,15 @@ app/lib/
 │   ├── database_provider.dart     # Riverpod provider for the DB
 │   ├── repository.dart            # GolfyRepository (single facade)
 │   ├── repository_provider.dart   # Riverpod providers for repo + streams
-│   ├── tables/                    # Courses, Rounds, HoleResults (drift)
-│   ├── daos/                      # CourseDao, RoundDao, HoleResultDao, DashboardDao
-│   └── models/                    # RoundWithCourse, DashboardStats value classes
+│   ├── tables/                    # Courses, Rounds, HoleResults, Events (drift)
+│   ├── daos/                      # CourseDao, RoundDao, HoleResultDao, DashboardDao, EventDao
+│   └── models/                    # RoundWithCourse (+ its event), DashboardStats value classes
 ├── features/
 │   ├── courses/                   # CoursePicker bottom sheet + AddCourseDialog
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
 │   ├── hole_entry/                # 18-card per-hole entry form + in-memory HoleDraft
+│   ├── events/                    # event-result formatter + edit-result dialog (#35)
 │   ├── dashboard/                 # lifetime-stats screen
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
 ├── shell/                         # AppShell + tabIndexProvider (bottom-nav state)
@@ -72,12 +73,14 @@ app/test/
 │   ├── _fixtures.dart             # shared in-memory DB fixtures
 │   ├── course_dao_test.dart
 │   ├── round_dao_test.dart
+│   ├── event_dao_test.dart
 │   ├── hole_result_dao_test.dart
 │   └── dashboard_dao_test.dart    # aggregation correctness against a seeded fixture
 ├── features/                      # widget tests + pure-formatter unit tests (mirrors lib/features/)
 │   ├── courses/                   # course_picker, add_course_dialog
 │   ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
 │   ├── hole_entry/                # hole_entry_screen, hole_card
+│   ├── events/                    # event_result_format, edit_event_result_dialog
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
 └── widgets/                       # shared-widget tests (empty_state)
@@ -96,11 +99,13 @@ app/test/
   `onConflict: DoUpdate(target: [roundId, holeNumber])` so re-saving a hole
   updates the existing row instead of deleting + reinserting. This keeps
   future referencing tables (notes, photos) safe.
-- **DAO-layer invariants throw.** Three impossible states are validated at
-  the DAO before the SQL hits the database:
-  - `upDownSuccess` requires `upDownAttempt`
-  - `sandSave` requires `bunkerVisited`
-  - `par == 3` requires `fairwayHit == null` (par-3s have no fairway)
+- **DAO-layer invariants throw.** Impossible states are validated at the DAO
+  before the SQL hits the database:
+  - `HoleResultDao`: `upDownSuccess` requires `upDownAttempt`; `sandSave`
+    requires `bunkerVisited`; `par == 3` requires `fairwayHit == null` (par-3s
+    have no fairway)
+  - `EventDao`: a result is exactly one of placed / cut / not-recorded — a
+    missed cut can't carry a finishing position, and a tie requires one
 - **Navigation is state, not a `Navigator` stack.** The bottom bar renders the
   tab named by [`tabIndexProvider`](lib/shell/tab_index_provider.dart); flows
   like "create a round → open Hole Entry" just set the index.
@@ -129,7 +134,7 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (173 tests)
+flutter test                           # everything (214 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
@@ -203,7 +208,9 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > The v2 schema carries an inert `rounds.migration_canary` column — a throwaway
 > added to prove this pipeline end to end
 > ([#24](https://github.com/aellington89/golfy/issues/24)). A later real
-> migration may drop it.
+> migration may drop it. The v3 migration adds the `events` table plus the
+> nullable `rounds.event_id` foreign key (`SET NULL` on delete) and its index
+> ([#35](https://github.com/aellington89/golfy/issues/35)).
 
 ## Release signing
 
