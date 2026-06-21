@@ -25,18 +25,24 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.1.0
+## Status — v0.1.1
 
-Phase 4 of the [roadmap](https://github.com/aellington89/golfy/issues/1) is
-complete — **v0.1.0 is Golfy's first stable release**: a signed Android APK,
-built and published by CI, that upgrades in place over future versions:
+**v0.1.1** is the latest release, building on the first stable cut with event
+organisation and richer scoring context:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
-| Debug-APK CI | [#18](https://github.com/aellington89/golfy/issues/18) | Every push/PR to `master` runs the tests and builds a debug APK plus a Windows desktop build as artifacts |
-| Debug build isolation | [#23](https://github.com/aellington89/golfy/issues/23) | Debug builds install under a `.debug` application ID so dev data sandboxes away from a real install |
-| Migrations & signing | [#24](https://github.com/aellington89/golfy/issues/24) | Step-based drift schema migrations (data survives upgrades) and a retained, upgrade-critical release keystore |
-| Signed-APK release | [#19](https://github.com/aellington89/golfy/issues/19) | A `v*` tag builds, verifies, and publishes a signed release APK to a draft GitHub Release |
+| Event tracking | [#35](https://github.com/aellington89/golfy/issues/35) | Rounds can belong to a named event (tournament / league / casual); the Rounds list groups by event and each event carries a recorded result — a finishing position, a tie, or a missed cut |
+| Score-distribution % | [#39](https://github.com/aellington89/golfy/issues/39) | The dashboard's score-distribution card shows each category's share of total holes as a percentage above the raw count |
+
+**v0.1.0** was Golfy's first stable release and completed Phase 4 of the
+[roadmap](https://github.com/aellington89/golfy/issues/1): a signed Android APK,
+built and published by CI, that upgrades in place — debug-APK CI
+([#18](https://github.com/aellington89/golfy/issues/18)), debug-build isolation
+([#23](https://github.com/aellington89/golfy/issues/23)), step-based drift
+migrations and a retained, upgrade-critical keystore
+([#24](https://github.com/aellington89/golfy/issues/24)), and the signed-APK
+release pipeline ([#19](https://github.com/aellington89/golfy/issues/19)).
 
 Earlier phases: Phase 3 polish — quality tests, system theming, and round
 editing (issues [#15](https://github.com/aellington89/golfy/issues/15)–[#17](https://github.com/aellington89/golfy/issues/17))
@@ -55,7 +61,7 @@ ships in the app. Still **not** captured: per-hole course-yardage columns
 
 **What's next** lives in GitHub, not here — the per-release
 [milestones](https://github.com/aellington89/golfy/milestones) (Phases 5–7,
-v0.1.1 → v0.2.0) and the
+through v0.2.0) and the
 [Golfy Release Tracking](https://github.com/users/aellington89/projects/29)
 project board. [`CHANGELOG.md`](CHANGELOG.md) remains the record of shipped
 releases.
@@ -105,7 +111,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 173 passing tests
+flutter test                           # 214 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

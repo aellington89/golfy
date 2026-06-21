@@ -23,11 +23,16 @@ class TestFixtures {
     );
   }
 
+  Future<int> insertEvent({String name = 'Club Championship'}) {
+    return db.eventDao.insert(EventsCompanion.insert(name: name));
+  }
+
   Future<int> insertRound(
     int courseId, {
     String date = '2026-05-19',
     int roundNumber = 1,
     String? teeSet,
+    int? eventId,
   }) {
     return db.roundDao.insert(
       RoundsCompanion.insert(
@@ -35,6 +40,7 @@ class TestFixtures {
         courseId: courseId,
         roundNumber: Value(roundNumber),
         teeSet: Value(teeSet),
+        eventId: Value(eventId),
       ),
     );
   }

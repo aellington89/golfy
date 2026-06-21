@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart';
 
 import 'courses.dart';
+import 'events.dart';
 
 @TableIndex(name: 'idx_rounds_date', columns: {#date})
 @TableIndex(name: 'idx_rounds_course', columns: {#courseId})
+@TableIndex(name: 'idx_rounds_event', columns: {#eventId})
 class Rounds extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get date => text()();
@@ -21,6 +23,13 @@ class Rounds extends Table {
   /// the upgrade is a plain `addColumn`. A later real migration (e.g. #22) may
   /// drop it.
   TextColumn get migrationCanary => text().nullable()();
+
+  /// Optional link to the [Events] competition this round belongs to (#35).
+  /// Nullable because casual rounds have no event; `SET NULL` on delete so
+  /// removing an event detaches its rounds rather than destroying their holes.
+  IntColumn get eventId => integer()
+      .nullable()
+      .references(Events, #id, onDelete: KeyAction.setNull)();
 
   @override
   List<Set<Column>> get uniqueKeys => [

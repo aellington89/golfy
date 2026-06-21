@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../database.dart';
 import '../models/round_with_course.dart';
 import '../tables/courses.dart';
+import '../tables/events.dart';
 import '../tables/hole_results.dart';
 import '../tables/rounds.dart';
 
@@ -10,7 +11,7 @@ part 'round_dao.g.dart';
 
 /// DAO for the `rounds` table plus the rounds-with-course-name join used by
 /// the rounds list screen.
-@DriftAccessor(tables: [Rounds, Courses, HoleResults])
+@DriftAccessor(tables: [Rounds, Courses, HoleResults, Events])
 class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
   RoundDao(super.db);
 
@@ -30,22 +31,26 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
     return (delete(rounds)..where((r) => r.id.equals(id))).go();
   }
 
-  /// Reactive list of every round joined with its course's name, the count of
-  /// hole_results rows attached to it, and the summed score / par across those
-  /// holes (for the rounds-list score-vs-par label). Ordered newest first by
-  /// date, breaking ties by descending row id so the most recently inserted
-  /// round wins on the same date.
+  /// Reactive list of every round joined with its course's name and its
+  /// optional event, the count of hole_results rows attached to it, and the
+  /// summed score / par across those holes (for the rounds-list score-vs-par
+  /// label). Ordered newest first by date, breaking ties by descending row id
+  /// so the most recently inserted round wins on the same date.
   ///
   /// Uses a `LEFT OUTER JOIN` to `hole_results` so rounds with no holes
   /// entered still appear (with `holesEntered = 0`); their `SUM`s are SQL NULL,
   /// coerced to `0` (the UI suppresses the score label when `holesEntered == 0`
-  /// rather than rendering a misleading `E`).
+  /// rather than rendering a misleading `E`). The `events` join is also a
+  /// `LEFT OUTER JOIN` so casual rounds (no `eventId`) keep a null `event`, and
+  /// because it joins `events`, the stream re-emits when an event's recorded
+  /// result changes — keeping the grouped rounds list's result badges live.
   Stream<List<RoundWithCourse>> watchAllWithCourse() {
     final holeCount = holeResults.id.count();
     final scoreSum = holeResults.score.sum();
     final parSum = holeResults.par.sum();
     final query = select(rounds).join([
       innerJoin(courses, courses.id.equalsExp(rounds.courseId)),
+      leftOuterJoin(events, events.id.equalsExp(rounds.eventId)),
       leftOuterJoin(
         holeResults,
         holeResults.roundId.equalsExp(rounds.id),
@@ -63,6 +68,7 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
           .map((row) => RoundWithCourse(
                 round: row.readTable(rounds),
                 courseName: row.readTable(courses).name,
+                event: row.readTableOrNull(events),
                 holesEntered: row.read(holeCount) ?? 0,
                 totalScore: row.read(scoreSum) ?? 0,
                 totalPar: row.read(parSum) ?? 0,

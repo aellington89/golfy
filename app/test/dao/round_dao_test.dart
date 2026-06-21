@@ -236,4 +236,40 @@ void main() {
       expect((await stream.first).single.relativeToPar, 1);
     });
   });
+
+  group('RoundDao.watchAllWithCourse — events', () {
+    test('round carries a null event when it has no eventId', () async {
+      final cid = await fx.insertCourse();
+      await fx.insertRound(cid);
+      final row = (await db.roundDao.watchAllWithCourse().first).single;
+      expect(row.round.eventId, isNull);
+      expect(row.event, isNull);
+    });
+
+    test('round carries its event when eventId is set', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent(name: 'Club Championship');
+      await fx.insertRound(cid, eventId: eid);
+      final row = (await db.roundDao.watchAllWithCourse().first).single;
+      expect(row.round.eventId, eid);
+      expect(row.event, isNotNull);
+      expect(row.event!.id, eid);
+      expect(row.event!.name, 'Club Championship');
+    });
+
+    test('re-emits with the updated event when its result changes', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent(name: 'Club Championship');
+      await fx.insertRound(cid, eventId: eid);
+      final stream = db.roundDao.watchAllWithCourse();
+
+      final first = await stream.first;
+      expect(first.single.event!.finishPosition, isNull);
+      expect(first.single.event!.missedCut, isFalse);
+
+      await db.eventDao.setResult(eid, finishPosition: 1);
+      final second = await stream.first;
+      expect(second.single.event!.finishPosition, 1);
+    });
+  });
 }

@@ -34,6 +34,32 @@ class GolfyRepository {
 
   Future<int> deleteRound(int id) => _db.roundDao.deleteById(id);
 
+  // ── Events ─────────────────────────────────────────────────────────────
+
+  Future<int> insertEvent(EventsCompanion event) =>
+      _db.eventDao.insert(event);
+
+  Stream<List<Event>> watchEvents() => _db.eventDao.watchAll();
+
+  Future<Event?> getEvent(int id) => _db.eventDao.getById(id);
+
+  /// Records an event's result. Pass all three components so the stored row is
+  /// fully specified; the DAO enforces the position / tied / cut invariant.
+  Future<int> setEventResult(
+    int id, {
+    int? finishPosition,
+    bool tied = false,
+    bool missedCut = false,
+  }) =>
+      _db.eventDao.setResult(
+        id,
+        finishPosition: finishPosition,
+        tied: tied,
+        missedCut: missedCut,
+      );
+
+  Future<int> deleteEvent(int id) => _db.eventDao.deleteById(id);
+
   // ── Hole results ───────────────────────────────────────────────────────
 
   Future<int> upsertHoleResult(HoleResultsCompanion hole) =>

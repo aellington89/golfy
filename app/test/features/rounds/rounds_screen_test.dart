@@ -9,6 +9,7 @@ import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
+import 'package:golfy_app/features/events/edit_event_result_dialog.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 import 'package:golfy_app/features/rounds/rounds_screen.dart';
@@ -63,6 +64,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Event makeEvent({
+    int id = 1,
+    String name = 'Club Championship',
+    int? finishPosition,
+    bool tied = false,
+    bool missedCut = false,
+  }) {
+    return Event(
+      id: id,
+      name: name,
+      finishPosition: finishPosition,
+      tied: tied,
+      missedCut: missedCut,
+    );
+  }
+
   RoundWithCourse makeRound({
     int id = 1,
     int courseId = 1,
@@ -72,6 +89,7 @@ void main() {
     int holesEntered = 0,
     int totalScore = 0,
     int totalPar = 0,
+    Event? event,
   }) {
     return RoundWithCourse(
       round: Round(
@@ -79,8 +97,10 @@ void main() {
         date: date,
         courseId: courseId,
         roundNumber: roundNumber,
+        eventId: event?.id,
       ),
       courseName: courseName,
+      event: event,
       holesEntered: holesEntered,
       totalScore: totalScore,
       totalPar: totalPar,
@@ -312,5 +332,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Pebble'), findsOneWidget);
+  });
+
+  testWidgets('groups rounds under event headers with a separate casual group',
+      (tester) async {
+    final event = makeEvent(id: 9, name: 'Club Championship');
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [
+      makeRound(id: 1, date: '2026-05-25', courseName: 'Pebble', event: event),
+      makeRound(id: 2, date: '2026-05-24', courseName: 'Augusta', event: event),
+      makeRound(id: 3, date: '2026-05-23', courseName: 'Spyglass'),
+    ]);
+
+    // One event header for the two tournament rounds, plus a casual group.
+    expect(find.byKey(const ValueKey('event_header_9')), findsOneWidget);
+    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.byKey(const ValueKey('event_header_casual')), findsOneWidget);
+    expect(find.text('No event'), findsOneWidget);
+    // Every round still renders.
+    expect(find.textContaining('Pebble'), findsOneWidget);
+    expect(find.textContaining('Augusta'), findsOneWidget);
+    expect(find.textContaining('Spyglass'), findsOneWidget);
+  });
+
+  testWidgets('event header shows the recorded result badge', (tester) async {
+    final event = makeEvent(id: 9, name: 'Club Championship', finishPosition: 1);
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [makeRound(id: 1, event: event)]);
+
+    expect(find.byKey(const ValueKey('event_result_badge_9')), findsOneWidget);
+    expect(find.text('1st'), findsOneWidget);
+  });
+
+  testWidgets('tapping a header edit action opens the result dialog',
+      (tester) async {
+    final event = makeEvent(id: 9, name: 'Club Championship');
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [makeRound(id: 1, event: event)]);
+
+    await tester.tap(find.byKey(const ValueKey('event_result_edit_9')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditEventResultDialog), findsOneWidget);
   });
 }

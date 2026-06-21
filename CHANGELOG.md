@@ -8,11 +8,24 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-21
+
+The first feature release after v0.1.0: rounds can be organised into **events**
+with recorded results, the score-distribution card gains percentage context, and
+the historical spreadsheet was imported on-device via a one-time tool.
+
 - Imported the historical `golf_stats.xlsx` data on-device via a one-time
   migration tool (built and then removed under [#33]); the shipping app is
   unchanged by it — no import UI and no migration code retained.
 
 ### Added
+- Event tracking: a round can now belong to a named **event** (tournament,
+  league, charity scramble, casual outing). Pick or create one from a typeahead
+  in the New Round dialog; the Rounds list groups rounds under per-event headers
+  (casual rounds fall under "No event"), and each event header shows — and lets
+  you edit — a structured result (finishing position, a tie, or missed cut).
+  Adds an `events` table and a nullable `rounds.event_id` foreign key
+  (`SET NULL` on delete) at schema v3 ([#35]).
 - Score-distribution card now shows each category's share of total holes as a
   prominent percentage above the raw count ([#39]).
 
@@ -131,7 +144,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/aellington89/golfy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/aellington89/golfy/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/aellington89/golfy/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/aellington89/golfy/compare/v0.0.1...v0.0.2
@@ -157,4 +171,5 @@ Phase 1 — data layer and navigation shell.
 [#23]: https://github.com/aellington89/golfy/issues/23
 [#24]: https://github.com/aellington89/golfy/issues/24
 [#33]: https://github.com/aellington89/golfy/issues/33
+[#35]: https://github.com/aellington89/golfy/issues/35
 [#39]: https://github.com/aellington89/golfy/issues/39
