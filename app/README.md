@@ -1,8 +1,7 @@
 # golfy_app
 
 Flutter front-end for Golfy — video-game golf stat tracker. See the
-[top-level README](../README.md) for the project overview, status, and
-roadmap.
+[top-level README](../README.md) for the project overview and status.
 
 ## Prerequisites
 
