@@ -12,6 +12,10 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   migration tool (built and then removed under [#33]); the shipping app is
   unchanged by it — no import UI and no migration code retained.
 
+### Added
+- Score-distribution card now shows each category's share of total holes as a
+  prominent percentage above the raw count ([#39]).
+
 ## [0.1.0] - 2026-06-14
 
 Phase 4 (release) — Golfy's first stable release. Pushing a `v*` tag now builds,
@@ -153,3 +157,4 @@ Phase 1 — data layer and navigation shell.
 [#23]: https://github.com/aellington89/golfy/issues/23
 [#24]: https://github.com/aellington89/golfy/issues/24
 [#33]: https://github.com/aellington89/golfy/issues/33
+[#39]: https://github.com/aellington89/golfy/issues/39

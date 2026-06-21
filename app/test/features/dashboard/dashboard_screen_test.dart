@@ -108,12 +108,17 @@ void main() {
     expect(textOfKey(tester, 'stat_putts'), '2.0');
     expect(textOfKey(tester, 'stat_updown_pct'), '—'); // no attempts
 
-    // Score distribution.
+    // Score distribution — raw counts plus each category's share of all 4 holes.
     expect(textOfKey(tester, 'dist_eagles'), '0');
     expect(textOfKey(tester, 'dist_birdies'), '1');
     expect(textOfKey(tester, 'dist_pars'), '2');
     expect(textOfKey(tester, 'dist_bogeys'), '1');
     expect(textOfKey(tester, 'dist_double_plus'), '0');
+    expect(textOfKey(tester, 'dist_eagles_pct'), '0.0%');
+    expect(textOfKey(tester, 'dist_birdies_pct'), '25.0%'); // 1 of 4
+    expect(textOfKey(tester, 'dist_pars_pct'), '50.0%'); // 2 of 4
+    expect(textOfKey(tester, 'dist_bogeys_pct'), '25.0%'); // 1 of 4
+    expect(textOfKey(tester, 'dist_double_plus_pct'), '0.0%');
   });
 
   testWidgets('a par-3-only round shows — for fairway %', (tester) async {
@@ -146,6 +151,9 @@ void main() {
 
     expect(textOfKey(tester, 'dist_eagles'), '1');
     expect(textOfKey(tester, 'dist_double_plus'), '2');
+    // Shares of all 3 holes — also exercises one-decimal rounding.
+    expect(textOfKey(tester, 'dist_eagles_pct'), '33.3%'); // 1 of 3
+    expect(textOfKey(tester, 'dist_double_plus_pct'), '66.7%'); // 2 of 3
   });
 
   testWidgets('best round vs par carries its sign', (tester) async {

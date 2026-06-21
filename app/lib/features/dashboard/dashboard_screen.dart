@@ -241,6 +241,7 @@ class _ScoreDistributionSection extends StatelessWidget {
     final categories = groupScoreDistribution(stats.scoreDistribution);
     final maxCount =
         categories.fold<int>(0, (m, c) => c.count > m ? c.count : m);
+    final total = categories.fold<int>(0, (s, c) => s + c.count);
 
     return _StatSection(
       title: 'Score distribution',
@@ -249,28 +250,38 @@ class _ScoreDistributionSection extends StatelessWidget {
           _DistributionBar(
             label: c.label,
             count: c.count,
+            total: total,
             maxCount: maxCount,
             countKey: ValueKey(_countKeys[c.label]!),
+            percentKey: ValueKey('${_countKeys[c.label]!}_pct'),
           ),
       ],
     );
   }
 }
 
-/// One category's horizontal bar: label, a track whose filled portion is
-/// proportional to this category's share of the busiest one, and the count.
+/// One category's horizontal bar: the label, a track whose filled portion is
+/// proportional to this category's share of the busiest one ([count] /
+/// [maxCount]), and a trailing cell with the category's share of *all* holes
+/// ([count] / [total]) shown prominently above the raw [count]. The bar fill and
+/// the percentage use different denominators on purpose — the bar reads
+/// relatively (against the tallest category), the percentage absolutely.
 class _DistributionBar extends StatelessWidget {
   const _DistributionBar({
     required this.label,
     required this.count,
+    required this.total,
     required this.maxCount,
     required this.countKey,
+    required this.percentKey,
   });
 
   final String label;
   final int count;
+  final int total;
   final int maxCount;
   final Key countKey;
+  final Key percentKey;
 
   @override
   Widget build(BuildContext context) {
@@ -301,12 +312,26 @@ class _DistributionBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(
-            width: 40,
-            child: Text(
-              '$count',
-              key: countKey,
-              textAlign: TextAlign.end,
-              style: theme.textTheme.titleMedium,
+            width: 60,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  formatPercent(total == 0 ? null : count / total),
+                  key: percentKey,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.titleMedium,
+                ),
+                Text(
+                  '$count',
+                  key: countKey,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
