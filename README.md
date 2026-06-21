@@ -53,6 +53,13 @@ ships in the app. Still **not** captured: per-hole course-yardage columns
 (yards, drive / approach distance, tee club —
 [#22](https://github.com/aellington89/golfy/issues/22)), open for a future release.
 
+**What's next** lives in GitHub, not here — the per-release
+[milestones](https://github.com/aellington89/golfy/milestones) (Phases 5–7,
+v0.1.1 → v0.2.0) and the
+[Golfy Release Tracking](https://github.com/users/aellington89/projects/29)
+project board. [`CHANGELOG.md`](CHANGELOG.md) remains the record of shipped
+releases.
+
 ## Stack
 
 - **Flutter** (Dart) — single codebase for Android + Windows
@@ -128,18 +135,6 @@ golfy/
 ├── .gitignore
 └── README.md            # you are here
 ```
-
-## Roadmap
-
-The full roadmap is tracked as a GitHub epic — see
-[issue #1](https://github.com/aellington89/golfy/issues/1) for the live list.
-Phases:
-
-- **Phase 0** ✓ Decision — Flutter over PySide6
-- **Phase 1** ✓ Foundation — data model, DAOs, and app shell (v0.0.1)
-- **Phase 2** ✓ Core features — course/round management, hole entry, scorecard, and the lifetime dashboard (v0.0.2)
-- **Phase 3** ✓ Quality & polish (v0.0.3) — dashboard stat-query tests ([#15](https://github.com/aellington89/golfy/issues/15)), empty states + input validation + dark/light theme ([#16](https://github.com/aellington89/golfy/issues/16)), and editing a completed round's holes ([#17](https://github.com/aellington89/golfy/issues/17))
-- **Phase 4** ✓ Release (v0.1.0) — CI debug-APK builds ([#18](https://github.com/aellington89/golfy/issues/18)), debug-id build config ([#23](https://github.com/aellington89/golfy/issues/23)), schema-migration + keystore hardening ([#24](https://github.com/aellington89/golfy/issues/24)), and the signed-APK release pipeline ([#19](https://github.com/aellington89/golfy/issues/19))
 
 ## History
 
