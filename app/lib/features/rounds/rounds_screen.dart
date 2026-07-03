@@ -13,6 +13,7 @@ import '../stats/score_color.dart';
 import '../stats/score_format.dart';
 import 'active_round_provider.dart';
 import 'delete_round.dart';
+import 'edit_round_dialog.dart';
 import 'new_round_dialog.dart';
 import 'scorecard/scorecard_screen.dart';
 
@@ -135,8 +136,16 @@ class _RoundRow extends ConsumerWidget {
             ),
             const SizedBox(width: 4),
             IconButton(
+              key: ValueKey('round_edit_button_${round.round.id}'),
+              icon: const Icon(Icons.edit_outlined),
+              iconSize: 20,
+              tooltip: 'Edit round',
+              onPressed: () => openEditRoundDialog(context, ref, round),
+            ),
+            IconButton(
               key: ValueKey('scorecard_button_${round.round.id}'),
               icon: const Icon(Icons.scoreboard_outlined),
+              iconSize: 20,
               tooltip: 'View scorecard',
               onPressed: () {
                 Navigator.of(context, rootNavigator: true).push(

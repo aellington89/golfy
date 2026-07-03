@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -270,6 +271,125 @@ void main() {
       await db.eventDao.setResult(eid, finishPosition: 1);
       final second = await stream.first;
       expect(second.single.event!.finishPosition, 1);
+    });
+  });
+
+  group('RoundDao.updateById', () {
+    test('attaches an event to a casual round (eventId null -> set)', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent(name: 'Club Championship');
+      final rid = await fx.insertRound(cid); // casual: no event
+      expect((await db.roundDao.getById(rid))!.eventId, isNull);
+
+      final n =
+          await db.roundDao.updateById(rid, RoundsCompanion(eventId: Value(eid)));
+      expect(n, 1);
+      expect((await db.roundDao.getById(rid))!.eventId, eid);
+    });
+
+    test('detaches an event (eventId set -> null)', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent();
+      final rid = await fx.insertRound(cid, eventId: eid);
+
+      await db.roundDao
+          .updateById(rid, const RoundsCompanion(eventId: Value(null)));
+      expect((await db.roundDao.getById(rid))!.eventId, isNull);
+    });
+
+    test('updates date, course, and round number', () async {
+      final c1 = await fx.insertCourse(name: 'Pebble');
+      final c2 = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      final rid = await fx.insertRound(c1, date: '2026-04-01', roundNumber: 1);
+
+      await db.roundDao.updateById(
+        rid,
+        RoundsCompanion(
+          date: const Value('2026-04-02'),
+          courseId: Value(c2),
+          roundNumber: const Value(3),
+        ),
+      );
+
+      final row = await db.roundDao.getById(rid);
+      expect(row!.date, '2026-04-02');
+      expect(row.courseId, c2);
+      expect(row.roundNumber, 3);
+    });
+
+    test('sets and then clears notes', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+
+      await db.roundDao
+          .updateById(rid, const RoundsCompanion(notes: Value('windy')));
+      expect((await db.roundDao.getById(rid))!.notes, 'windy');
+
+      await db.roundDao
+          .updateById(rid, const RoundsCompanion(notes: Value<String?>(null)));
+      expect((await db.roundDao.getById(rid))!.notes, isNull);
+    });
+
+    test('returns 1 when the round existed, 0 for an unknown id', () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      expect(
+        await db.roundDao
+            .updateById(rid, const RoundsCompanion(notes: Value('x'))),
+        1,
+      );
+      expect(
+        await db.roundDao
+            .updateById(9999, const RoundsCompanion(notes: Value('x'))),
+        0,
+      );
+    });
+
+    test('rejects an update that collides with another round\'s triple',
+        () async {
+      final cid = await fx.insertCourse();
+      await fx.insertRound(cid, date: '2026-04-01', roundNumber: 1);
+      final r2 = await fx.insertRound(cid, date: '2026-04-01', roundNumber: 2);
+
+      // Moving r2 onto r1's (date, courseId, roundNumber) violates UNIQUE.
+      await expectLater(
+        db.roundDao
+            .updateById(r2, const RoundsCompanion(roundNumber: Value(1))),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('re-saving a round onto its own triple does not self-collide',
+        () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid, date: '2026-04-01', roundNumber: 1);
+
+      final n = await db.roundDao.updateById(
+        rid,
+        RoundsCompanion(
+          date: const Value('2026-04-01'),
+          courseId: Value(cid),
+          roundNumber: const Value(1),
+          notes: const Value('re-saved'),
+        ),
+      );
+      expect(n, 1);
+      expect((await db.roundDao.getById(rid))!.notes, 're-saved');
+    });
+
+    test('preserves hole_results across an update (incl. a course change)',
+        () async {
+      final c1 = await fx.insertCourse(name: 'Pebble');
+      final c2 = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      final rid = await fx.insertRound(c1);
+      await fx.upsertHole(rid, 1);
+      await fx.upsertHole(rid, 2);
+
+      await db.roundDao
+          .updateById(rid, RoundsCompanion(courseId: Value(c2)));
+
+      expect(await db.holeResultDao.countForRound(rid), 2);
+      expect((await db.roundDao.getById(rid))!.courseId, c2);
     });
   });
 }

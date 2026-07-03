@@ -8,6 +8,26 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-02
+
+A hotfix on v0.1.1: rounds are no longer immutable once created — a round's own
+details can be edited after the fact.
+
+### Added
+- Edit an existing round's details: a new **Edit Round** dialog changes a
+  round's event, course, date, round number and notes, pre-filled with the
+  round's current values and reachable from both the rounds-list row and the
+  scorecard. This is how a round created without an event gets one attached (and
+  how a mis-entered course / date / round number is corrected) without deleting
+  and re-creating the round — its holes are preserved. Backed by a new
+  `RoundDao.updateById`; no schema change (the `rounds.event_id` foreign key has
+  been nullable since v3) ([#45]).
+
+### Changed
+- The scorecard's **Edit** action is now labelled **Edit scores** (it resumes
+  hole entry), distinguishing it from the new **Edit details** action that opens
+  the Edit Round dialog ([#45]).
+
 ## [0.1.1] - 2026-06-21
 
 The first feature release after v0.1.0: rounds can be organised into **events**
@@ -144,7 +164,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/aellington89/golfy/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/aellington89/golfy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/aellington89/golfy/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/aellington89/golfy/compare/v0.0.2...v0.0.3
@@ -173,3 +194,4 @@ Phase 1 — data layer and navigation shell.
 [#33]: https://github.com/aellington89/golfy/issues/33
 [#35]: https://github.com/aellington89/golfy/issues/35
 [#39]: https://github.com/aellington89/golfy/issues/39
+[#45]: https://github.com/aellington89/golfy/issues/45
