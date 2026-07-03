@@ -25,10 +25,17 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.1.1
+## Status — v0.1.2
 
-**v0.1.1** is the latest release, building on the first stable cut with event
-organisation and richer scoring context:
+**v0.1.2** is the latest release — a hotfix on v0.1.1 that makes a round's own
+details editable after it's created:
+
+| Feature | Issue | What it delivered |
+|---|---|---|
+| Edit round details | [#45](https://github.com/aellington89/golfy/issues/45) | A round's event, course, date, round number and notes can be changed after creation via a new Edit Round dialog (reachable from the rounds list and the scorecard) — so a round saved without an event can be fixed without deleting and re-creating it |
+
+It builds on **v0.1.1**, which added event organisation and richer scoring
+context:
 
 | Feature | Issue | What it delivered |
 |---|---|---|

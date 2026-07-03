@@ -32,6 +32,12 @@ class GolfyRepository {
 
   Future<Round?> getRound(int id) => _db.roundDao.getById(id);
 
+  /// Updates a round in place (#45). The companion carries only the columns to
+  /// change; a present `Value(null)` clears a nullable column (e.g. detaching
+  /// the event). See [RoundDao.updateById].
+  Future<int> updateRound(int id, RoundsCompanion round) =>
+      _db.roundDao.updateById(id, round);
+
   Future<int> deleteRound(int id) => _db.roundDao.deleteById(id);
 
   // ── Events ─────────────────────────────────────────────────────────────

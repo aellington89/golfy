@@ -11,6 +11,7 @@ import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/events/edit_event_result_dialog.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
+import 'package:golfy_app/features/rounds/edit_round_dialog.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 import 'package:golfy_app/features/rounds/rounds_screen.dart';
 import 'package:golfy_app/features/rounds/scorecard/scorecard_screen.dart';
@@ -211,6 +212,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NewRoundDialog), findsOneWidget);
+  });
+
+  testWidgets('row edit button opens the Edit Round dialog', (tester) async {
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [makeRound(id: 5, courseName: 'Pebble')]);
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Pebble', gameTitle: 'PGA')],
+    );
+
+    await tester.tap(find.byKey(const ValueKey('round_edit_button_5')));
+    // openEditRoundDialog awaits repo.watchCoursesByName().first on the real
+    // db to pre-select the course, so flush real async before settling.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditRoundDialog), findsOneWidget);
   });
 
   testWidgets(

@@ -7,6 +7,7 @@ import '../../../data/repository_provider.dart';
 import '../../../shell/tab_index_provider.dart';
 import '../active_round_provider.dart';
 import '../delete_round.dart';
+import '../edit_round_dialog.dart';
 import 'hole_scorecard_card.dart';
 import 'scorecard_totals_card.dart';
 
@@ -36,6 +37,7 @@ class ScorecardScreen extends ConsumerWidget {
         actions: [
           _DeleteButton(roundId: roundId),
           _EditButton(roundId: roundId),
+          _EditDetailsButton(roundId: roundId),
         ],
       ),
       body: holesAsync.when(
@@ -108,9 +110,11 @@ class _ScorecardTitle extends StatelessWidget {
   }
 }
 
-/// Hands off to the Hole Entry tab for this round. The data is already
-/// persisted, so the form pre-fills from [holeResultsStreamProvider]; we just
-/// point the shell at it and pop back to reveal it.
+/// "Edit scores": hands off to the Hole Entry tab to edit this round's holes.
+/// The data is already persisted, so the form pre-fills from
+/// [holeResultsStreamProvider]; we just point the shell at it and pop back to
+/// reveal it. Distinct from [_EditDetailsButton], which edits the round's own
+/// details (event, course, date, …).
 class _EditButton extends ConsumerWidget {
   const _EditButton({required this.roundId});
 
@@ -120,12 +124,35 @@ class _EditButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
       key: const ValueKey('scorecard_edit_button'),
-      icon: const Icon(Icons.edit_outlined),
-      tooltip: 'Edit round',
+      icon: const Icon(Icons.edit_note),
+      tooltip: 'Edit scores',
       onPressed: () {
         ref.read(activeRoundIdProvider.notifier).set(roundId);
         ref.read(tabIndexProvider.notifier).set(1);
         Navigator.of(context).pop();
+      },
+    );
+  }
+}
+
+/// "Edit round details": opens [EditRoundDialog] to change this round's event,
+/// course, date, round number or notes — as opposed to [_EditButton]'s
+/// "Edit scores" (hole entry). No-op until the round has loaded.
+class _EditDetailsButton extends ConsumerWidget {
+  const _EditDetailsButton({required this.roundId});
+
+  final int roundId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      key: const ValueKey('scorecard_edit_details_button'),
+      icon: const Icon(Icons.edit_outlined),
+      tooltip: 'Edit round details',
+      onPressed: () {
+        final round = ref.read(roundWithCourseProvider(roundId)).value;
+        if (round == null) return;
+        openEditRoundDialog(context, ref, round);
       },
     );
   }

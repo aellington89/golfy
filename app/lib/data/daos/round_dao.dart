@@ -31,6 +31,20 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
     return (delete(rounds)..where((r) => r.id.equals(id))).go();
   }
 
+  /// Updates a single round in place (#45). Pass a companion carrying only the
+  /// columns to change; a present `Value(null)` explicitly clears a nullable
+  /// column — e.g. `eventId: Value(null)` detaches the round from its event,
+  /// while `Value.absent()` leaves a column untouched. Returns the number of
+  /// rows updated (1 if the round existed, 0 otherwise).
+  ///
+  /// The `UNIQUE(date, courseId, roundNumber)` constraint and the `courseId`
+  /// FK (RESTRICT) still apply, so an update that collides with another round
+  /// or points at a missing course throws — callers pre-check and also catch
+  /// the DB-level error as a safety net (mirroring [insert]).
+  Future<int> updateById(int id, RoundsCompanion round) {
+    return (update(rounds)..where((r) => r.id.equals(id))).write(round);
+  }
+
   /// Reactive list of every round joined with its course's name and its
   /// optional event, the count of hole_results rows attached to it, and the
   /// summed score / par across those holes (for the rounds-list score-vs-par
