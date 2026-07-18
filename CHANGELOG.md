@@ -8,6 +8,15 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-18
+
+This release tightens hole-entry data integrity and finishes the play-order form
+redesign: the form now follows the sequence a hole is actually played, and two
+more "impossible state" combinations are blocked at both the form and the
+database — an up & down success needs one putt or fewer, and putts must be fewer
+than the score — with a one-time schema-v4 migration cleaning any pre-existing
+rows.
+
 ### Changed
 - The hole-entry form now enforces two more "impossible state" rules for a hole,
   matching the existing DAO guards: an **up & down success requires one putt or
@@ -181,7 +190,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/aellington89/golfy/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/aellington89/golfy/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/aellington89/golfy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/aellington89/golfy/compare/v0.0.3...v0.1.0
