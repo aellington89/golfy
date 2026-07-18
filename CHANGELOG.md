@@ -8,6 +8,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+- The hole-entry form now follows the order a hole is actually played — **Tee**
+  (par, fairway hit) → **Approach & Around the Green** (GIR, up/down attempt,
+  bunker visited) → **Putting** (putts) → **Score** (up/down success, sand save,
+  penalty strokes, then score). Fields are grouped under stage headers and
+  **Score is entered last**, once the hole is complete, rather than appearing
+  second under Par ([#34]).
+
 ## [0.1.2] - 2026-07-02
 
 A hotfix on v0.1.1: rounds are no longer immutable once created — a round's own
@@ -192,6 +200,7 @@ Phase 1 — data layer and navigation shell.
 [#23]: https://github.com/aellington89/golfy/issues/23
 [#24]: https://github.com/aellington89/golfy/issues/24
 [#33]: https://github.com/aellington89/golfy/issues/33
+[#34]: https://github.com/aellington89/golfy/issues/34
 [#35]: https://github.com/aellington89/golfy/issues/35
 [#39]: https://github.com/aellington89/golfy/issues/39
 [#45]: https://github.com/aellington89/golfy/issues/45

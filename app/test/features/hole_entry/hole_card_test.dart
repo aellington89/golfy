@@ -259,4 +259,96 @@ void main() {
       expect(btn.onPressed, isNull);
     });
   });
+
+  group('HoleCard — play-order layout (#34)', () {
+    testWidgets(
+        'fields follow play sequence: tee → approach → putting → score',
+        (tester) async {
+      // Par 4 so the fairway control is enabled and labelled "Fairway hit".
+      await pumpCard(tester, initial: HoleDraft.initial());
+
+      double dyText(String t) => tester.getTopLeft(find.text(t)).dy;
+      double dyKey(String k) => tester.getTopLeft(find.byKey(ValueKey(k))).dy;
+
+      final fairway = dyText('Fairway hit');
+      final gir = dyText('GIR');
+      final putts = dyKey('putts');
+      final penalty = dyKey('penalty');
+      final score = dyKey('score');
+
+      expect(fairway, lessThan(gir));
+      expect(gir, lessThan(putts));
+      expect(putts, lessThan(penalty));
+      // Score is the last scoring input — below every other stat.
+      expect(penalty, lessThan(score));
+    });
+
+    testWidgets('stage section headers render in play order', (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial());
+
+      expect(find.text('Tee'), findsOneWidget);
+      expect(find.text('Approach & Around the Green'), findsOneWidget);
+      expect(find.text('Putting'), findsOneWidget);
+      // "Score" labels both the section header and the score stepper.
+      expect(find.text('Score'), findsNWidgets(2));
+
+      double dy(Finder f) => tester.getTopLeft(f).dy;
+      expect(
+        dy(find.text('Tee')),
+        lessThan(dy(find.text('Approach & Around the Green'))),
+      );
+      expect(
+        dy(find.text('Approach & Around the Green')),
+        lessThan(dy(find.text('Putting'))),
+      );
+      // The Score header (first "Score" in tree order) sits below Putting.
+      expect(
+        dy(find.text('Putting')),
+        lessThan(dy(find.text('Score').first)),
+      );
+    });
+
+    testWidgets('par 3 keeps the fairway control in the Tee section',
+        (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial(par: 3));
+
+      // Still present, disabled, N/A label — the reorder didn't drop it.
+      expect(find.text('Fairway hit (N/A on par 3)'), findsOneWidget);
+      final segmented = tester.widget<SegmentedButton<int>>(
+          find.byType(SegmentedButton<int>).at(1));
+      expect(segmented.onSelectionChanged, isNull);
+
+      // And it sits under "Tee", above the Approach header and GIR.
+      double dy(Finder f) => tester.getTopLeft(f).dy;
+      expect(
+        dy(find.text('Fairway hit (N/A on par 3)')),
+        lessThan(dy(find.text('Approach & Around the Green'))),
+      );
+      expect(
+        dy(find.text('Approach & Around the Green')),
+        lessThan(dy(find.text('GIR'))),
+      );
+    });
+
+    testWidgets(
+        'up/down success and sand save sit in the Score section, above penalty',
+        (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial());
+
+      double dy(Finder f) => tester.getTopLeft(f).dy;
+      // First "Score" in tree order is the section header.
+      final scoreHeader = dy(find.text('Score').first);
+      final upDownSuccess = dy(find.text('Up/Down success'));
+      final sandSave = dy(find.text('Sand save'));
+      final putts = dy(find.byKey(const ValueKey('putts')));
+      final penalty = dy(find.byKey(const ValueKey('penalty')));
+
+      // They've left the Approach group (now below Putts), and sit under the
+      // Score header ordered success → sand save → penalty strokes.
+      expect(putts, lessThan(scoreHeader));
+      expect(scoreHeader, lessThan(upDownSuccess));
+      expect(upDownSuccess, lessThan(sandSave));
+      expect(sandSave, lessThan(penalty));
+    });
+  });
 }

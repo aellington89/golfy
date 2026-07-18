@@ -7,6 +7,10 @@ import 'hole_draft.dart';
 /// The only local state is the `ExpansionTile` open flag for the notes
 /// row.
 ///
+/// Fields are grouped into stage sections (Tee → Approach & Around the
+/// Green → Putting → Score) following the order a golfer learns each value
+/// during play, so Score is entered last once the hole is complete (#34).
+///
 /// Conditional resets enforced here mirror the three DAO invariants in
 /// `hole_result_dao.dart::_assertInvariants` so the upsert can't throw:
 ///
@@ -100,7 +104,7 @@ class _HoleCardState extends State<HoleCard> {
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const _SectionHeader('Tee'),
               _ParRow(
                 par: d.par,
                 onChanged: (newPar) {
@@ -114,27 +118,45 @@ class _HoleCardState extends State<HoleCard> {
                 },
               ),
               const SizedBox(height: 12),
-              _StepperRow(
-                key: const ValueKey('score'),
-                label: 'Score',
-                value: d.score,
-                min: 1,
-                onChanged: (v) => widget.onChanged(d.copyWith(score: v)),
-              ),
-              const SizedBox(height: 12),
               _FairwayRow(
                 value: d.fairwayHit,
                 disabled: d.par == 3,
                 onChanged: (v) =>
                     widget.onChanged(d.copyWith(fairwayHit: v)),
               ),
-              const SizedBox(height: 4),
+              const _SectionHeader('Approach & Around the Green'),
               _SwitchRow(
                 label: 'GIR',
                 value: d.gir,
                 onChanged: (v) => widget.onChanged(d.copyWith(gir: v)),
               ),
               const SizedBox(height: 8),
+              _SwitchRow(
+                label: 'Up/Down attempt',
+                value: d.upDownAttempt,
+                onChanged: (v) {
+                  // Turning attempt off cancels any recorded success — the
+                  // DAO won't accept success=true without attempt=true. The
+                  // success toggle itself lives in the Score section below.
+                  widget.onChanged(d.copyWith(
+                    upDownAttempt: v,
+                    upDownSuccess: v ? d.upDownSuccess : false,
+                  ));
+                },
+              ),
+              const SizedBox(height: 8),
+              _SwitchRow(
+                label: 'Bunker visited',
+                value: d.bunkerVisited,
+                onChanged: (v) {
+                  // Its success half (sand save) lives in the Score section.
+                  widget.onChanged(d.copyWith(
+                    bunkerVisited: v,
+                    sandSave: v ? d.sandSave : false,
+                  ));
+                },
+              ),
+              const _SectionHeader('Putting'),
               _StepperRow(
                 key: const ValueKey('putts'),
                 label: 'Putts',
@@ -142,19 +164,10 @@ class _HoleCardState extends State<HoleCard> {
                 min: 0,
                 onChanged: (v) => widget.onChanged(d.copyWith(putts: v)),
               ),
-              const SizedBox(height: 12),
-              _SwitchRow(
-                label: 'Up/Down attempt',
-                value: d.upDownAttempt,
-                onChanged: (v) {
-                  // Turning attempt off cancels any recorded success — the
-                  // DAO won't accept success=true without attempt=true.
-                  widget.onChanged(d.copyWith(
-                    upDownAttempt: v,
-                    upDownSuccess: v ? d.upDownSuccess : false,
-                  ));
-                },
-              ),
+              const _SectionHeader('Score'),
+              // Up/down success and sand save are scoring outcomes known only
+              // once the hole is done, so they sit here with the tally — their
+              // enabling toggles (attempt / bunker) stay in the Approach group.
               _SwitchRow(
                 label: 'Up/Down success',
                 value: d.upDownSuccess,
@@ -162,24 +175,13 @@ class _HoleCardState extends State<HoleCard> {
                 onChanged: (v) =>
                     widget.onChanged(d.copyWith(upDownSuccess: v)),
               ),
-              const SizedBox(height: 8),
-              _SwitchRow(
-                label: 'Bunker visited',
-                value: d.bunkerVisited,
-                onChanged: (v) {
-                  widget.onChanged(d.copyWith(
-                    bunkerVisited: v,
-                    sandSave: v ? d.sandSave : false,
-                  ));
-                },
-              ),
               _SwitchRow(
                 label: 'Sand save',
                 value: d.sandSave,
                 enabled: d.bunkerVisited,
                 onChanged: (v) => widget.onChanged(d.copyWith(sandSave: v)),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _StepperRow(
                 key: const ValueKey('penalty'),
                 label: 'Penalty strokes',
@@ -187,6 +189,14 @@ class _HoleCardState extends State<HoleCard> {
                 min: 0,
                 onChanged: (v) =>
                     widget.onChanged(d.copyWith(penaltyStrokes: v)),
+              ),
+              const SizedBox(height: 12),
+              _StepperRow(
+                key: const ValueKey('score'),
+                label: 'Score',
+                value: d.score,
+                min: 1,
+                onChanged: (v) => widget.onChanged(d.copyWith(score: v)),
               ),
               const SizedBox(height: 12),
               _NotesSection(
@@ -224,6 +234,31 @@ class _HoleCardState extends State<HoleCard> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A stage sub-header ("Tee", "Approach & Around the Green", "Putting",
+/// "Score") that labels each group of fields. Purely visual — it makes the
+/// play-order sequence explicit and carries its own top spacing so sections
+/// are separated without extra `SizedBox`es around it.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Text(
+        label,
+        style: theme.textTheme.titleSmall?.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
