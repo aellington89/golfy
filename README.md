@@ -25,14 +25,19 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.1.2
+## Status — v0.1.3
 
-**v0.1.2** is the latest release — a hotfix on v0.1.1 that makes a round's own
-details editable after it's created:
+**v0.1.3** is the latest release — it tightens hole-entry data integrity and
+finishes the play-order form redesign:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
-| Edit round details | [#45](https://github.com/aellington89/golfy/issues/45) | A round's event, course, date, round number and notes can be changed after creation via a new Edit Round dialog (reachable from the rounds list and the scorecard) — so a round saved without an event can be fixed without deleting and re-creating it |
+| Play-order hole entry | [#34](https://github.com/aellington89/golfy/issues/34) | The hole-entry form follows the order a hole is actually played — Tee → Approach & Around the Green → Putting → Score — grouped under stage headers, with Score entered last once the hole is complete |
+| Putts-based entry guards | [#37](https://github.com/aellington89/golfy/issues/37) | Two more impossible-state combinations are blocked at both the form and the database — an up & down success needs one putt or fewer (a 1-putt or chip-in), and putts must be fewer than the score — with a schema-v4 migration that cleans any pre-existing rows |
+
+It builds on **v0.1.2**, a hotfix on v0.1.1 that made a round's event, course,
+date, round number and notes editable after creation
+([#45](https://github.com/aellington89/golfy/issues/45)).
 
 It builds on **v0.1.1**, which added event organisation and richer scoring
 context:
