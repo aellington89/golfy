@@ -114,8 +114,10 @@ app/test/
   cleared on Finish Round or delete.
 - **Hole Entry edits stay in memory until saved.** Each hole is a
   [`HoleDraft`](lib/features/hole_entry/hole_draft.dart) kept across `PageView`
-  swipes; **Save Hole** upserts it via `HoleResultDao`. Course-yardage fields are
-  stamped with placeholder defaults until
+  swipes; **Save Hole** upserts it via `HoleResultDao`. The card's fields are
+  grouped under stage headers in course-play order (Tee → Approach & Around the
+  Green → Putting → Score), so **Score is entered last**. Course-yardage fields
+  are stamped with placeholder defaults until
   [#22](https://github.com/aellington89/golfy/issues/22) adds real yardage entry.
 - **Presentation logic is pure and shared.** [`features/stats/`](lib/features/stats/)
   holds widget-free helpers — `score_format` / `stat_format` (formatting) and
