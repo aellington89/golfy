@@ -129,6 +129,66 @@ void main() {
       final rows = await db.holeResultDao.watchForRound(rid).first;
       expect(rows, hasLength(3));
     });
+
+    test('throws ArgumentError when upDownSuccess=true and putts>1', () async {
+      final rid = await seedRound();
+      expect(
+        () => db.holeResultDao.upsert(fx.holeCompanion(
+          rid,
+          1,
+          upDownAttempt: true,
+          upDownSuccess: true,
+          putts: 2,
+        )),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('accepts an up/down success with 0 or 1 putt', () async {
+      final rid = await seedRound();
+      // A 1-putt "down".
+      await db.holeResultDao.upsert(fx.holeCompanion(
+        rid,
+        1,
+        upDownAttempt: true,
+        upDownSuccess: true,
+        putts: 1,
+      ));
+      // A 0-putt chip-in still counts as up & down.
+      await db.holeResultDao.upsert(fx.holeCompanion(
+        rid,
+        2,
+        upDownAttempt: true,
+        upDownSuccess: true,
+        putts: 0,
+      ));
+      final rows = await db.holeResultDao.watchForRound(rid).first;
+      expect(rows, hasLength(2));
+    });
+
+    test('throws ArgumentError when putts >= score', () async {
+      final rid = await seedRound();
+      expect(
+        () => db.holeResultDao.upsert(fx.holeCompanion(
+          rid,
+          1,
+          score: 3,
+          putts: 3,
+        )),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('accepts putts == score - 1 (the boundary)', () async {
+      final rid = await seedRound();
+      final id = await db.holeResultDao.upsert(fx.holeCompanion(
+        rid,
+        1,
+        score: 3,
+        putts: 2,
+      ));
+      expect(id, isPositive);
+    });
   });
 
   group('HoleResultDao.watchForRound', () {

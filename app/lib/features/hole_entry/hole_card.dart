@@ -11,12 +11,15 @@ import 'hole_draft.dart';
 /// Green → Putting → Score) following the order a golfer learns each value
 /// during play, so Score is entered last once the hole is complete (#34).
 ///
-/// Conditional resets enforced here mirror the three DAO invariants in
+/// Conditional resets and bounds enforced here mirror the DAO invariants in
 /// `hole_result_dao.dart::_assertInvariants` so the upsert can't throw:
 ///
 ///  * `par == 3` → fairwayHit forced to `null`
 ///  * `upDownAttempt == false` → upDownSuccess forced to `false`
+///  * `putts > 1` → upDownSuccess forced to `false` (an up & down is a 1-putt)
 ///  * `bunkerVisited == false` → sandSave forced to `false`
+///  * putts is capped at `score - 1` and score floored at `putts + 1` (the tee
+///    shot is never a putt)
 class HoleCard extends StatefulWidget {
   const HoleCard({
     super.key,
@@ -162,7 +165,14 @@ class _HoleCardState extends State<HoleCard> {
                 label: 'Putts',
                 value: d.putts,
                 min: 0,
-                onChanged: (v) => widget.onChanged(d.copyWith(putts: v)),
+                // Putts can't reach the score — the tee shot is never a putt.
+                max: d.score - 1,
+                onChanged: (v) => widget.onChanged(d.copyWith(
+                  putts: v,
+                  // An up & down is a 1-putt (or chip-in); 2+ putts can't be a
+                  // recorded success, and the DAO would reject it.
+                  upDownSuccess: v > 1 ? false : d.upDownSuccess,
+                )),
               ),
               const _SectionHeader('Score'),
               // Up/down success and sand save are scoring outcomes known only
@@ -171,7 +181,9 @@ class _HoleCardState extends State<HoleCard> {
               _SwitchRow(
                 label: 'Up/Down success',
                 value: d.upDownSuccess,
-                enabled: d.upDownAttempt,
+                enabled: d.upDownAttempt && d.putts <= 1,
+                disabledReason:
+                    d.upDownAttempt && d.putts > 1 ? 'N/A — 2+ putts' : null,
                 onChanged: (v) =>
                     widget.onChanged(d.copyWith(upDownSuccess: v)),
               ),
@@ -195,7 +207,8 @@ class _HoleCardState extends State<HoleCard> {
                 key: const ValueKey('score'),
                 label: 'Score',
                 value: d.score,
-                min: 1,
+                // Score must exceed putts — at least the tee shot isn't a putt.
+                min: d.putts + 1,
                 onChanged: (v) => widget.onChanged(d.copyWith(score: v)),
               ),
               const SizedBox(height: 12),
@@ -301,11 +314,16 @@ class _StepperRow extends StatelessWidget {
     required this.value,
     required this.min,
     required this.onChanged,
+    this.max,
   });
 
   final String label;
   final int value;
   final int min;
+
+  /// Optional upper bound; the increment button disables once `value` reaches
+  /// it. `null` means unbounded (the default for penalty strokes).
+  final int? max;
   final ValueChanged<int> onChanged;
 
   @override
@@ -333,7 +351,9 @@ class _StepperRow extends StatelessWidget {
           ),
           IconButton(
             key: ValueKey('${label}_inc'),
-            onPressed: () => onChanged(value + 1),
+            onPressed: (max != null && value >= max!)
+                ? null
+                : () => onChanged(value + 1),
             icon: const Icon(Icons.add),
           ),
         ],
@@ -399,6 +419,7 @@ class _SwitchRow extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
+    this.disabledReason,
   });
 
   final String label;
@@ -406,10 +427,16 @@ class _SwitchRow extends StatelessWidget {
   final bool enabled;
   final ValueChanged<bool> onChanged;
 
+  /// Optional note shown as the tile subtitle while the row is disabled,
+  /// explaining why (e.g. "N/A — 2+ putts"). Ignored when enabled.
+  final String? disabledReason;
+
   @override
   Widget build(BuildContext context) {
     return SwitchListTile(
       title: Text(label),
+      subtitle:
+          !enabled && disabledReason != null ? Text(disabledReason!) : null,
       value: value,
       onChanged: enabled ? onChanged : null,
       contentPadding: EdgeInsets.zero,
