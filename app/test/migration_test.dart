@@ -17,6 +17,7 @@ import 'package:golfy_app/data/database.dart';
 import 'generated_migrations/schema.dart';
 import 'generated_migrations/schema_v1.dart' as v1;
 import 'generated_migrations/schema_v2.dart' as v2;
+import 'generated_migrations/schema_v3.dart' as v3;
 
 void main() {
   late SchemaVerifier verifier;
@@ -108,6 +109,91 @@ void main() {
 
     final events = await db.select(db.events).get();
     expect(events, isEmpty);
+  });
+
+  test('migrates the schema from v3 to v4', () async {
+    final connection = await verifier.startAt(3);
+    final db = GolfyDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    // A data-only migration (#37) — no structural change; the resulting schema
+    // must still match the generated v4 snapshot.
+    await verifier.migrateAndValidate(db, 4);
+  });
+
+  test('v3 -> v4 fixes contradictory putts data (#37)', () async {
+    final schema = await verifier.schemaAt(3);
+
+    // Seed rows through the v3-shaped database. The DAO's app-layer invariants
+    // don't exist here, so we can write the states this migration is meant to
+    // fix.
+    final oldDb = v3.DatabaseAtV3(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v3.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    final roundId = await oldDb.into(oldDb.rounds).insert(
+          v3.RoundsCompanion.insert(date: '2026-05-19', courseId: courseId),
+        );
+
+    v3.HoleResultsCompanion hole(
+      int holeNumber, {
+      required int score,
+      required int putts,
+      required bool upDownSuccess,
+    }) {
+      // The versioned v3 schema stores booleans as raw ints (0/1).
+      return v3.HoleResultsCompanion.insert(
+        roundId: roundId,
+        holeNumber: holeNumber,
+        par: 4,
+        score: score,
+        yards: 400,
+        gir: 0,
+        putts: putts,
+        upDownAttempt: 1,
+        upDownSuccess: upDownSuccess ? 1 : 0,
+        penaltyStrokes: 0,
+        bunkerVisited: 0,
+        sandSave: 0,
+        driveDistanceYards: 250,
+      );
+    }
+
+    // Hole 1: an up/down "success" recorded with 2 putts — Rule A clears the
+    // success; its putts stay (2 < 5).
+    await oldDb
+        .into(oldDb.holeResults)
+        .insert(hole(1, score: 5, putts: 2, upDownSuccess: true));
+    // Hole 2: putts equal to score — Rule B clamps putts to score - 1.
+    await oldDb
+        .into(oldDb.holeResults)
+        .insert(hole(2, score: 3, putts: 3, upDownSuccess: false));
+    // Hole 3 (control): a valid 1-putt up/down success — left untouched.
+    await oldDb
+        .into(oldDb.holeResults)
+        .insert(hole(3, score: 4, putts: 1, upDownSuccess: true));
+    await oldDb.close();
+
+    // Migrate the same underlying database with the real app schema (v4).
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 4);
+
+    final rows = await db.holeResultDao.watchForRound(roundId).first;
+    final byHole = {for (final r in rows) r.holeNumber: r};
+
+    // Rule A: the 2-putt "success" is cleared; putts untouched.
+    expect(byHole[1]!.upDownSuccess, isFalse);
+    expect(byHole[1]!.putts, 2);
+    // Rule B: putts >= score clamped down to score - 1.
+    expect(byHole[2]!.putts, 2);
+    expect(byHole[2]!.upDownSuccess, isFalse);
+    // Control: the valid 1-putt success survives intact.
+    expect(byHole[3]!.upDownSuccess, isTrue);
+    expect(byHole[3]!.putts, 1);
   });
 
   test('a freshly created database matches the generated schema', () async {

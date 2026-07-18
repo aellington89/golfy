@@ -90,7 +90,7 @@ void main() {
     await fx.upsertHole(rid, 1,
         par: 4,
         score: 5,
-        putts: 2,
+        putts: 1,
         fairwayHit: true,
         gir: false,
         upDownAttempt: true,
@@ -120,7 +120,7 @@ void main() {
     expect(textOfKey(tester, 'total_rel'), 'E'); // 12 - 12
     expect(textOfKey(tester, 'total_fairways'), '1/2'); // 1 hit of 2 non-par-3
     expect(textOfKey(tester, 'total_gir'), '2/3'); // greens 2 of 3 holes
-    expect(textOfKey(tester, 'total_putts'), '6'); // 2 + 1 + 3
+    expect(textOfKey(tester, 'total_putts'), '5'); // 1 + 1 + 3
     expect(textOfKey(tester, 'total_updown'), '1/2'); // 1 made of 2 tries
 
     Finder inHole(int hole, String text) => find.descendant(

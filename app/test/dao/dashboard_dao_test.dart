@@ -12,9 +12,9 @@ import '_fixtures.dart';
 /// * Scores: 4 birdies (3), 10 pars (4), 4 bogeys (5) → SUM=72, to-par=0
 /// * Fairway hits: holes 1–12 = true, 13–18 = false → 12/18 hits
 /// * GIR: holes 1–10 = true, 11–18 = false → 10/18
-/// * Putts: 2 each → SUM=36
+/// * Putts: 2 each except hole 18 = 1 (its up & down is a 1-putt) → SUM=35
 /// * Up/down: hole 17 attempt=true,success=false; hole 18 attempt=true,
-///   success=true. Others all attempt=false. → 2 attempts, 1 success.
+///   success=true (1 putt). Others all attempt=false. → 2 attempts, 1 success.
 /// * Penalty: hole 13 has penaltyStrokes=2; rest 0. → 1 hole with penalty,
 ///   total penalty strokes=2.
 /// * Bunker/sand save: holes 14,15,16 bunkerVisited=true; hole 14
@@ -38,7 +38,7 @@ import '_fixtures.dart';
 /// * SUM(score-par) = -2 → avg vs par = -1.0
 /// * fairwayHitPct = 20 / 32 = 0.625
 /// * girPct = 25 / 36 ≈ 0.69444…
-/// * avgPuttsPerHole = 2.0
+/// * avgPuttsPerHole = 71 / 36 ≈ 1.9722
 /// * upDownPct = 1 / 2 = 0.5
 /// * penaltyHolePct = 1 / 36 ≈ 0.02778…
 /// * avgPenaltyStrokesPerHole = 2 / 36 ≈ 0.05556…
@@ -69,6 +69,8 @@ Future<({int r1, int r2})> seedRichFixture(TestFixtures fx) async {
     final penaltyStrokes = h == 13 ? 2 : 0;
     final bunkerVisited = h == 14 || h == 15 || h == 16;
     final sandSave = h == 14;
+    // Hole 18's up & down success must be a 1-putt (#37); all others 2-putt.
+    final putts = h == 18 ? 1 : 2;
     await fx.upsertHole(
       r1,
       h,
@@ -76,7 +78,7 @@ Future<({int r1, int r2})> seedRichFixture(TestFixtures fx) async {
       score: score,
       fairwayHit: fairwayHit,
       gir: gir,
-      putts: 2,
+      putts: putts,
       upDownAttempt: upDownAttempt,
       upDownSuccess: upDownSuccess,
       penaltyStrokes: penaltyStrokes,
@@ -164,7 +166,7 @@ void main() {
       expect(stats.avgScoreVsPar, closeTo(-1.0, 1e-9));
       expect(stats.fairwayHitPct, closeTo(20 / 32, 1e-9));
       expect(stats.girPct, closeTo(25 / 36, 1e-9));
-      expect(stats.avgPuttsPerHole, closeTo(2.0, 1e-9));
+      expect(stats.avgPuttsPerHole, closeTo(71 / 36, 1e-9));
       expect(stats.upDownPct, closeTo(0.5, 1e-9));
       expect(stats.penaltyHolePct, closeTo(1 / 36, 1e-9));
       expect(stats.avgPenaltyStrokesPerHole, closeTo(2 / 36, 1e-9));
@@ -297,7 +299,7 @@ void main() {
       final cid = await fx.insertCourse();
       final rid = await fx.insertRound(cid);
       // One hole per (score - par) bucket from -2 to +3, all par-4.
-      await fx.upsertHole(rid, 1, par: 4, score: 2); // -2 eagle
+      await fx.upsertHole(rid, 1, par: 4, score: 2, putts: 1); // -2 eagle
       await fx.upsertHole(rid, 2, par: 4, score: 3); // -1 birdie
       await fx.upsertHole(rid, 3, par: 4, score: 4); //  0 par
       await fx.upsertHole(rid, 4, par: 4, score: 5); // +1 bogey

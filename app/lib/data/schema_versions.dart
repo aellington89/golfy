@@ -577,9 +577,117 @@ i1.GeneratedColumn<int> _column_31(String aliasedName) =>
       type: i1.DriftSqlType.int,
       $customConstraints: 'NULL REFERENCES events(id)ON DELETE SET NULL',
     );
+
+final class Schema4 extends i0.VersionedSchema {
+  Schema4({required super.database}) : super(version: 4);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    courses,
+    events,
+    rounds,
+    holeResults,
+    idxRoundsDate,
+    idxRoundsCourse,
+    idxRoundsEvent,
+    idxHolesRound,
+  ];
+  late final Shape0 courses = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'courses',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(name, game_title)'],
+      columns: [_column_0, _column_1, _column_2],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape3 events = Shape3(
+    source: i0.VersionedTable(
+      entityName: 'events',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(name)'],
+      columns: [_column_0, _column_1, _column_28, _column_29, _column_30],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 rounds = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'rounds',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(date, course_id, round_number)'],
+      columns: [
+        _column_0,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_31,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape2 holeResults = Shape2(
+    source: i0.VersionedTable(
+      entityName: 'hole_results',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(round_id, hole_number)'],
+      columns: [
+        _column_0,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+        _column_18,
+        _column_19,
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+        _column_26,
+        _column_27,
+        _column_10,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index idxRoundsDate = i1.Index(
+    'idx_rounds_date',
+    'CREATE INDEX idx_rounds_date ON rounds (date)',
+  );
+  final i1.Index idxRoundsCourse = i1.Index(
+    'idx_rounds_course',
+    'CREATE INDEX idx_rounds_course ON rounds (course_id)',
+  );
+  final i1.Index idxRoundsEvent = i1.Index(
+    'idx_rounds_event',
+    'CREATE INDEX idx_rounds_event ON rounds (event_id)',
+  );
+  final i1.Index idxHolesRound = i1.Index(
+    'idx_holes_round',
+    'CREATE INDEX idx_holes_round ON hole_results (round_id)',
+  );
+}
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -593,6 +701,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from2To3(migrator, schema);
         return 3;
+      case 3:
+        final schema = Schema4(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from3To4(migrator, schema);
+        return 4;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -602,6 +715,11 @@ i0.MigrationStepWithVersion migrationSteps({
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
+  step: migrationSteps(
+    from1To2: from1To2,
+    from2To3: from2To3,
+    from3To4: from3To4,
+  ),
 );

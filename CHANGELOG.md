@@ -9,6 +9,15 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 ## [Unreleased]
 
 ### Changed
+- The hole-entry form now enforces two more "impossible state" rules for a hole,
+  matching the existing DAO guards: an **up & down success requires one putt or
+  fewer** (a 1-putt or a chip-in — the success toggle disables with an
+  "N/A — 2+ putts" note, and raising putts past 1 clears it), and **putts must be
+  fewer than the score** (the tee shot is never a putt — the putts and score
+  steppers now cap each other). A schema **v4** data migration cleans rows saved
+  before these rules existed: it clears any up & down success recorded with 2+
+  putts and clamps putts down to `score - 1` where they met or exceeded it
+  ([#37]).
 - The hole-entry form now follows the order a hole is actually played — **Tee**
   (par, fairway hit) → **Approach & Around the Green** (GIR, up/down attempt,
   bunker visited) → **Putting** (putts) → **Score** (up/down success, sand save,
@@ -202,5 +211,6 @@ Phase 1 — data layer and navigation shell.
 [#33]: https://github.com/aellington89/golfy/issues/33
 [#34]: https://github.com/aellington89/golfy/issues/34
 [#35]: https://github.com/aellington89/golfy/issues/35
+[#37]: https://github.com/aellington89/golfy/issues/37
 [#39]: https://github.com/aellington89/golfy/issues/39
 [#45]: https://github.com/aellington89/golfy/issues/45

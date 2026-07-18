@@ -49,10 +49,13 @@ class HoleResultDao extends DatabaseAccessor<GolfyDatabase>
     return row.read(count) ?? 0;
   }
 
-  /// Validates the three "impossible state" combinations the database does
+  /// Validates the five "impossible state" combinations the database does
   /// not enforce at the SQL level:
   ///
   /// * `upDownSuccess = true` requires `upDownAttempt = true`
+  /// * `upDownSuccess = true` requires `putts <= 1` (an up & down is a 1-putt
+  ///   or a chip-in)
+  /// * `putts` must be `< score` (the tee shot is never a putt)
   /// * `sandSave = true` requires `bunkerVisited = true`
   /// * `par = 3` cannot have a non-null `fairwayHit` (par 3s have no fairway)
   ///
@@ -67,6 +70,19 @@ class HoleResultDao extends DatabaseAccessor<GolfyDatabase>
         !upDownAttempt) {
       throw ArgumentError(
         'upDownSuccess=true requires upDownAttempt=true',
+      );
+    }
+
+    final putts = h.putts.present ? h.putts.value : null;
+    final score = h.score.present ? h.score.value : null;
+    if (upDownSuccess != null && upDownSuccess && putts != null && putts > 1) {
+      throw ArgumentError(
+        'upDownSuccess=true requires putts <= 1',
+      );
+    }
+    if (putts != null && score != null && putts >= score) {
+      throw ArgumentError(
+        'putts must be less than score',
       );
     }
 

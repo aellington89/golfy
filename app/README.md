@@ -101,9 +101,10 @@ app/test/
   future referencing tables (notes, photos) safe.
 - **DAO-layer invariants throw.** Impossible states are validated at the DAO
   before the SQL hits the database:
-  - `HoleResultDao`: `upDownSuccess` requires `upDownAttempt`; `sandSave`
-    requires `bunkerVisited`; `par == 3` requires `fairwayHit == null` (par-3s
-    have no fairway)
+  - `HoleResultDao`: `upDownSuccess` requires `upDownAttempt`; `upDownSuccess`
+    requires `putts <= 1` (an up & down is a 1-putt or chip-in); `putts < score`
+    (the tee shot is never a putt); `sandSave` requires `bunkerVisited`;
+    `par == 3` requires `fairwayHit == null` (par-3s have no fairway)
   - `EventDao`: a result is exactly one of placed / cut / not-recorded — a
     missed cut can't carry a finishing position, and a tie requires one
 - **Navigation is state, not a `Navigator` stack.** The bottom bar renders the
@@ -212,7 +213,10 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > ([#24](https://github.com/aellington89/golfy/issues/24)). A later real
 > migration may drop it. The v3 migration adds the `events` table plus the
 > nullable `rounds.event_id` foreign key (`SET NULL` on delete) and its index
-> ([#35](https://github.com/aellington89/golfy/issues/35)).
+> ([#35](https://github.com/aellington89/golfy/issues/35)). The v4 migration is
+> data-only (no schema change): it clears any up/down success recorded with 2+
+> putts and clamps `putts` to `score - 1` where they met or exceeded it
+> ([#37](https://github.com/aellington89/golfy/issues/37)).
 
 ## Release signing
 

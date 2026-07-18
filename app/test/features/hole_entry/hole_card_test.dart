@@ -173,11 +173,80 @@ void main() {
     });
   });
 
+  group('HoleCard — up/down success vs putts (#37)', () {
+    testWidgets('up/down success is disabled with a reason when putts > 1',
+        (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(upDownAttempt: true, putts: 2),
+      );
+
+      final tile = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Up/Down success'),
+      );
+      expect(tile.onChanged, isNull);
+      expect(find.text('N/A — 2+ putts'), findsOneWidget);
+    });
+
+    testWidgets('up/down success is enabled at 1 putt when attempt is on',
+        (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(upDownAttempt: true, putts: 1),
+      );
+
+      final tile = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Up/Down success'),
+      );
+      expect(tile.onChanged, isNotNull);
+    });
+
+    testWidgets('raising putts above 1 clears recorded up/down success',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial()
+            .copyWith(upDownAttempt: true, putts: 1, upDownSuccess: true),
+      );
+      expect(state.draft.upDownSuccess, true);
+
+      await tester.tap(find.byKey(const ValueKey('Putts_inc')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.putts, 2);
+      expect(state.draft.upDownSuccess, false);
+    });
+  });
+
+  group('HoleCard — putts < score coupling (#37)', () {
+    testWidgets('putts increment is disabled at putts == score - 1',
+        (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4).copyWith(score: 4, putts: 3),
+      );
+      final btn =
+          tester.widget<IconButton>(find.byKey(const ValueKey('Putts_inc')));
+      expect(btn.onPressed, isNull);
+    });
+
+    testWidgets('score decrement is disabled at score == putts + 1',
+        (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4).copyWith(score: 3, putts: 2),
+      );
+      final btn =
+          tester.widget<IconButton>(find.byKey(const ValueKey('Score_dec')));
+      expect(btn.onPressed, isNull);
+    });
+  });
+
   group('HoleCard — steppers clamp at minimum', () {
     testWidgets('score decrement is disabled at score == 1', (tester) async {
       await pumpCard(
         tester,
-        initial: HoleDraft.initial().copyWith(score: 1),
+        initial: HoleDraft.initial().copyWith(score: 1, putts: 0),
       );
       final btn = tester.widget<IconButton>(find.byKey(const ValueKey('Score_dec')));
       expect(btn.onPressed, isNull);

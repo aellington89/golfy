@@ -24,7 +24,7 @@ class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -40,6 +40,22 @@ class GolfyDatabase extends _$GolfyDatabase {
             await m.createTable(schema.events);
             await m.addColumn(schema.rounds, schema.rounds.eventId);
             await m.create(schema.idxRoundsEvent);
+          },
+          // v3 -> v4: data-only fix (#37) — no structural change. Enforce the
+          // two putts invariants on rows written before they existed.
+          from3To4: (m, schema) async {
+            // An up & down is a 1-putt (or chip-in); clear any success recorded
+            // with 2+ putts. Runs BEFORE the clamp below so a 2-putt "success"
+            // isn't resurrected once its putts are lowered.
+            await m.database.customStatement(
+              'UPDATE hole_results SET up_down_success = 0 '
+              'WHERE up_down_success = 1 AND putts > 1',
+            );
+            // The tee shot is never a putt, so putts < score always. Clamp any
+            // row that meets or exceeds score down to the max valid value.
+            await m.database.customStatement(
+              'UPDATE hole_results SET putts = score - 1 WHERE putts >= score',
+            );
           },
         ),
         beforeOpen: (details) async {
