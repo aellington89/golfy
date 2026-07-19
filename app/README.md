@@ -269,8 +269,9 @@ Releases are handled by a separate workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml): pushing a
 `v*.*.*` tag runs the test suite, builds a **signed** release APK from the
 `ANDROID_*` secrets (see [Release signing](#release-signing)), asserts it is
-release-signed and under 20 MB, and attaches it to a **draft** GitHub Release to
-publish after on-device validation. A manual `workflow_dispatch` run does the
+release-signed and within an 80 MB sanity ceiling for the fat universal APK,
+and attaches it to a **draft** GitHub Release to publish after on-device
+validation. A manual `workflow_dispatch` run does the
 same build but uploads the APK as an artifact instead of creating a Release — use
 it to dry-run the signing pipeline before tagging.
 
