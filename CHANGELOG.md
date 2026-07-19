@@ -84,7 +84,7 @@ pipeline atop the migration-safe upgrades and retained keystore from v0.0.x.
 ### Added
 - Tag-triggered release workflow (`.github/workflows/release.yml`): a `v*.*.*`
   tag builds a signed release APK, asserts it is release-signed (not debug) and
-  under 20 MB, and attaches it to a **draft** GitHub Release to publish after
+  under 80 MB, and attaches it to a **draft** GitHub Release to publish after
   on-device validation; `workflow_dispatch` runs the same build as an artifact
   dry-run ([#19]).
 - Continuous integration via GitHub Actions: every push and pull request to
