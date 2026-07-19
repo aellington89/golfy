@@ -5,10 +5,10 @@ import 'package:intl/intl.dart';
 
 import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
-import '../../data/repository.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
 import '../courses/course_picker.dart';
+import '../events/event_picker.dart';
 import 'active_round_provider.dart';
 
 /// Modal dialog for starting a new round. On confirm, inserts a `rounds`
@@ -16,29 +16,25 @@ import 'active_round_provider.dart';
 /// the Hole Entry tab, and pops with the new round id. Cancel pops with
 /// `null` and leaves all state untouched.
 ///
-/// Optionally associates the round with an event (#35): the Event field is a
-/// typeahead over [existingEvents]; picking one links the round to it, a
-/// brand-new typed name creates an event on submit, and an empty field leaves
-/// the round casual (no event).
+/// Optionally associates the round with an event (#35): the Event field is an
+/// [EventPicker] (mirroring [CoursePicker]) — pick an existing event, choose
+/// "No event / Casual round" to leave it casual, or create one via
+/// "Add new event…". No event is selected by default.
 ///
 /// Validates that a course is selected, pre-checks [existingRounds] for a
 /// duplicate `(date, courseId, roundNumber)` triple, and catches the
 /// DB-level UNIQUE constraint as a safety net for the rare race.
-/// The caller supplies the rounds + events snapshots so the dialog has no live
-/// stream dependency — that keeps widget tests free of pending timers.
+/// The caller supplies the rounds snapshot so the dialog has no live stream
+/// dependency for the duplicate pre-check — that keeps widget tests free of
+/// pending timers. The event list is sourced live from [eventsStreamProvider]
+/// via the [EventPicker] (overridden with a manual stream in tests).
 class NewRoundDialog extends ConsumerStatefulWidget {
   const NewRoundDialog({
     super.key,
     this.existingRounds = const [],
-    this.existingEvents = const [],
   });
 
   final List<RoundWithCourse> existingRounds;
-
-  /// Snapshot of existing events for the Event typeahead — passed in (rather
-  /// than watched) so the dialog keeps no live stream dependency, mirroring
-  /// [existingRounds].
-  final List<Event> existingEvents;
 
   @override
   ConsumerState<NewRoundDialog> createState() => _NewRoundDialogState();
@@ -47,9 +43,9 @@ class NewRoundDialog extends ConsumerStatefulWidget {
 class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
   final _notesController = TextEditingController();
 
-  /// Current text of the Event typeahead. Resolved to an event id on submit
-  /// (matched against [widget.existingEvents] or inserted as a new event).
-  String _eventText = '';
+  /// Currently-selected event, or `null` for a casual round. Set by the
+  /// [EventPicker]; its id is written straight to the round on submit.
+  Event? _event;
 
   Course? _course;
   late DateTime _date;
@@ -163,9 +159,7 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
 
     try {
       final repo = ref.read(repositoryProvider);
-      // Resolved after the duplicate pre-check above so a rejected round never
-      // leaves an orphan event behind.
-      final eventId = await _resolveEventId(repo);
+      final eventId = _event?.id;
       final notes = _notesController.text.trim();
       final companion = RoundsCompanion.insert(
         date: _isoDate,
@@ -187,18 +181,6 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
             'A round with this course, date, and round number already exists';
       });
     }
-  }
-
-  /// Resolves the typed event name to an event id: empty -> `null` (casual);
-  /// an existing name (case-insensitive) -> its id; a new name -> a freshly
-  /// inserted event.
-  Future<int?> _resolveEventId(GolfyRepository repo) async {
-    final name = _eventText.trim();
-    if (name.isEmpty) return null;
-    for (final e in widget.existingEvents) {
-      if (e.name.toLowerCase() == name.toLowerCase()) return e.id;
-    }
-    return repo.insertEvent(EventsCompanion.insert(name: name));
   }
 
   @override
@@ -227,32 +209,11 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
               ),
             ],
             const SizedBox(height: 12),
-            Autocomplete<Event>(
-              displayStringForOption: (e) => e.name,
-              optionsBuilder: (value) {
-                final query = value.text.trim().toLowerCase();
-                if (query.isEmpty) return widget.existingEvents;
-                return widget.existingEvents.where(
-                  (e) => e.name.toLowerCase().contains(query),
-                );
-              },
-              onSelected: (e) => _eventText = e.name,
-              fieldViewBuilder:
-                  (context, controller, focusNode, onFieldSubmitted) {
-                return TextFormField(
-                  key: const ValueKey('event_field'),
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Event (optional)',
-                    border: OutlineInputBorder(),
-                    helperText: 'Pick an existing event or type a new one',
-                  ),
-                  enabled: !_submitting,
-                  textInputAction: TextInputAction.next,
-                  onChanged: (v) => _eventText = v,
-                );
-              },
+            EventPicker(
+              value: _event,
+              onChanged: _submitting
+                  ? (_) {}
+                  : (e) => setState(() => _event = e),
             ),
             const SizedBox(height: 12),
             InkWell(

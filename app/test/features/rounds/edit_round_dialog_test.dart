@@ -9,19 +9,23 @@ import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
+import 'package:golfy_app/features/events/event_picker.dart';
 import 'package:golfy_app/features/rounds/edit_round_dialog.dart';
 
 void main() {
   late GolfyDatabase db;
   late StreamController<List<Course>> coursesController;
+  late StreamController<List<Event>> eventsController;
 
   setUp(() {
     db = GolfyDatabase.forTesting(NativeDatabase.memory());
     coursesController = StreamController<List<Course>>.broadcast();
+    eventsController = StreamController<List<Event>>.broadcast();
   });
 
   tearDown(() async {
     await coursesController.close();
+    await eventsController.close();
     await db.close();
   });
 
@@ -59,7 +63,6 @@ void main() {
   Widget wrap({
     required RoundWithCourse round,
     List<RoundWithCourse> existingRounds = const [],
-    List<Event> existingEvents = const [],
     List<Course> existingCourses = const [],
   }) {
     return ProviderScope(
@@ -67,6 +70,7 @@ void main() {
         databaseProvider.overrideWithValue(db),
         coursesByNameStreamProvider
             .overrideWith((ref) => coursesController.stream),
+        eventsStreamProvider.overrideWith((ref) => eventsController.stream),
       ],
       child: MaterialApp(
         home: Builder(
@@ -79,7 +83,6 @@ void main() {
                     builder: (_) => EditRoundDialog(
                       round: round,
                       existingRounds: existingRounds,
-                      existingEvents: existingEvents,
                       existingCourses: existingCourses,
                     ),
                   ),
@@ -103,14 +106,29 @@ void main() {
     await tester.pumpWidget(wrap(
       round: round,
       existingRounds: existingRounds,
-      existingEvents: existingEvents,
       existingCourses: existingCourses,
     ));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    // Feed the course picker's stream (its initial value comes from
-    // existingCourses, but emit so the picker isn't stuck loading).
+    // Feed the pickers' streams. The pre-selected course/event come from the
+    // round + snapshots, but emit so the pickers aren't stuck loading (and so
+    // the event sheet lists these events).
     coursesController.add(existingCourses);
+    eventsController.add(existingEvents);
+    await tester.pumpAndSettle();
+  }
+
+  // Opens the EventPicker sheet and taps the row with [name] (an existing event
+  // or "No event / Casual round"). Requires events to have been emitted.
+  Future<void> selectEvent(WidgetTester tester, String name) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(EventPicker),
+        matching: find.byType(InkWell),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, name));
     await tester.pumpAndSettle();
   }
 
@@ -139,8 +157,8 @@ void main() {
       existingEvents: [event],
     );
 
-    // Course name in the picker, event name in the typeahead, the round's
-    // number in the stepper, and its notes in the notes field.
+    // Course name in the course picker, event name in the event picker, the
+    // round's number in the stepper, and its notes in the notes field.
     expect(find.text('Augusta'), findsOneWidget);
     expect(find.text('Club Championship'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
@@ -161,11 +179,29 @@ void main() {
 
     await openDialog(tester, round: round, existingCourses: const [course]);
 
-    await tester.enterText(
-      find.byKey(const ValueKey('event_field')),
-      'Club Championship',
+    // Open the event picker → "Add new event…" → name it.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(EventPicker),
+        matching: find.byType(InkWell),
+      ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Add new event…'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Event Name'),
+      'Club Championship',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    // Flush the insert, then let the add-event dialog close (bounded pumps
+    // while its text field still holds focus).
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.byKey(const ValueKey('edit_round_save')));
     await flush(tester);
@@ -201,14 +237,7 @@ void main() {
       existingEvents: [event],
     );
 
-    // Type a prefix, then pick the suggestion from the typeahead overlay.
-    await tester.enterText(
-      find.byKey(const ValueKey('event_field')),
-      'Club',
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Club Championship').last);
-    await tester.pumpAndSettle();
+    await selectEvent(tester, 'Club Championship');
 
     await tester.tap(find.byKey(const ValueKey('edit_round_save')));
     await flush(tester);
@@ -246,9 +275,8 @@ void main() {
       existingEvents: [event],
     );
 
-    // Field starts pre-filled with the event name; clear it to detach.
-    await tester.enterText(find.byKey(const ValueKey('event_field')), '');
-    await tester.pumpAndSettle();
+    // Field starts pre-filled with the event; choose "No event" to detach.
+    await selectEvent(tester, 'No event / Casual round');
 
     await tester.tap(find.byKey(const ValueKey('edit_round_save')));
     await flush(tester);
@@ -307,7 +335,8 @@ void main() {
 
     await openDialog(tester, round: round, existingCourses: const [course]);
 
-    // The notes field is the last TextFormField (the event typeahead is first).
+    // Notes is now the only TextFormField in the dialog (the event field is a
+    // picker, not a text field).
     await tester.enterText(
       find.byType(TextFormField).last,
       'gusty back nine',

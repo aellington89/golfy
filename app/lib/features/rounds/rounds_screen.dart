@@ -67,20 +67,9 @@ class RoundsScreen extends ConsumerWidget {
     BuildContext context,
     List<RoundWithCourse> rounds,
   ) async {
-    // Distinct events currently attached to any round, for the dialog's
-    // typeahead — derived from the same snapshot so the dialog keeps no live
-    // stream dependency.
-    final events = <int, Event>{};
-    for (final r in rounds) {
-      final e = r.event;
-      if (e != null) events[e.id] = e;
-    }
     await showDialog<int>(
       context: context,
-      builder: (_) => NewRoundDialog(
-        existingRounds: rounds,
-        existingEvents: events.values.toList(),
-      ),
+      builder: (_) => NewRoundDialog(existingRounds: rounds),
     );
   }
 }

@@ -5,14 +5,14 @@ import 'package:intl/intl.dart';
 
 import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
-import '../../data/repository.dart';
 import '../../data/repository_provider.dart';
 import '../courses/course_picker.dart';
+import '../events/event_picker.dart';
 
 /// Modal dialog for editing an existing round's details (#45): its course,
 /// event, date, round number and notes. Mirrors [NewRoundDialog]'s form — the
-/// same [CoursePicker], event typeahead and round-number stepper — but writes
-/// an UPDATE via [GolfyRepository.updateRound] and, on confirm, simply pops.
+/// same [CoursePicker], [EventPicker] and round-number stepper — but writes an
+/// UPDATE via the repository's `updateRound` and, on confirm, simply pops.
 /// The rounds stream re-emits on its own, so the list regroups under the new
 /// event automatically. Cancel pops and leaves the round untouched.
 ///
@@ -20,9 +20,10 @@ import '../courses/course_picker.dart';
 /// wrong course / date / round number is corrected) without deleting and
 /// re-creating the round — its hole_results are preserved across the edit.
 ///
-/// Like [NewRoundDialog], the caller supplies the rounds / events / courses
-/// snapshots so the dialog has no live stream dependency, keeping widget tests
-/// free of pending timers. Two edit-specific differences from New Round:
+/// Like [NewRoundDialog], the caller supplies the rounds / courses snapshots so
+/// the dialog has no live stream dependency for those, keeping widget tests
+/// free of pending timers; the event list comes live from [eventsStreamProvider]
+/// via the [EventPicker]. Two edit-specific differences from New Round:
 ///   * the round number is *not* auto-recomputed when course / date change —
 ///     the round keeps its existing number unless the user steps it; and
 ///   * the duplicate `(date, courseId, roundNumber)` pre-check excludes the
@@ -32,7 +33,6 @@ class EditRoundDialog extends ConsumerStatefulWidget {
     super.key,
     required this.round,
     this.existingRounds = const [],
-    this.existingEvents = const [],
     this.existingCourses = const [],
   });
 
@@ -40,9 +40,6 @@ class EditRoundDialog extends ConsumerStatefulWidget {
   final RoundWithCourse round;
 
   final List<RoundWithCourse> existingRounds;
-
-  /// Snapshot of existing events for the Event typeahead (see [NewRoundDialog]).
-  final List<Event> existingEvents;
 
   /// Snapshot of existing courses, used to resolve the round's current
   /// [Course] for the [CoursePicker]'s initial value ([RoundWithCourse] only
@@ -56,9 +53,9 @@ class EditRoundDialog extends ConsumerStatefulWidget {
 class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
   late final TextEditingController _notesController;
 
-  /// Current text of the Event typeahead — seeded from the round's current
-  /// event and resolved to an event id (or null) on submit.
-  late String _eventText;
+  /// Currently-selected event, or `null` for a casual round. Seeded from the
+  /// round's current event; its id is written to the round on submit.
+  Event? _event;
 
   Course? _course;
   late DateTime _date;
@@ -75,7 +72,7 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
     super.initState();
     final r = widget.round;
     _course = _courseFor(r.round.courseId);
-    _eventText = r.event?.name ?? '';
+    _event = r.event;
     _date = DateTime.tryParse(r.round.date) ?? DateTime.now();
     _roundNumber = r.round.roundNumber;
     _notesController = TextEditingController(text: r.round.notes ?? '');
@@ -166,15 +163,13 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
 
     try {
       final repo = ref.read(repositoryProvider);
-      // Resolved after the duplicate pre-check so a rejected edit never leaves
-      // an orphan event behind.
-      final eventId = await _resolveEventId(repo);
+      final eventId = _event?.id;
       final notes = _notesController.text.trim();
       final companion = RoundsCompanion(
         date: Value(_isoDate),
         courseId: Value(course.id),
         roundNumber: Value(_roundNumber),
-        // Value(null) explicitly clears the event when the field is emptied.
+        // Value(null) explicitly clears the event when "No event" is chosen.
         eventId: Value(eventId),
         notes: Value(notes.isEmpty ? null : notes),
       );
@@ -189,18 +184,6 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
             'A round with this course, date, and round number already exists';
       });
     }
-  }
-
-  /// Resolves the typed event name to an event id: empty -> `null` (detaches /
-  /// casual); an existing name (case-insensitive) -> its id; a new name -> a
-  /// freshly inserted event. Identical to [NewRoundDialog]'s resolver.
-  Future<int?> _resolveEventId(GolfyRepository repo) async {
-    final name = _eventText.trim();
-    if (name.isEmpty) return null;
-    for (final e in widget.existingEvents) {
-      if (e.name.toLowerCase() == name.toLowerCase()) return e.id;
-    }
-    return repo.insertEvent(EventsCompanion.insert(name: name));
   }
 
   @override
@@ -229,34 +212,11 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
               ),
             ],
             const SizedBox(height: 12),
-            Autocomplete<Event>(
-              initialValue: TextEditingValue(text: _eventText),
-              displayStringForOption: (e) => e.name,
-              optionsBuilder: (value) {
-                final query = value.text.trim().toLowerCase();
-                if (query.isEmpty) return widget.existingEvents;
-                return widget.existingEvents.where(
-                  (e) => e.name.toLowerCase().contains(query),
-                );
-              },
-              onSelected: (e) => _eventText = e.name,
-              fieldViewBuilder:
-                  (context, controller, focusNode, onFieldSubmitted) {
-                return TextFormField(
-                  key: const ValueKey('event_field'),
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Event (optional)',
-                    border: OutlineInputBorder(),
-                    helperText: 'Pick an existing event, type a new one, or '
-                        'clear to detach',
-                  ),
-                  enabled: !_submitting,
-                  textInputAction: TextInputAction.next,
-                  onChanged: (v) => _eventText = v,
-                );
-              },
+            EventPicker(
+              value: _event,
+              onChanged: _submitting
+                  ? (_) {}
+                  : (e) => setState(() => _event = e),
             ),
             const SizedBox(height: 12),
             InkWell(
@@ -331,10 +291,11 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
   }
 }
 
-/// Opens [EditRoundDialog] for [round], gathering the rounds / events / courses
+/// Opens [EditRoundDialog] for [round], gathering the rounds / courses
 /// snapshots it needs. Shared by the rounds-list row and the scorecard so both
 /// entry points behave identically. Awaits the courses list first so the
-/// [CoursePicker] opens pre-selected on the round's current course.
+/// [CoursePicker] opens pre-selected on the round's current course. (The event
+/// list is sourced live by the [EventPicker] from [eventsStreamProvider].)
 Future<void> openEditRoundDialog(
   BuildContext context,
   WidgetRef ref,
@@ -343,20 +304,12 @@ Future<void> openEditRoundDialog(
   final repo = ref.read(repositoryProvider);
   final rounds = ref.read(roundsStreamProvider).value ?? const [];
   final courses = await repo.watchCoursesByName().first;
-  // Distinct events currently attached to any round, for the typeahead —
-  // derived from the same snapshot the New Round dialog uses.
-  final events = <int, Event>{};
-  for (final r in rounds) {
-    final e = r.event;
-    if (e != null) events[e.id] = e;
-  }
   if (!context.mounted) return;
   await showDialog<void>(
     context: context,
     builder: (_) => EditRoundDialog(
       round: round,
       existingRounds: rounds,
-      existingEvents: events.values.toList(),
       existingCourses: courses,
     ),
   );

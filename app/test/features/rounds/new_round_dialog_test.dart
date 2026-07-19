@@ -9,6 +9,7 @@ import 'package:golfy_app/data/database_provider.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/courses/course_picker.dart';
+import 'package:golfy_app/features/events/event_picker.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 import 'package:golfy_app/shell/tab_index_provider.dart';
@@ -16,20 +17,22 @@ import 'package:golfy_app/shell/tab_index_provider.dart';
 void main() {
   late GolfyDatabase db;
   late StreamController<List<Course>> coursesController;
+  late StreamController<List<Event>> eventsController;
 
   setUp(() {
     db = GolfyDatabase.forTesting(NativeDatabase.memory());
     coursesController = StreamController<List<Course>>.broadcast();
+    eventsController = StreamController<List<Event>>.broadcast();
   });
 
   tearDown(() async {
     await coursesController.close();
+    await eventsController.close();
     await db.close();
   });
 
   Widget wrap({
     List<RoundWithCourse> existing = const [],
-    List<Event> existingEvents = const [],
     void Function(int?)? onResult,
   }) {
     return ProviderScope(
@@ -37,6 +40,7 @@ void main() {
         databaseProvider.overrideWithValue(db),
         coursesByNameStreamProvider
             .overrideWith((ref) => coursesController.stream),
+        eventsStreamProvider.overrideWith((ref) => eventsController.stream),
       ],
       child: MaterialApp(
         home: Builder(
@@ -47,10 +51,7 @@ void main() {
                   onPressed: () async {
                     final result = await showDialog<int>(
                       context: context,
-                      builder: (_) => NewRoundDialog(
-                        existingRounds: existing,
-                        existingEvents: existingEvents,
-                      ),
+                      builder: (_) => NewRoundDialog(existingRounds: existing),
                     );
                     if (onResult != null) onResult(result);
                   },
@@ -71,12 +72,10 @@ void main() {
   Future<void> openDialog(
     WidgetTester tester, {
     List<RoundWithCourse> existing = const [],
-    List<Event> existingEvents = const [],
     void Function(int?)? onResult,
   }) async {
     await tester.pumpWidget(wrap(
       existing: existing,
-      existingEvents: existingEvents,
       onResult: onResult,
     ));
     await tester.tap(find.text('Open'));
@@ -88,10 +87,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> emitEvents(WidgetTester tester, List<Event> events) async {
+    eventsController.add(events);
+    await tester.pumpAndSettle();
+  }
+
   Future<void> selectCourse(WidgetTester tester, String name) async {
     await tester.tap(
       find.descendant(
         of: find.byType(CoursePicker),
+        matching: find.byType(InkWell),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, name));
+    await tester.pumpAndSettle();
+  }
+
+  // Opens the EventPicker sheet and taps the row with [name] (an existing event
+  // or "No event / Casual round"). Requires events to have been emitted so the
+  // picker is out of its loading state and rendering its tappable field.
+  Future<void> selectEvent(WidgetTester tester, String name) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(EventPicker),
         matching: find.byType(InkWell),
       ),
     );
@@ -246,7 +265,7 @@ void main() {
     expect(rounds.single.round.eventId, isNull);
   });
 
-  testWidgets('typing a new event name creates the event and links the round',
+  testWidgets('adding a new event via "Add new event…" creates and links it',
       (tester) async {
     await db.courseDao.insert(
       CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
@@ -257,13 +276,32 @@ void main() {
       tester,
       const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
     );
+    await emitEvents(tester, const []);
     await selectCourse(tester, 'Augusta');
 
-    await tester.enterText(
-      find.byKey(const ValueKey('event_field')),
-      'Club Championship',
+    // Open the event picker and choose "Add new event…".
+    await tester.tap(
+      find.descendant(
+        of: find.byType(EventPicker),
+        matching: find.byType(InkWell),
+      ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Add new event…'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Event Name'),
+      'Club Championship',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    // Flush the real async insert, then let the add-event dialog close. Bounded
+    // pumps (not pumpAndSettle) while its text field still holds focus.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
     await tester.runAsync(() async {
@@ -294,21 +332,14 @@ void main() {
     final existingEvents =
         await tester.runAsync(() => db.eventDao.watchAll().first);
 
-    await openDialog(tester, existingEvents: existingEvents!);
+    await openDialog(tester);
     await emitCourses(
       tester,
       const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
     );
+    await emitEvents(tester, existingEvents!);
     await selectCourse(tester, 'Augusta');
-
-    // Type a prefix, then pick the suggestion from the typeahead overlay.
-    await tester.enterText(
-      find.byKey(const ValueKey('event_field')),
-      'Club',
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Club Championship').last);
-    await tester.pumpAndSettle();
+    await selectEvent(tester, 'Club Championship');
 
     await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
     await tester.runAsync(() async {
