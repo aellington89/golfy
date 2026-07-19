@@ -29,14 +29,16 @@ class HoleDraft {
 
   /// Default values for a hole the user hasn't touched yet. Score mirrors
   /// par so a hurried "save" still records an even-par score — visually
-  /// distinct on the dashboard if it wasn't intentional.
+  /// distinct on the dashboard if it wasn't intentional. Putts default to 1,
+  /// the common case for a routine one-putt / regulation hole, so the typical
+  /// entry needs fewer taps.
   factory HoleDraft.initial({int par = 4}) {
     return HoleDraft(
       par: par,
       score: par,
       fairwayHit: null,
       gir: false,
-      putts: 2,
+      putts: 1,
       upDownAttempt: false,
       upDownSuccess: false,
       bunkerVisited: false,

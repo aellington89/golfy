@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/features/stats/score_color.dart';
 
 void main() {
-  // The app's real schemes; `scheme.error` is what the red band must equal.
+  // Green-seeded schemes mirroring the app's golf palette; `scheme.error` is
+  // what the red (two-over) band must equal.
   final light = ColorScheme.fromSeed(
-    seedColor: Colors.deepPurple,
+    seedColor: Colors.green,
     brightness: Brightness.light,
   );
   final dark = ColorScheme.fromSeed(
-    seedColor: Colors.deepPurple,
+    seedColor: Colors.green,
     brightness: Brightness.dark,
   );
 

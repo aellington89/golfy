@@ -8,6 +8,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-19
+
+This release gives Golfy a golf-appropriate look and smooths a couple of
+hole-entry rough edges: the app is re-themed from deep purple to a green /
+yellow / blue golf palette, a new hole now starts at one putt instead of two, and
+the Event field becomes a pick-from-list dropdown so a typo can't silently spawn
+a duplicate event.
+
 ### Changed
 - The **Event** field in the New Round and Edit Round dialogs is now a dropdown
   + modal-sheet picker matching the Course picker, replacing the free-text
@@ -16,6 +24,12 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   silently spawns a duplicate event. The field stays optional via a
   "No event / Casual round" choice, and editing a round pre-selects its current
   event. Backed by a new `eventsStreamProvider` ([#51]).
+- New/untouched holes now default to **1 putt** (was 2) — fewer taps for the
+  common one-putt / regulation-hole entry ([#52]).
+- Re-themed the app from the deep-purple seed to a **golf palette** — a
+  fairway-green primary with flag-yellow and sky-blue accents, in both light and
+  dark. Score-to-par colour bands (green / amber / red) are unchanged and still
+  coordinate with the new surfaces ([#53]).
 
 ## [0.1.3] - 2026-07-18
 
@@ -199,7 +213,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/aellington89/golfy/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/aellington89/golfy/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/aellington89/golfy/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/aellington89/golfy/compare/v0.1.0...v0.1.1
@@ -234,3 +249,5 @@ Phase 1 — data layer and navigation shell.
 [#39]: https://github.com/aellington89/golfy/issues/39
 [#45]: https://github.com/aellington89/golfy/issues/45
 [#51]: https://github.com/aellington89/golfy/issues/51
+[#52]: https://github.com/aellington89/golfy/issues/52
+[#53]: https://github.com/aellington89/golfy/issues/53
