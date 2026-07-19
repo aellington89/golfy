@@ -25,15 +25,20 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.1.3
+## Status — v0.1.4
 
-**v0.1.3** is the latest release — it tightens hole-entry data integrity and
-finishes the play-order form redesign:
+**v0.1.4** is the latest release — it gives Golfy a golf-appropriate look and
+smooths a couple of hole-entry rough edges:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
-| Play-order hole entry | [#34](https://github.com/aellington89/golfy/issues/34) | The hole-entry form follows the order a hole is actually played — Tee → Approach & Around the Green → Putting → Score — grouped under stage headers, with Score entered last once the hole is complete |
-| Putts-based entry guards | [#37](https://github.com/aellington89/golfy/issues/37) | Two more impossible-state combinations are blocked at both the form and the database — an up & down success needs one putt or fewer (a 1-putt or chip-in), and putts must be fewer than the score — with a schema-v4 migration that cleans any pre-existing rows |
+| Golf-themed palette | [#53](https://github.com/aellington89/golfy/issues/53) | The app is re-themed from a single deep-purple seed to a golf palette — a fairway-green primary with flag-yellow and sky-blue accents — across light and dark, with the score-to-par colour bands kept coordinated |
+| One-putt default | [#52](https://github.com/aellington89/golfy/issues/52) | A new, untouched hole now starts at one putt instead of two — fewer taps for the common one-putt or regulation hole |
+| Event picker dropdown | [#51](https://github.com/aellington89/golfy/issues/51) | The Event field in the New / Edit Round dialogs is now a pick-from-list dropdown + modal sheet mirroring the Course picker; a brand-new event is added only via an explicit action, so a typo no longer spawns a duplicate |
+
+It builds on **v0.1.3**, which tightened hole-entry data integrity and finished
+the play-order form redesign ([#34](https://github.com/aellington89/golfy/issues/34),
+[#37](https://github.com/aellington89/golfy/issues/37)).
 
 It builds on **v0.1.2**, a hotfix on v0.1.1 that made a round's event, course,
 date, round number and notes editable after creation

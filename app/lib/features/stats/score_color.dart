@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 /// over → amber, two-or-more over → the theme's error red.
 ///
 /// Returning `null` for even keeps the `E` label in the default on-surface
-/// colour. Green and amber are golf-semantic shades with no equivalent in a
-/// deep-purple [ColorScheme]; they shift to lighter shades on a dark scheme so
-/// they stay legible on a dark surface (#16). Red reuses [ColorScheme.error],
+/// colour. Green and amber are fixed golf-semantic shades — they signal a
+/// scoring outcome independent of the app's palette, so they're kept out of the
+/// [ColorScheme]; they shift to lighter shades on a dark scheme so they stay
+/// legible on a dark surface (#16). Red reuses [ColorScheme.error],
 /// which already tracks the theme. Shared by the rounds list and the scorecard
 /// so they agree.
 Color? scoreToParColor(int relativeToPar, ColorScheme scheme) {
