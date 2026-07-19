@@ -57,7 +57,7 @@ app/lib/
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
 │   ├── hole_entry/                # 18-card per-hole entry form + in-memory HoleDraft
-│   ├── events/                    # event-result formatter + edit-result dialog (#35)
+│   ├── events/                    # EventPicker + AddEventDialog, event-result formatter + edit-result dialog (#35, #51)
 │   ├── dashboard/                 # lifetime-stats screen
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
 ├── shell/                         # AppShell + tabIndexProvider (bottom-nav state)
@@ -80,7 +80,7 @@ app/test/
 │   ├── courses/                   # course_picker, add_course_dialog
 │   ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
 │   ├── hole_entry/                # hole_entry_screen, hole_card
-│   ├── events/                    # event_result_format, edit_event_result_dialog
+│   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
 └── widgets/                       # shared-widget tests (empty_state)

@@ -8,6 +8,15 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+- The **Event** field in the New Round and Edit Round dialogs is now a dropdown
+  + modal-sheet picker matching the Course picker, replacing the free-text
+  typeahead. Existing events are chosen from a list and a brand-new event is
+  created only via an explicit "Add new event…" action — so a typo no longer
+  silently spawns a duplicate event. The field stays optional via a
+  "No event / Casual round" choice, and editing a round pre-selects its current
+  event. Backed by a new `eventsStreamProvider` ([#51]).
+
 ## [0.1.3] - 2026-07-18
 
 This release tightens hole-entry data integrity and finishes the play-order form
@@ -224,3 +233,4 @@ Phase 1 — data layer and navigation shell.
 [#37]: https://github.com/aellington89/golfy/issues/37
 [#39]: https://github.com/aellington89/golfy/issues/39
 [#45]: https://github.com/aellington89/golfy/issues/45
+[#51]: https://github.com/aellington89/golfy/issues/51

@@ -21,16 +21,19 @@ void main() {
   late GolfyDatabase db;
   late StreamController<List<RoundWithCourse>> roundsController;
   late StreamController<List<Course>> coursesController;
+  late StreamController<List<Event>> eventsController;
 
   setUp(() {
     db = GolfyDatabase.forTesting(NativeDatabase.memory());
     roundsController = StreamController<List<RoundWithCourse>>.broadcast();
     coursesController = StreamController<List<Course>>.broadcast();
+    eventsController = StreamController<List<Event>>.broadcast();
   });
 
   tearDown(() async {
     await roundsController.close();
     await coursesController.close();
+    await eventsController.close();
     await db.close();
   });
 
@@ -42,6 +45,11 @@ void main() {
             .overrideWith((ref) => roundsController.stream),
         coursesByNameStreamProvider
             .overrideWith((ref) => coursesController.stream),
+        // The New/Edit Round dialogs opened from this screen embed an
+        // EventPicker that watches eventsStreamProvider; override it with a
+        // manual stream so it doesn't spin up a live drift watcher (whose
+        // pending timer fails flutter_test's !timersPending invariant).
+        eventsStreamProvider.overrideWith((ref) => eventsController.stream),
       ],
       child: const MaterialApp(home: RoundsScreen()),
     );
