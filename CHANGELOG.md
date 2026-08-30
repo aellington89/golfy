@@ -19,6 +19,11 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   through to the same detail screen. No schema change: builds on the #35 data
   layer and the existing `eventsStreamProvider`, adding only an
   `EventDao.rename`.
+- Internal: a keyed `event → rounds` query (`RoundDao.watchRoundsForEvent`,
+  surfaced as `roundsForEventProvider`) so the Events feature can fetch a single
+  event's rounds directly rather than filtering the full rounds stream in
+  memory. Data-model groundwork for per-event stats; no user-facing or schema
+  change — builds on the existing `rounds.event_id` index from #35 ([#55]).
 
 ## [0.1.4] - 2026-07-19
 
@@ -264,3 +269,4 @@ Phase 1 — data layer and navigation shell.
 [#52]: https://github.com/aellington89/golfy/issues/52
 [#53]: https://github.com/aellington89/golfy/issues/53
 [#42]: https://github.com/aellington89/golfy/issues/42
+[#55]: https://github.com/aellington89/golfy/issues/55

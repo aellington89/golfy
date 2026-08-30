@@ -50,6 +50,15 @@ final roundWithCourseProvider =
   });
 });
 
+/// Reactive list of the rounds belonging to a single event, newest first
+/// (same shape as [roundsStreamProvider]). Family parameter is the event id.
+/// Backed by a keyed DB query (`idx_rounds_event`), so consumers get one
+/// event's rounds without re-scanning the full rounds stream client-side (#55).
+final roundsForEventProvider =
+    StreamProvider.family<List<RoundWithCourse>, int>((ref, eventId) {
+  return ref.watch(repositoryProvider).watchRoundsForEvent(eventId);
+});
+
 /// Reactive list of hole_results for a specific round, ordered by hole
 /// number. Family parameter is the round id.
 final holeResultsStreamProvider =

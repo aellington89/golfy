@@ -274,6 +274,100 @@ void main() {
     });
   });
 
+  group('RoundDao.watchRoundsForEvent', () {
+    test('returns only that event\'s rounds', () async {
+      final cid = await fx.insertCourse();
+      final eventA = await fx.insertEvent(name: 'Club Championship');
+      final eventB = await fx.insertEvent(name: 'Ryder Cup');
+      await fx.insertRound(cid, date: '2026-05-01', eventId: eventA);
+      await fx.insertRound(cid, date: '2026-05-02', eventId: eventA);
+      await fx.insertRound(cid, date: '2026-05-03', eventId: eventB);
+      await fx.insertRound(cid, date: '2026-05-04'); // casual, no event
+
+      final rows = await db.roundDao.watchRoundsForEvent(eventA).first;
+      expect(rows, hasLength(2));
+      expect(rows.every((r) => r.round.eventId == eventA), isTrue);
+      expect(rows.every((r) => r.event?.id == eventA), isTrue);
+    });
+
+    test('is empty for an event with no rounds', () async {
+      final eid = await fx.insertEvent(name: 'Empty Open');
+      expect(await db.roundDao.watchRoundsForEvent(eid).first, isEmpty);
+    });
+
+    test('carries course name, event, and hole aggregates', () async {
+      final cid = await fx.insertCourse(name: 'Augusta');
+      final eid = await fx.insertEvent(name: 'The Masters');
+      final rid = await fx.insertRound(cid, eventId: eid);
+      await fx.upsertHole(rid, 1, par: 4, score: 5);
+      await fx.upsertHole(rid, 2, par: 3, score: 3, fairwayHit: null);
+
+      final row = (await db.roundDao.watchRoundsForEvent(eid).first).single;
+      expect(row.courseName, 'Augusta');
+      expect(row.event, isNotNull);
+      expect(row.event!.id, eid);
+      expect(row.event!.name, 'The Masters');
+      expect(row.holesEntered, 2);
+      expect(row.totalScore, 8);
+      expect(row.totalPar, 7);
+    });
+
+    test('includes a round with no holes entered (aggregates coerced to 0)',
+        () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent();
+      await fx.insertRound(cid, eventId: eid);
+
+      final row = (await db.roundDao.watchRoundsForEvent(eid).first).single;
+      expect(row.holesEntered, 0);
+      expect(row.totalScore, 0);
+      expect(row.totalPar, 0);
+    });
+
+    test('orders newest first by date, then by descending id', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent();
+      // Insert out of order; two share a date to exercise the id tie-break.
+      final older = await fx.insertRound(cid,
+          date: '2026-05-01', roundNumber: 1, eventId: eid);
+      final sameDayFirst = await fx.insertRound(cid,
+          date: '2026-05-10', roundNumber: 1, eventId: eid);
+      final sameDaySecond = await fx.insertRound(cid,
+          date: '2026-05-10', roundNumber: 2, eventId: eid);
+
+      final rows = await db.roundDao.watchRoundsForEvent(eid).first;
+      expect(
+        rows.map((r) => r.round.id).toList(),
+        [sameDaySecond, sameDayFirst, older],
+      );
+    });
+
+    test('reacts to a new round inserted for the event', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent();
+      await fx.insertRound(cid, date: '2026-05-01', eventId: eid);
+      final stream = db.roundDao.watchRoundsForEvent(eid);
+
+      expect(await stream.first, hasLength(1));
+
+      await fx.insertRound(cid, date: '2026-05-02', eventId: eid);
+      expect(await stream.first, hasLength(2));
+    });
+
+    test('drops a round when it is detached from the event', () async {
+      final cid = await fx.insertCourse();
+      final eid = await fx.insertEvent();
+      final rid = await fx.insertRound(cid, eventId: eid);
+      final stream = db.roundDao.watchRoundsForEvent(eid);
+
+      expect(await stream.first, hasLength(1));
+
+      await db.roundDao
+          .updateById(rid, const RoundsCompanion(eventId: Value(null)));
+      expect(await stream.first, isEmpty);
+    });
+  });
+
   group('RoundDao.updateById', () {
     test('attaches an event to a casual round (eventId null -> set)', () async {
       final cid = await fx.insertCourse();

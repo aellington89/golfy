@@ -48,8 +48,18 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
   /// Reactive list of every round joined with its course's name and its
   /// optional event, the count of hole_results rows attached to it, and the
   /// summed score / par across those holes (for the rounds-list score-vs-par
-  /// label). Ordered newest first by date, breaking ties by descending row id
-  /// so the most recently inserted round wins on the same date.
+  /// label). Ordered newest first — see [_watchRoundsWithCourse].
+  Stream<List<RoundWithCourse>> watchAllWithCourse() => _watchRoundsWithCourse();
+
+  /// Reactive list of the rounds belonging to the event [eventId], in the same
+  /// shape and newest-first order as [watchAllWithCourse]. Filters on
+  /// `rounds.event_id` — backed by the `idx_rounds_event` index (#35) — so the
+  /// Events feature can query one event's rounds directly instead of
+  /// re-scanning the full rounds stream client-side (#55).
+  Stream<List<RoundWithCourse>> watchRoundsForEvent(int eventId) =>
+      _watchRoundsWithCourse(filter: rounds.eventId.equals(eventId));
+
+  /// Shared query behind [watchAllWithCourse] and [watchRoundsForEvent].
   ///
   /// Uses a `LEFT OUTER JOIN` to `hole_results` so rounds with no holes
   /// entered still appear (with `holesEntered = 0`); their `SUM`s are SQL NULL,
@@ -58,7 +68,13 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
   /// `LEFT OUTER JOIN` so casual rounds (no `eventId`) keep a null `event`, and
   /// because it joins `events`, the stream re-emits when an event's recorded
   /// result changes — keeping the grouped rounds list's result badges live.
-  Stream<List<RoundWithCourse>> watchAllWithCourse() {
+  ///
+  /// Ordered newest first by date, breaking ties by descending row id so the
+  /// most recently inserted round wins on the same date. [filter], when given,
+  /// is applied as a `WHERE` on the joined query to narrow the rows.
+  Stream<List<RoundWithCourse>> _watchRoundsWithCourse({
+    Expression<bool>? filter,
+  }) {
     final holeCount = holeResults.id.count();
     final scoreSum = holeResults.score.sum();
     final parSum = holeResults.par.sum();
@@ -76,6 +92,9 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
         OrderingTerm.desc(rounds.date),
         OrderingTerm.desc(rounds.id),
       ]);
+    if (filter != null) {
+      query.where(filter);
+    }
 
     return query.watch().map((rows) {
       return rows
