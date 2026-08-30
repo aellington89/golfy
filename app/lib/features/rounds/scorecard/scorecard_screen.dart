@@ -128,7 +128,7 @@ class _EditButton extends ConsumerWidget {
       tooltip: 'Edit scores',
       onPressed: () {
         ref.read(activeRoundIdProvider.notifier).set(roundId);
-        ref.read(tabIndexProvider.notifier).set(1);
+        ref.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
         Navigator.of(context).pop();
       },
     );

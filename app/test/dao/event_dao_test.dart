@@ -146,4 +146,32 @@ void main() {
       expect(await db.eventDao.deleteById(9999), 0);
     });
   });
+
+  group('EventDao.rename', () {
+    test('renames an event and leaves its recorded result untouched', () async {
+      final id = await fx.insertEvent(name: 'Club Champ');
+      await db.eventDao.setResult(id, finishPosition: 3, tied: true);
+
+      final n = await db.eventDao.rename(id, 'Club Championship');
+      expect(n, 1);
+
+      final row = await db.eventDao.getById(id);
+      expect(row!.name, 'Club Championship');
+      expect(row.finishPosition, 3);
+      expect(row.tied, isTrue);
+    });
+
+    test('returns 0 when no row matched', () async {
+      expect(await db.eventDao.rename(9999, 'Whatever'), 0);
+    });
+
+    test('UNIQUE(name) rejects renaming onto an existing name', () async {
+      final a = await fx.insertEvent(name: 'A-League Night');
+      await fx.insertEvent(name: 'Major');
+      await expectLater(
+        db.eventDao.rename(a, 'Major'),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
 }

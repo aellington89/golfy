@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/dashboard/dashboard_screen.dart';
+import '../features/events/events_screen.dart';
 import '../features/hole_entry/hole_entry_screen.dart';
 import '../features/rounds/rounds_screen.dart';
 import 'tab_index_provider.dart';
@@ -17,6 +18,7 @@ class AppShell extends ConsumerWidget {
       body: IndexedStack(
         index: idx,
         children: const [
+          EventsScreen(),
           RoundsScreen(),
           HoleEntryScreen(),
           DashboardScreen(),
@@ -27,6 +29,11 @@ class AppShell extends ConsumerWidget {
         onDestinationSelected: (i) =>
             ref.read(tabIndexProvider.notifier).set(i),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Events',
+          ),
           NavigationDestination(
             icon: Icon(Icons.list_alt_outlined),
             selectedIcon: Icon(Icons.list_alt),

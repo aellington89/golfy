@@ -8,6 +8,18 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+- A dedicated **Events** tab ([#42]): create an event up front — including an
+  empty one with no rounds yet — from a `+` action, rather than only as a side
+  effect of starting a round. Open an event to see its rounds, add a round with
+  the event pre-selected, edit its result, **rename** it, or **delete** it, and
+  see a per-event scoring summary (rounds scored, average score vs. par, best
+  round). Deleting an event stays non-destructive — its rounds are detached to
+  "No event" (`SET NULL`), never deleted. The Rounds-tab event headers now tap
+  through to the same detail screen. No schema change: builds on the #35 data
+  layer and the existing `eventsStreamProvider`, adding only an
+  `EventDao.rename`.
+
 ## [0.1.4] - 2026-07-19
 
 This release gives Golfy a golf-appropriate look and smooths a couple of
@@ -251,3 +263,4 @@ Phase 1 — data layer and navigation shell.
 [#51]: https://github.com/aellington89/golfy/issues/51
 [#52]: https://github.com/aellington89/golfy/issues/52
 [#53]: https://github.com/aellington89/golfy/issues/53
+[#42]: https://github.com/aellington89/golfy/issues/42

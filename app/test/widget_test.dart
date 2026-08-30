@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/app.dart';
 
 void main() {
-  testWidgets('App shell shows the 3-tab bottom navigation bar',
+  testWidgets('App shell shows the 4-tab bottom navigation bar',
       (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: GolfyApp()));
     // The Rounds screen now subscribes to a live drift stream, so we can't
@@ -16,6 +16,7 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Rounds'), findsWidgets);
+    expect(find.text('Events'), findsWidgets);
     expect(find.text('Hole Entry'), findsWidgets);
     expect(find.text('Dashboard'), findsWidgets);
   });

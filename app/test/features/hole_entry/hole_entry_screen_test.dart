@@ -75,7 +75,7 @@ void main() {
     final container = makeContainer();
     addTearDown(container.dispose);
     // Pretend the user is currently on the Hole Entry tab.
-    container.read(tabIndexProvider.notifier).set(1);
+    container.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
 
     await tester.pumpWidget(wrap(container));
     await tester.pumpAndSettle();
@@ -83,7 +83,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Go to Rounds'));
     await tester.pump();
 
-    expect(container.read(tabIndexProvider), 0);
+    expect(container.read(tabIndexProvider), ShellTabs.rounds);
   });
 
   testWidgets(
@@ -134,7 +134,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(activeRoundIdProvider), isNull);
-    expect(container.read(tabIndexProvider), 0);
+    expect(container.read(tabIndexProvider), ShellTabs.rounds);
   });
 
   testWidgets(

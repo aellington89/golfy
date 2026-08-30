@@ -19,7 +19,8 @@ import 'active_round_provider.dart';
 /// Optionally associates the round with an event (#35): the Event field is an
 /// [EventPicker] (mirroring [CoursePicker]) — pick an existing event, choose
 /// "No event / Casual round" to leave it casual, or create one via
-/// "Add new event…". No event is selected by default.
+/// "Add new event…". No event is selected by default, unless [initialEvent] is
+/// supplied (e.g. opened from an event's detail screen), which pre-selects it.
 ///
 /// Validates that a course is selected, pre-checks [existingRounds] for a
 /// duplicate `(date, courseId, roundNumber)` triple, and catches the
@@ -32,9 +33,15 @@ class NewRoundDialog extends ConsumerStatefulWidget {
   const NewRoundDialog({
     super.key,
     this.existingRounds = const [],
+    this.initialEvent,
   });
 
   final List<RoundWithCourse> existingRounds;
+
+  /// Event to pre-select in the [EventPicker], or `null` to start with no
+  /// event (the default). Set when starting a round from an event's detail
+  /// screen.
+  final Event? initialEvent;
 
   @override
   ConsumerState<NewRoundDialog> createState() => _NewRoundDialogState();
@@ -62,6 +69,7 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
   void initState() {
     super.initState();
     _date = DateTime.now();
+    _event = widget.initialEvent;
   }
 
   @override
@@ -171,7 +179,7 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
       final newId = await repo.insertRound(companion);
       if (!mounted) return;
       ref.read(activeRoundIdProvider.notifier).set(newId);
-      ref.read(tabIndexProvider.notifier).set(1);
+      ref.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
       Navigator.of(context).pop(newId);
     } catch (_) {
       if (!mounted) return;

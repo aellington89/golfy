@@ -120,7 +120,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
 
   void _finishRound() {
     ref.read(activeRoundIdProvider.notifier).clear();
-    ref.read(tabIndexProvider.notifier).set(0);
+    ref.read(tabIndexProvider.notifier).set(ShellTabs.rounds);
   }
 
   @override
@@ -375,7 +375,7 @@ class _NoActiveRound extends ConsumerWidget {
         icon: Icons.flag_outlined,
         message: 'No active round. Go to Rounds to start one.',
         action: FilledButton.icon(
-          onPressed: () => ref.read(tabIndexProvider.notifier).set(0),
+          onPressed: () => ref.read(tabIndexProvider.notifier).set(ShellTabs.rounds),
           icon: const Icon(Icons.list_alt),
           label: const Text('Go to Rounds'),
         ),
