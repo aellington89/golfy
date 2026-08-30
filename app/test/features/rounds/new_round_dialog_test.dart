@@ -33,6 +33,7 @@ void main() {
 
   Widget wrap({
     List<RoundWithCourse> existing = const [],
+    Event? initialEvent,
     void Function(int?)? onResult,
   }) {
     return ProviderScope(
@@ -51,7 +52,10 @@ void main() {
                   onPressed: () async {
                     final result = await showDialog<int>(
                       context: context,
-                      builder: (_) => NewRoundDialog(existingRounds: existing),
+                      builder: (_) => NewRoundDialog(
+                        existingRounds: existing,
+                        initialEvent: initialEvent,
+                      ),
                     );
                     if (onResult != null) onResult(result);
                   },
@@ -72,10 +76,12 @@ void main() {
   Future<void> openDialog(
     WidgetTester tester, {
     List<RoundWithCourse> existing = const [],
+    Event? initialEvent,
     void Function(int?)? onResult,
   }) async {
     await tester.pumpWidget(wrap(
       existing: existing,
+      initialEvent: initialEvent,
       onResult: onResult,
     ));
     await tester.tap(find.text('Open'));
@@ -253,7 +259,7 @@ void main() {
     expect(popped, isNotNull);
 
     expect(container.read(activeRoundIdProvider), popped);
-    expect(container.read(tabIndexProvider), 1);
+    expect(container.read(tabIndexProvider), ShellTabs.holeEntry);
 
     final rounds = await tester.runAsync(
       () => db.roundDao.watchAllWithCourse().first,
@@ -350,6 +356,44 @@ void main() {
     // No second event created — the existing one was reused.
     final events = await tester.runAsync(() => db.eventDao.watchAll().first);
     expect(events, hasLength(1));
+
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds!.single.round.eventId, eventId);
+  });
+
+  testWidgets(
+      'initialEvent pre-selects the event and links the started round',
+      (tester) async {
+    await db.courseDao.insert(
+      CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+    );
+    final eventId = await db.eventDao.insert(
+      EventsCompanion.insert(name: 'Club Championship'),
+    );
+    final event = await db.eventDao.getById(eventId);
+
+    await openDialog(tester, initialEvent: event);
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
+    );
+    await emitEvents(tester, [event!]);
+
+    // The picker shows the pre-selected event's name (no picking required).
+    expect(find.text('Club Championship'), findsOneWidget);
+
+    await selectCourse(tester, 'Augusta');
+    final container = containerFor(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(container.read(tabIndexProvider), ShellTabs.holeEntry);
 
     final rounds = await tester.runAsync(
       () => db.roundDao.watchAllWithCourse().first,

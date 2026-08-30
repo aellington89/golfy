@@ -50,6 +50,14 @@ class EventDao extends DatabaseAccessor<GolfyDatabase> with _$EventDaoMixin {
     );
   }
 
+  /// Renames a single event, leaving its result columns untouched. A
+  /// UNIQUE(name) collision throws (the UI surfaces it as "already exists").
+  /// Returns the rows updated (1 if the event existed, 0 otherwise).
+  Future<int> rename(int id, String name) {
+    return (update(events)..where((e) => e.id.equals(id)))
+        .write(EventsCompanion(name: Value(name)));
+  }
+
   /// Deletes a single event by id. Its rounds are detached (their `event_id`
   /// is set to NULL) via the schema-level `ON DELETE SET NULL`; round and hole
   /// data is preserved. Returns the number of rows deleted.

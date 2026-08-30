@@ -303,7 +303,7 @@ void main() {
     await tester.pump();
 
     expect(container.read(activeRoundIdProvider), 42);
-    expect(container.read(tabIndexProvider), 1);
+    expect(container.read(tabIndexProvider), ShellTabs.holeEntry);
   });
 
   testWidgets(

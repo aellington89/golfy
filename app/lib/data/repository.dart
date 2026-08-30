@@ -64,6 +64,11 @@ class GolfyRepository {
         missedCut: missedCut,
       );
 
+  /// Renames an event. A duplicate name throws (schema-level UNIQUE); the
+  /// caller pre-checks and also catches this as a safety net.
+  Future<int> renameEvent(int id, String name) =>
+      _db.eventDao.rename(id, name);
+
   Future<int> deleteEvent(int id) => _db.eventDao.deleteById(id);
 
   // ── Hole results ───────────────────────────────────────────────────────

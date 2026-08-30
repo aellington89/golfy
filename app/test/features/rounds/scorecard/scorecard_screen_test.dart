@@ -233,7 +233,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(activeRoundIdProvider), rid);
-    expect(container.read(tabIndexProvider), 1);
+    expect(container.read(tabIndexProvider), ShellTabs.holeEntry);
     expect(find.byType(ScorecardScreen), findsNothing);
   });
 
