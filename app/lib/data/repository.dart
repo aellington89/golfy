@@ -30,6 +30,11 @@ class GolfyRepository {
   Stream<List<RoundWithCourse>> watchRounds() =>
       _db.roundDao.watchAllWithCourse();
 
+  /// Reactive list of the rounds belonging to a single event (#55), in the same
+  /// shape and order as [watchRounds]. See [RoundDao.watchRoundsForEvent].
+  Stream<List<RoundWithCourse>> watchRoundsForEvent(int eventId) =>
+      _db.roundDao.watchRoundsForEvent(eventId);
+
   Future<Round?> getRound(int id) => _db.roundDao.getById(id);
 
   /// Updates a round in place (#45). The companion carries only the columns to
