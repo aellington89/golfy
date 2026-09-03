@@ -277,6 +277,16 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _seasonMeta = const VerificationMeta('season');
+  @override
+  late final GeneratedColumn<int> season = GeneratedColumn<int>(
+    'season',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   static const VerificationMeta _finishPositionMeta = const VerificationMeta(
     'finishPosition',
   );
@@ -320,6 +330,7 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    season,
     finishPosition,
     tied,
     missedCut,
@@ -346,6 +357,12 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('season')) {
+      context.handle(
+        _seasonMeta,
+        season.isAcceptableOrUnknown(data['season']!, _seasonMeta),
+      );
     }
     if (data.containsKey('finish_position')) {
       context.handle(
@@ -375,7 +392,7 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {name},
+    {name, season},
   ];
   @override
   Event map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -388,6 +405,10 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
+      )!,
+      season: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}season'],
       )!,
       finishPosition: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -414,6 +435,12 @@ class Event extends DataClass implements Insertable<Event> {
   final int id;
   final String name;
 
+  /// Which occurrence of [name] this is — a 1-based season number (#47).
+  /// NOT NULL with a default of 1 (the first/sole occurrence): a nullable
+  /// season would defeat the `(name, season)` UNIQUE, since SQLite treats NULLs
+  /// as distinct and would let unlimited same-name rows through.
+  final int season;
+
   /// Finishing position (1 = win). Null until a result is recorded.
   final int? finishPosition;
 
@@ -425,6 +452,7 @@ class Event extends DataClass implements Insertable<Event> {
   const Event({
     required this.id,
     required this.name,
+    required this.season,
     this.finishPosition,
     required this.tied,
     required this.missedCut,
@@ -434,6 +462,7 @@ class Event extends DataClass implements Insertable<Event> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    map['season'] = Variable<int>(season);
     if (!nullToAbsent || finishPosition != null) {
       map['finish_position'] = Variable<int>(finishPosition);
     }
@@ -446,6 +475,7 @@ class Event extends DataClass implements Insertable<Event> {
     return EventsCompanion(
       id: Value(id),
       name: Value(name),
+      season: Value(season),
       finishPosition: finishPosition == null && nullToAbsent
           ? const Value.absent()
           : Value(finishPosition),
@@ -462,6 +492,7 @@ class Event extends DataClass implements Insertable<Event> {
     return Event(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      season: serializer.fromJson<int>(json['season']),
       finishPosition: serializer.fromJson<int?>(json['finishPosition']),
       tied: serializer.fromJson<bool>(json['tied']),
       missedCut: serializer.fromJson<bool>(json['missedCut']),
@@ -473,6 +504,7 @@ class Event extends DataClass implements Insertable<Event> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'season': serializer.toJson<int>(season),
       'finishPosition': serializer.toJson<int?>(finishPosition),
       'tied': serializer.toJson<bool>(tied),
       'missedCut': serializer.toJson<bool>(missedCut),
@@ -482,12 +514,14 @@ class Event extends DataClass implements Insertable<Event> {
   Event copyWith({
     int? id,
     String? name,
+    int? season,
     Value<int?> finishPosition = const Value.absent(),
     bool? tied,
     bool? missedCut,
   }) => Event(
     id: id ?? this.id,
     name: name ?? this.name,
+    season: season ?? this.season,
     finishPosition: finishPosition.present
         ? finishPosition.value
         : this.finishPosition,
@@ -498,6 +532,7 @@ class Event extends DataClass implements Insertable<Event> {
     return Event(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      season: data.season.present ? data.season.value : this.season,
       finishPosition: data.finishPosition.present
           ? data.finishPosition.value
           : this.finishPosition,
@@ -511,6 +546,7 @@ class Event extends DataClass implements Insertable<Event> {
     return (StringBuffer('Event(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('season: $season, ')
           ..write('finishPosition: $finishPosition, ')
           ..write('tied: $tied, ')
           ..write('missedCut: $missedCut')
@@ -519,13 +555,15 @@ class Event extends DataClass implements Insertable<Event> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, finishPosition, tied, missedCut);
+  int get hashCode =>
+      Object.hash(id, name, season, finishPosition, tied, missedCut);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Event &&
           other.id == this.id &&
           other.name == this.name &&
+          other.season == this.season &&
           other.finishPosition == this.finishPosition &&
           other.tied == this.tied &&
           other.missedCut == this.missedCut);
@@ -534,12 +572,14 @@ class Event extends DataClass implements Insertable<Event> {
 class EventsCompanion extends UpdateCompanion<Event> {
   final Value<int> id;
   final Value<String> name;
+  final Value<int> season;
   final Value<int?> finishPosition;
   final Value<bool> tied;
   final Value<bool> missedCut;
   const EventsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.season = const Value.absent(),
     this.finishPosition = const Value.absent(),
     this.tied = const Value.absent(),
     this.missedCut = const Value.absent(),
@@ -547,6 +587,7 @@ class EventsCompanion extends UpdateCompanion<Event> {
   EventsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.season = const Value.absent(),
     this.finishPosition = const Value.absent(),
     this.tied = const Value.absent(),
     this.missedCut = const Value.absent(),
@@ -554,6 +595,7 @@ class EventsCompanion extends UpdateCompanion<Event> {
   static Insertable<Event> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<int>? season,
     Expression<int>? finishPosition,
     Expression<bool>? tied,
     Expression<bool>? missedCut,
@@ -561,6 +603,7 @@ class EventsCompanion extends UpdateCompanion<Event> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (season != null) 'season': season,
       if (finishPosition != null) 'finish_position': finishPosition,
       if (tied != null) 'tied': tied,
       if (missedCut != null) 'missed_cut': missedCut,
@@ -570,6 +613,7 @@ class EventsCompanion extends UpdateCompanion<Event> {
   EventsCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
+    Value<int>? season,
     Value<int?>? finishPosition,
     Value<bool>? tied,
     Value<bool>? missedCut,
@@ -577,6 +621,7 @@ class EventsCompanion extends UpdateCompanion<Event> {
     return EventsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      season: season ?? this.season,
       finishPosition: finishPosition ?? this.finishPosition,
       tied: tied ?? this.tied,
       missedCut: missedCut ?? this.missedCut,
@@ -591,6 +636,9 @@ class EventsCompanion extends UpdateCompanion<Event> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (season.present) {
+      map['season'] = Variable<int>(season.value);
     }
     if (finishPosition.present) {
       map['finish_position'] = Variable<int>(finishPosition.value);
@@ -609,6 +657,7 @@ class EventsCompanion extends UpdateCompanion<Event> {
     return (StringBuffer('EventsCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('season: $season, ')
           ..write('finishPosition: $finishPosition, ')
           ..write('tied: $tied, ')
           ..write('missedCut: $missedCut')
@@ -2658,6 +2707,7 @@ typedef $$EventsTableCreateCompanionBuilder =
     EventsCompanion Function({
       Value<int> id,
       required String name,
+      Value<int> season,
       Value<int?> finishPosition,
       Value<bool> tied,
       Value<bool> missedCut,
@@ -2666,6 +2716,7 @@ typedef $$EventsTableUpdateCompanionBuilder =
     EventsCompanion Function({
       Value<int> id,
       Value<String> name,
+      Value<int> season,
       Value<int?> finishPosition,
       Value<bool> tied,
       Value<bool> missedCut,
@@ -2711,6 +2762,11 @@ class $$EventsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get season => $composableBuilder(
+    column: $table.season,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2774,6 +2830,11 @@ class $$EventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get finishPosition => $composableBuilder(
     column: $table.finishPosition,
     builder: (column) => ColumnOrderings(column),
@@ -2804,6 +2865,9 @@ class $$EventsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get season =>
+      $composableBuilder(column: $table.season, builder: (column) => column);
 
   GeneratedColumn<int> get finishPosition => $composableBuilder(
     column: $table.finishPosition,
@@ -2872,12 +2936,14 @@ class $$EventsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<int> season = const Value.absent(),
                 Value<int?> finishPosition = const Value.absent(),
                 Value<bool> tied = const Value.absent(),
                 Value<bool> missedCut = const Value.absent(),
               }) => EventsCompanion(
                 id: id,
                 name: name,
+                season: season,
                 finishPosition: finishPosition,
                 tied: tied,
                 missedCut: missedCut,
@@ -2886,12 +2952,14 @@ class $$EventsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
+                Value<int> season = const Value.absent(),
                 Value<int?> finishPosition = const Value.absent(),
                 Value<bool> tied = const Value.absent(),
                 Value<bool> missedCut = const Value.absent(),
               }) => EventsCompanion.insert(
                 id: id,
                 name: name,
+                season: season,
                 finishPosition: finishPosition,
                 tied: tied,
                 missedCut: missedCut,

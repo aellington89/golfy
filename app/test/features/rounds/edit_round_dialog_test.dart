@@ -57,8 +57,12 @@ void main() {
     );
   }
 
-  Event makeEvent({int id = 1, String name = 'Club Championship'}) =>
-      Event(id: id, name: name, tied: false, missedCut: false);
+  Event makeEvent({
+    int id = 1,
+    String name = 'Club Championship',
+    int season = 1,
+  }) =>
+      Event(id: id, name: name, season: season, tied: false, missedCut: false);
 
   Widget wrap({
     required RoundWithCourse round,
@@ -160,7 +164,7 @@ void main() {
     // Course name in the course picker, event name in the event picker, the
     // round's number in the stepper, and its notes in the notes field.
     expect(find.text('Augusta'), findsOneWidget);
-    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('breezy'), findsOneWidget);
   });
@@ -237,7 +241,7 @@ void main() {
       existingEvents: [event],
     );
 
-    await selectEvent(tester, 'Club Championship');
+    await selectEvent(tester, 'Club Championship (Season 1)');
 
     await tester.tap(find.byKey(const ValueKey('edit_round_save')));
     await flush(tester);

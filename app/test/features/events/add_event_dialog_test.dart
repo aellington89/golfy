@@ -76,10 +76,16 @@ void main() {
   });
 
   testWidgets(
-      'duplicate name (case-insensitive) shows error and does not insert again',
-      (tester) async {
+      'duplicate name + season (case-insensitive) shows error and does not '
+      'insert again', (tester) async {
     const existing = [
-      Event(id: 1, name: 'Club Championship', tied: false, missedCut: false),
+      Event(
+        id: 1,
+        name: 'Club Championship',
+        season: 1,
+        tied: false,
+        missedCut: false,
+      ),
     ];
     await db.eventDao.insert(
       EventsCompanion.insert(name: 'Club Championship'),
@@ -92,17 +98,63 @@ void main() {
       find.widgetWithText(TextFormField, 'Event Name'),
       'club championship',
     );
+    await settle(tester);
+    // Typing an existing name auto-advances the season to the next unused one
+    // (2); type the taken season 1 back in to force the collision.
+    await tester.enterText(find.widgetWithText(TextFormField, 'Season'), '1');
+    await settle(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Add'));
     await settle(tester);
 
-    expect(find.text('Event already exists'), findsOneWidget);
+    expect(find.text('Season 1 already exists'), findsOneWidget);
     expect(find.byType(AddEventDialog), findsOneWidget);
 
     final rows = await tester.runAsync(() => db.eventDao.watchAll().first);
     expect(rows, hasLength(1));
   });
 
-  testWidgets('valid input inserts row and pops with the new Event',
+  testWidgets(
+      'typing an existing name auto-suggests the next season and inserts it '
+      '(#47)', (tester) async {
+    const existing = [
+      Event(
+        id: 1,
+        name: 'Club Championship',
+        season: 1,
+        tied: false,
+        missedCut: false,
+      ),
+    ];
+    await db.eventDao.insert(
+      EventsCompanion.insert(name: 'Club Championship'),
+    );
+
+    Event? popped;
+    await openDialog(tester, existing: existing, onResult: (e) => popped = e);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Event Name'),
+      'Club Championship',
+    );
+    await settle(tester);
+    // The season auto-advanced to 2 (next unused for this name).
+    expect(find.widgetWithText(TextFormField, '2'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await settle(tester);
+
+    expect(popped, isNotNull);
+    expect(popped!.name, 'Club Championship');
+    expect(popped!.season, 2);
+
+    final rows = await tester.runAsync(() => db.eventDao.watchAll().first);
+    expect(
+      rows!.map((e) => (e.name, e.season)).toList(),
+      [('Club Championship', 1), ('Club Championship', 2)],
+    );
+  });
+
+  testWidgets('valid input inserts a season-1 row and pops with the new Event',
       (tester) async {
     Event? popped;
     await openDialog(tester, onResult: (e) => popped = e);
@@ -117,8 +169,29 @@ void main() {
     expect(find.byType(AddEventDialog), findsNothing);
     expect(popped, isNotNull);
     expect(popped!.name, 'Club Championship');
+    expect(popped!.season, 1);
 
     final rows = await tester.runAsync(() => db.eventDao.watchAll().first);
-    expect(rows!.map((e) => e.name).toList(), ['Club Championship']);
+    expect(rows!.map((e) => (e.name, e.season)).toList(),
+        [('Club Championship', 1)]);
+  });
+
+  testWidgets('a non-positive / non-numeric season is rejected (#47)',
+      (tester) async {
+    await openDialog(tester);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Event Name'),
+      'Club Championship',
+    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'Season'), '0');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await settle(tester);
+
+    expect(find.text('Enter a season of 1 or more'), findsOneWidget);
+    expect(find.byType(AddEventDialog), findsOneWidget);
+
+    final rows = await tester.runAsync(() => db.eventDao.watchAll().first);
+    expect(rows, isEmpty);
   });
 }

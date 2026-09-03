@@ -10,14 +10,21 @@ part 'event_dao.g.dart';
 class EventDao extends DatabaseAccessor<GolfyDatabase> with _$EventDaoMixin {
   EventDao(super.db);
 
-  /// Inserts a new event and returns the generated row id. Throws if the
-  /// `name` already exists (schema-level UNIQUE). Callers create events with a
-  /// name only; the result is recorded later via [setResult].
+  /// Inserts a new event and returns the generated row id. Throws if an event
+  /// with the same `(name, season)` already exists (schema-level UNIQUE) — the
+  /// same name recurs across seasons as distinct occurrences (#47). Callers
+  /// supply a name and season; the result is recorded later via [setResult].
   Future<int> insert(EventsCompanion event) => into(events).insert(event);
 
-  /// Reactive list of every event, ordered alphabetically by name.
+  /// Reactive list of every event, ordered by name then ascending season so a
+  /// recurring competition's occurrences cluster together (Season 1, 2, 3…).
   Stream<List<Event>> watchAll() {
-    return (select(events)..orderBy([(e) => OrderingTerm.asc(e.name)])).watch();
+    return (select(events)
+          ..orderBy([
+            (e) => OrderingTerm.asc(e.name),
+            (e) => OrderingTerm.asc(e.season),
+          ]))
+        .watch();
   }
 
   /// Looks up a single event by id. Returns null if no row matches.
@@ -50,12 +57,17 @@ class EventDao extends DatabaseAccessor<GolfyDatabase> with _$EventDaoMixin {
     );
   }
 
-  /// Renames a single event, leaving its result columns untouched. A
-  /// UNIQUE(name) collision throws (the UI surfaces it as "already exists").
-  /// Returns the rows updated (1 if the event existed, 0 otherwise).
-  Future<int> rename(int id, String name) {
+  /// Updates a single event's identity — its [name] and [season] — leaving its
+  /// result columns untouched. A UNIQUE(name, season) collision throws (the UI
+  /// surfaces it as "already exists"), so an edit can land on an existing
+  /// occurrence. Returns the rows updated (1 if the event existed, 0 otherwise).
+  Future<int> updateDetails(
+    int id, {
+    required String name,
+    required int season,
+  }) {
     return (update(events)..where((e) => e.id.equals(id)))
-        .write(EventsCompanion(name: Value(name)));
+        .write(EventsCompanion(name: Value(name), season: Value(season)));
   }
 
   /// Deletes a single event by id. Its rounds are detached (their `event_id`

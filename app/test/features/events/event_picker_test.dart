@@ -47,8 +47,8 @@ void main() {
   Future<void> settle(WidgetTester tester) =>
       tester.pump(const Duration(milliseconds: 400));
 
-  Event event(int id, String name) =>
-      Event(id: id, name: name, tied: false, missedCut: false);
+  Event event(int id, String name, {int season = 1}) =>
+      Event(id: id, name: name, season: season, tied: false, missedCut: false);
 
   testWidgets('opens sheet and lists events sorted alphabetically by name',
       (tester) async {
@@ -72,9 +72,9 @@ void main() {
         .toList();
     expect(titles, [
       'No event / Casual round',
-      'Autumn Open',
-      'Club Championship',
-      'Spring Scramble',
+      'Autumn Open (Season 1)',
+      'Club Championship (Season 1)',
+      'Spring Scramble (Season 1)',
       'Add new event…',
     ]);
   });
@@ -85,11 +85,11 @@ void main() {
 
     await tester.tap(find.byType(InkWell).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Club Championship'));
+    await tester.tap(find.widgetWithText(ListTile, 'Club Championship (Season 1)'));
     await tester.pumpAndSettle();
 
     // Field now shows the selected event name, not the casual placeholder.
-    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
     expect(find.text('No event (casual round)'), findsNothing);
   });
 
@@ -101,9 +101,9 @@ void main() {
     // Select an event first…
     await tester.tap(find.byType(InkWell).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Club Championship'));
+    await tester.tap(find.widgetWithText(ListTile, 'Club Championship (Season 1)'));
     await tester.pumpAndSettle();
-    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
 
     // …then clear it back to casual via the "No event" row.
     await tester.tap(find.byType(InkWell).first);
@@ -112,7 +112,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No event (casual round)'), findsOneWidget);
-    expect(find.text('Club Championship'), findsNothing);
+    expect(find.text('Club Championship (Season 1)'), findsNothing);
   });
 
   testWidgets('checkmark tracks the selected event (and "No event" when null)',
@@ -127,14 +127,14 @@ void main() {
     await tester.tap(find.byType(InkWell).first);
     await tester.pumpAndSettle();
     expect(tileWithTitle('No event / Casual round').trailing, isA<Icon>());
-    expect(tileWithTitle('Club Championship').trailing, isNull);
+    expect(tileWithTitle('Club Championship (Season 1)').trailing, isNull);
 
     // Pick an event, reopen → the check moves to it and off "No event".
-    await tester.tap(find.widgetWithText(ListTile, 'Club Championship'));
+    await tester.tap(find.widgetWithText(ListTile, 'Club Championship (Season 1)'));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(InkWell).first);
     await tester.pumpAndSettle();
-    expect(tileWithTitle('Club Championship').trailing, isA<Icon>());
+    expect(tileWithTitle('Club Championship (Season 1)').trailing, isA<Icon>());
     expect(tileWithTitle('No event / Casual round').trailing, isNull);
   });
 
@@ -166,7 +166,7 @@ void main() {
 
     expect(find.byType(AddEventDialog), findsNothing);
     // Picker label now shows the newly-added event as the selected value.
-    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
 
     // Event landed in the real db too.
     final rows = await tester.runAsync(() => db.eventDao.watchAll().first);
@@ -180,7 +180,7 @@ void main() {
 
     await tester.tap(find.byType(InkWell).first);
     await tester.pumpAndSettle();
-    expect(find.text('Club Championship'), findsNothing);
+    expect(find.text('Club Championship (Season 1)'), findsNothing);
 
     // Close the sheet, emit a new list, reopen.
     Navigator.of(tester.element(find.text('Add new event…'))).pop();
@@ -190,7 +190,7 @@ void main() {
 
     await tester.tap(find.byType(InkWell).first);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(ListTile, 'Club Championship'), findsOneWidget);
+    expect(find.widgetWithText(ListTile, 'Club Championship (Season 1)'), findsOneWidget);
   });
 }
 

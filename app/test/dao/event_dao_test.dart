@@ -34,24 +34,41 @@ void main() {
       expect(await db.eventDao.getById(9999), isNull);
     });
 
-    test('watchAll orders events alphabetically by name', () async {
-      await db.eventDao
-          .insert(EventsCompanion.insert(name: 'Charity Scramble'));
-      await db.eventDao.insert(EventsCompanion.insert(name: 'A-League Night'));
-      await db.eventDao.insert(EventsCompanion.insert(name: 'Major'));
+    test('watchAll orders by name then ascending season', () async {
+      await fx.insertEvent(name: 'Charity Scramble');
+      await fx.insertEvent(name: 'A-League Night');
+      await fx.insertEvent(name: 'Major', season: 2);
+      await fx.insertEvent(name: 'Major'); // season 1, inserted after season 2
       final rows = await db.eventDao.watchAll().first;
       expect(
-        rows.map((e) => e.name).toList(),
-        ['A-League Night', 'Charity Scramble', 'Major'],
+        rows.map((e) => (e.name, e.season)).toList(),
+        [
+          ('A-League Night', 1),
+          ('Charity Scramble', 1),
+          ('Major', 1),
+          ('Major', 2),
+        ],
       );
     });
 
-    test('UNIQUE(name) rejects a duplicate name', () async {
-      await db.eventDao
-          .insert(EventsCompanion.insert(name: 'Club Championship'));
+    test('UNIQUE(name, season) rejects a duplicate name in the same season',
+        () async {
+      await fx.insertEvent(name: 'Club Championship');
       await expectLater(
-        db.eventDao.insert(EventsCompanion.insert(name: 'Club Championship')),
+        fx.insertEvent(name: 'Club Championship'),
         throwsA(isA<Exception>()),
+      );
+    });
+
+    test('allows the same name across seasons as distinct rows (#47)',
+        () async {
+      final s1 = await fx.insertEvent(name: 'Club Championship');
+      final s2 = await fx.insertEvent(name: 'Club Championship', season: 2);
+      expect(s1, isNot(s2));
+      final rows = await db.eventDao.watchAll().first;
+      expect(
+        rows.map((e) => (e.name, e.season)).toList(),
+        [('Club Championship', 1), ('Club Championship', 2)],
       );
     });
   });
@@ -90,6 +107,21 @@ void main() {
       expect(row!.finishPosition, isNull);
       expect(row.tied, isFalse);
       expect(row.missedCut, isFalse);
+    });
+
+    test('recording a result on one season leaves another untouched (#47)',
+        () async {
+      final s1 = await fx.insertEvent(name: 'Club Championship');
+      final s2 = await fx.insertEvent(name: 'Club Championship', season: 2);
+      await db.eventDao.setResult(s1, finishPosition: 1);
+      await db.eventDao.setResult(s2, missedCut: true);
+
+      final r1 = await db.eventDao.getById(s1);
+      final r2 = await db.eventDao.getById(s2);
+      expect(r1!.finishPosition, 1);
+      expect(r1.missedCut, isFalse);
+      expect(r2!.missedCut, isTrue);
+      expect(r2.finishPosition, isNull);
     });
 
     test('rejects a missed cut combined with a position', () async {
@@ -147,31 +179,48 @@ void main() {
     });
   });
 
-  group('EventDao.rename', () {
-    test('renames an event and leaves its recorded result untouched', () async {
+  group('EventDao.updateDetails', () {
+    test('updates name + season and leaves the recorded result untouched (#47)',
+        () async {
       final id = await fx.insertEvent(name: 'Club Champ');
       await db.eventDao.setResult(id, finishPosition: 3, tied: true);
 
-      final n = await db.eventDao.rename(id, 'Club Championship');
+      final n = await db.eventDao
+          .updateDetails(id, name: 'Club Championship', season: 4);
       expect(n, 1);
 
       final row = await db.eventDao.getById(id);
       expect(row!.name, 'Club Championship');
+      expect(row.season, 4);
       expect(row.finishPosition, 3);
       expect(row.tied, isTrue);
     });
 
     test('returns 0 when no row matched', () async {
-      expect(await db.eventDao.rename(9999, 'Whatever'), 0);
+      expect(
+        await db.eventDao.updateDetails(9999, name: 'Whatever', season: 1),
+        0,
+      );
     });
 
-    test('UNIQUE(name) rejects renaming onto an existing name', () async {
+    test('UNIQUE(name, season) rejects updating onto an existing occurrence',
+        () async {
       final a = await fx.insertEvent(name: 'A-League Night');
-      await fx.insertEvent(name: 'Major');
+      await fx.insertEvent(name: 'Major'); // season 1
       await expectLater(
-        db.eventDao.rename(a, 'Major'),
+        db.eventDao.updateDetails(a, name: 'Major', season: 1),
         throwsA(isA<Exception>()),
       );
+    });
+
+    test('allows moving to a free season of an existing name (#47)', () async {
+      final a = await fx.insertEvent(name: 'A-League Night');
+      await fx.insertEvent(name: 'Major'); // season 1
+      final n = await db.eventDao.updateDetails(a, name: 'Major', season: 2);
+      expect(n, 1);
+      final row = await db.eventDao.getById(a);
+      expect(row!.name, 'Major');
+      expect(row.season, 2);
     });
   });
 }

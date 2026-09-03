@@ -97,7 +97,7 @@ class _EventTile extends StatelessWidget {
     return ListTile(
       key: ValueKey('event_tile_${event.id}'),
       leading: const Icon(Icons.emoji_events_outlined),
-      title: Text(event.name),
+      title: Text(formatEventTitle(event)),
       subtitle: Text(subtitle),
       trailing:
           hasRecordedResult(event) ? EventResultBadge(event: event) : null,

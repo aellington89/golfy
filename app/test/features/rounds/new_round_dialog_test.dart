@@ -345,7 +345,7 @@ void main() {
     );
     await emitEvents(tester, existingEvents!);
     await selectCourse(tester, 'Augusta');
-    await selectEvent(tester, 'Club Championship');
+    await selectEvent(tester, 'Club Championship (Season 1)');
 
     await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
     await tester.runAsync(() async {
@@ -381,8 +381,8 @@ void main() {
     );
     await emitEvents(tester, [event!]);
 
-    // The picker shows the pre-selected event's name (no picking required).
-    expect(find.text('Club Championship'), findsOneWidget);
+    // The picker shows the pre-selected event's title (no picking required).
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
 
     await selectCourse(tester, 'Augusta');
     final container = containerFor(tester);

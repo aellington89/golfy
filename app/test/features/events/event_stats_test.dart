@@ -4,8 +4,8 @@ import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/features/events/event_stats.dart';
 
 void main() {
-  Event makeEvent(int id, {String name = 'Event'}) =>
-      Event(id: id, name: name, tied: false, missedCut: false);
+  Event makeEvent(int id, {String name = 'Event', int season = 1}) =>
+      Event(id: id, name: name, season: season, tied: false, missedCut: false);
 
   RoundWithCourse makeRound({
     required int id,

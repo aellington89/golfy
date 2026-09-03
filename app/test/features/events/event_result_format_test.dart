@@ -2,10 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/features/events/event_result_format.dart';
 
-Event _event({int? finishPosition, bool tied = false, bool missedCut = false}) {
+Event _event({
+  int season = 1,
+  int? finishPosition,
+  bool tied = false,
+  bool missedCut = false,
+}) {
   return Event(
     id: 1,
     name: 'Test Event',
+    season: season,
     finishPosition: finishPosition,
     tied: tied,
     missedCut: missedCut,
@@ -13,6 +19,17 @@ Event _event({int? finishPosition, bool tied = false, bool missedCut = false}) {
 }
 
 void main() {
+  group('formatEventTitle', () {
+    test('appends the season, always (even Season 1) (#47)', () {
+      expect(formatEventTitle(_event()), 'Test Event (Season 1)');
+    });
+
+    test('reflects the occurrence number for later seasons', () {
+      expect(formatEventTitle(_event(season: 2)), 'Test Event (Season 2)');
+      expect(formatEventTitle(_event(season: 10)), 'Test Event (Season 10)');
+    });
+  });
+
   group('ordinal', () {
     test('basic 1-4 suffixes', () {
       expect(ordinal(1), '1st');
