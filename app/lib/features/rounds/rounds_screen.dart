@@ -179,7 +179,7 @@ class _EventHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            event?.name ?? 'No event',
+            event == null ? 'No event' : formatEventTitle(event),
             key: event == null
                 ? const ValueKey('event_header_casual')
                 : ValueKey('event_header_${event.id}'),

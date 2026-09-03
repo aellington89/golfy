@@ -12,18 +12,33 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 - A dedicated **Events** tab ([#42]): create an event up front — including an
   empty one with no rounds yet — from a `+` action, rather than only as a side
   effect of starting a round. Open an event to see its rounds, add a round with
-  the event pre-selected, edit its result, **rename** it, or **delete** it, and
-  see a per-event scoring summary (rounds scored, average score vs. par, best
-  round). Deleting an event stays non-destructive — its rounds are detached to
+  the event pre-selected, edit its result, **edit** its name or season, or
+  **delete** it, and see a per-event scoring summary (rounds scored, average
+  score vs. par, best round). Deleting an event stays non-destructive — its rounds are detached to
   "No event" (`SET NULL`), never deleted. The Rounds-tab event headers now tap
   through to the same detail screen. No schema change: builds on the #35 data
-  layer and the existing `eventsStreamProvider`, adding only an
-  `EventDao.rename`.
+  layer and the existing `eventsStreamProvider`, adding only an event-details
+  update method on `EventDao` (`rename`, generalized to name + season in #47).
 - Internal: a keyed `event → rounds` query (`RoundDao.watchRoundsForEvent`,
   surfaced as `roundsForEventProvider`) so the Events feature can fetch a single
   event's rounds directly rather than filtering the full rounds stream in
   memory. Data-model groundwork for per-event stats; no user-facing or schema
   change — builds on the existing `rounds.event_id` index from #35 ([#55]).
+
+### Changed
+- Events are now distinct **per season**: the same event name recurs each season
+  as its own occurrence — with its own result, rounds, and edits — instead of a
+  single shared row per name. The New/Edit Round pickers, the Events tab, the
+  detail screen and the Rounds-tab headers all show the season (e.g. "The
+  Legends Championship (Season 2)"). The season is a typed number field when
+  adding an event (auto-filling the next unused season when you re-enter an
+  existing name) and is editable afterwards from the event's **Edit** action
+  (which now changes both name and season). Recording a result on one season no
+  longer overwrites another's. Adds an
+  `events.season` column (`NOT NULL`, default 1) and swaps the unique key to
+  `(name, season)` at schema **v5**; the migration recreates the `events` table,
+  preserves existing events and their round links, and backfills every existing
+  event to season 1 ([#47]).
 
 ## [0.1.4] - 2026-07-19
 
@@ -270,3 +285,4 @@ Phase 1 — data layer and navigation shell.
 [#53]: https://github.com/aellington89/golfy/issues/53
 [#42]: https://github.com/aellington89/golfy/issues/42
 [#55]: https://github.com/aellington89/golfy/issues/55
+[#47]: https://github.com/aellington89/golfy/issues/47

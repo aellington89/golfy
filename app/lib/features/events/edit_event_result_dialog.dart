@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../data/repository_provider.dart';
+import 'event_result_format.dart';
 
 /// Dialog to record or edit an [Event]'s result (#35): a finishing position
 /// with an optional "Tied" flag, or "Missed cut" (mutually exclusive with a
@@ -97,7 +98,7 @@ class _EditEventResultDialogState extends ConsumerState<EditEventResultDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.event.name),
+      title: Text(formatEventTitle(widget.event)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

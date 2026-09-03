@@ -10,7 +10,7 @@ import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/events/edit_event_result_dialog.dart';
 import 'package:golfy_app/features/events/event_detail_screen.dart';
-import 'package:golfy_app/features/events/rename_event_dialog.dart';
+import 'package:golfy_app/features/events/edit_event_dialog.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 
 void main() {
@@ -51,6 +51,7 @@ void main() {
   Event makeEvent({
     int id = 9,
     String name = 'Club Championship',
+    int season = 1,
     int? finishPosition,
     bool tied = false,
     bool missedCut = false,
@@ -58,6 +59,7 @@ void main() {
       Event(
         id: id,
         name: name,
+        season: season,
         finishPosition: finishPosition,
         tied: tied,
         missedCut: missedCut,
@@ -107,7 +109,8 @@ void main() {
       makeRound(id: 2, courseName: 'Casual Course'), // casual — excluded
     ]);
 
-    expect(find.text('Club Championship'), findsWidgets); // AppBar title
+    expect(find.text('Club Championship (Season 1)'),
+        findsWidgets); // AppBar title
     expect(find.byKey(const ValueKey('event_result_badge_9')), findsOneWidget);
     expect(find.text('Pebble — Round 1'), findsOneWidget); // the round row
     expect(find.textContaining('Casual Course'), findsNothing);
@@ -151,16 +154,16 @@ void main() {
     expect(find.byType(EditEventResultDialog), findsOneWidget);
   });
 
-  testWidgets('overflow -> Rename opens the rename dialog', (tester) async {
+  testWidgets('overflow -> Edit opens the edit dialog', (tester) async {
     await tester.pumpWidget(wrap(9));
     await emit(tester, events: [makeEvent(id: 9)], rounds: const []);
 
     await tester.tap(find.byKey(const ValueKey('event_detail_menu')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Rename'));
+    await tester.tap(find.text('Edit'));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(RenameEventDialog), findsOneWidget);
+    expect(find.byType(EditEventDialog), findsOneWidget);
   });
 
   testWidgets('overflow -> Delete shows kept-rounds copy and deletes the event',
@@ -203,7 +206,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byType(NewRoundDialog), findsOneWidget);
-    // The embedded EventPicker shows the pre-selected event's name.
-    expect(find.text('Club Championship'), findsWidgets);
+    // The embedded EventPicker shows the pre-selected event's title.
+    expect(find.text('Club Championship (Season 1)'), findsWidgets);
   });
 }

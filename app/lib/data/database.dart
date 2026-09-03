@@ -24,7 +24,7 @@ class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +55,24 @@ class GolfyDatabase extends _$GolfyDatabase {
             // row that meets or exceeds score down to the max valid value.
             await m.database.customStatement(
               'UPDATE hole_results SET putts = score - 1 WHERE putts >= score',
+            );
+          },
+          // v4 -> v5: events gain a `season` column so a recurring competition
+          // is one row per season, and the unique key becomes (name, season)
+          // (#47). Changing a table-level UNIQUE means recreating the table;
+          // every existing event is the sole occurrence of its name today, so
+          // each is seeded to season 1. Round links (`rounds.event_id`) survive
+          // — `TableMigration` copies row ids, and foreign keys are off during
+          // migrations (they're enabled only in `beforeOpen`, which runs after).
+          from4To5: (m, schema) async {
+            await m.alterTable(
+              TableMigration(
+                schema.events,
+                columnTransformer: {
+                  schema.events.season: const Constant(1),
+                },
+                newColumns: [schema.events.season],
+              ),
             );
           },
         ),

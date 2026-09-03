@@ -9,6 +9,7 @@
 // When the schema changes: bump `schemaVersion`, dump a new snapshot, add the
 // `fromNToN+1` step, regenerate helpers, then extend the cases below. See
 // app/README.md > "Database migrations".
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +19,7 @@ import 'generated_migrations/schema.dart';
 import 'generated_migrations/schema_v1.dart' as v1;
 import 'generated_migrations/schema_v2.dart' as v2;
 import 'generated_migrations/schema_v3.dart' as v3;
+import 'generated_migrations/schema_v4.dart' as v4;
 
 void main() {
   late SchemaVerifier verifier;
@@ -194,6 +196,72 @@ void main() {
     // Control: the valid 1-putt success survives intact.
     expect(byHole[3]!.upDownSuccess, isTrue);
     expect(byHole[3]!.putts, 1);
+  });
+
+  test('migrates the schema from v4 to v5', () async {
+    final connection = await verifier.startAt(4);
+    final db = GolfyDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    // Recreates `events` with the new `season` column and the
+    // UNIQUE(name, season) key (#47); the resulting schema must match the
+    // generated v5 snapshot.
+    await verifier.migrateAndValidate(db, 5);
+  });
+
+  test('v4 -> v5 backfills season 1 and preserves event links (#47)', () async {
+    final schema = await verifier.schemaAt(4);
+
+    // Seed through the v4-shaped database (events have no season column): two
+    // events — one with a linked round, one empty — plus a course and round.
+    final oldDb = v4.DatabaseAtV4(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v4.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    final linkedEventId = await oldDb.into(oldDb.events).insert(
+          v4.EventsCompanion.insert(name: 'Club Championship'),
+        );
+    await oldDb
+        .into(oldDb.events)
+        .insert(v4.EventsCompanion.insert(name: 'Empty Open'));
+    final roundId = await oldDb.into(oldDb.rounds).insert(
+          v4.RoundsCompanion.insert(
+            date: '2026-05-19',
+            courseId: courseId,
+            eventId: Value(linkedEventId),
+          ),
+        );
+    await oldDb.close();
+
+    // Migrate the same underlying database with the real app schema (v5).
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 5);
+
+    // Every pre-existing event is backfilled to season 1 (each is the sole
+    // occurrence of its name today), ordered by name then season.
+    final events = await db.eventDao.watchAll().first;
+    expect(
+      events.map((e) => (e.name, e.season)).toList(),
+      [('Club Championship', 1), ('Empty Open', 1)],
+    );
+
+    // The round still points at its event — TableMigration preserved row ids.
+    final round = await db.roundDao.getById(roundId);
+    expect(round!.eventId, linkedEventId);
+
+    // The new (name, season) key is live: a second season of the same name is
+    // now allowed, but re-inserting season 1 collides.
+    await db.eventDao.insert(
+      EventsCompanion.insert(name: 'Club Championship', season: const Value(2)),
+    );
+    await expectLater(
+      db.eventDao.insert(EventsCompanion.insert(name: 'Club Championship')),
+      throwsA(isA<Exception>()),
+    );
   });
 
   test('a freshly created database matches the generated schema', () async {

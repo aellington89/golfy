@@ -76,6 +76,7 @@ void main() {
   Event makeEvent({
     int id = 1,
     String name = 'Club Championship',
+    int season = 1,
     int? finishPosition,
     bool tied = false,
     bool missedCut = false,
@@ -83,6 +84,7 @@ void main() {
     return Event(
       id: id,
       name: name,
+      season: season,
       finishPosition: finishPosition,
       tied: tied,
       missedCut: missedCut,
@@ -374,7 +376,7 @@ void main() {
 
     // One event header for the two tournament rounds, plus a casual group.
     expect(find.byKey(const ValueKey('event_header_9')), findsOneWidget);
-    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
     expect(find.byKey(const ValueKey('event_header_casual')), findsOneWidget);
     expect(find.text('No event'), findsOneWidget);
     // Every round still renders.

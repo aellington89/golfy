@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../data/repository_provider.dart';
 import 'add_event_dialog.dart';
+import 'event_result_format.dart';
 
 /// Controlled event picker: parent owns the selected [Event] and supplies
 /// [value] + [onChanged]. Tapping the field opens a modal sheet listing all
@@ -35,7 +36,7 @@ class EventPicker extends ConsumerWidget {
         suffixIcon: const Icon(Icons.arrow_drop_down),
       ),
       child: Text(
-        value?.name ?? 'No event (casual round)',
+        value == null ? 'No event (casual round)' : formatEventTitle(value!),
         style: value == null
             ? theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -135,7 +136,7 @@ class _EventPickerSheet extends StatelessWidget {
             ),
           for (final e in events)
             ListTile(
-              title: Text(e.name),
+              title: Text(formatEventTitle(e)),
               trailing: e.id == selectedId ? const Icon(Icons.check) : null,
               onTap: () =>
                   Navigator.of(context).pop(_PickerResult.event(e)),

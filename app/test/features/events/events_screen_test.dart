@@ -43,6 +43,7 @@ void main() {
   Event makeEvent({
     int id = 1,
     String name = 'Club Championship',
+    int season = 1,
     int? finishPosition,
     bool tied = false,
     bool missedCut = false,
@@ -50,6 +51,7 @@ void main() {
       Event(
         id: id,
         name: name,
+        season: season,
         finishPosition: finishPosition,
         tied: tied,
         missedCut: missedCut,
@@ -99,7 +101,7 @@ void main() {
       rounds: [makeRound(id: 1, event: event), makeRound(id: 2, event: event)],
     );
 
-    expect(find.text('Club Championship'), findsOneWidget);
+    expect(find.text('Club Championship (Season 1)'), findsOneWidget);
     expect(find.byKey(const ValueKey('event_result_badge_9')), findsOneWidget);
     expect(find.text('1st'), findsOneWidget);
     expect(find.text('2 rounds'), findsOneWidget);

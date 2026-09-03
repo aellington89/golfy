@@ -12,13 +12,13 @@ import '../stats/score_color.dart';
 import '../stats/score_format.dart';
 import '../stats/stat_format.dart';
 import 'delete_event.dart';
+import 'edit_event_dialog.dart';
 import 'edit_event_result_dialog.dart';
 import 'event_result_badge.dart';
 import 'event_result_format.dart';
 import 'event_stats.dart';
-import 'rename_event_dialog.dart';
 
-enum _EventMenuAction { rename, delete }
+enum _EventMenuAction { edit, delete }
 
 /// Detail view for a single event (#42), pushed from the Events list and the
 /// Rounds-tab event headers. Shows the event's result, a scoring summary, and
@@ -65,7 +65,7 @@ class EventDetailScreen extends ConsumerWidget {
         }
         return Scaffold(
           appBar: AppBar(
-            title: Text(event.name),
+            title: Text(formatEventTitle(event)),
             actions: [
               PopupMenuButton<_EventMenuAction>(
                 key: const ValueKey('event_detail_menu'),
@@ -73,8 +73,8 @@ class EventDetailScreen extends ConsumerWidget {
                     _onMenuAction(context, ref, action, event, events),
                 itemBuilder: (_) => const [
                   PopupMenuItem(
-                    value: _EventMenuAction.rename,
-                    child: Text('Rename'),
+                    value: _EventMenuAction.edit,
+                    child: Text('Edit'),
                   ),
                   PopupMenuItem(
                     value: _EventMenuAction.delete,
@@ -134,11 +134,11 @@ class EventDetailScreen extends ConsumerWidget {
     List<Event> events,
   ) async {
     switch (action) {
-      case _EventMenuAction.rename:
+      case _EventMenuAction.edit:
         await showDialog<Event>(
           context: context,
           builder: (_) =>
-              RenameEventDialog(event: event, existingEvents: events),
+              EditEventDialog(event: event, existingEvents: events),
         );
       case _EventMenuAction.delete:
         final all = ref.read(roundsStreamProvider).value ??
@@ -146,7 +146,7 @@ class EventDetailScreen extends ConsumerWidget {
         final count = roundsForEvent(all, event.id).length;
         final confirmed = await confirmDeleteEvent(
           context,
-          eventName: event.name,
+          eventName: formatEventTitle(event),
           roundCount: count,
         );
         if (!confirmed) return;

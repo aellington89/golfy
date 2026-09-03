@@ -216,7 +216,13 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > ([#35](https://github.com/aellington89/golfy/issues/35)). The v4 migration is
 > data-only (no schema change): it clears any up/down success recorded with 2+
 > putts and clamps `putts` to `score - 1` where they met or exceeded it
-> ([#37](https://github.com/aellington89/golfy/issues/37)).
+> ([#37](https://github.com/aellington89/golfy/issues/37)). The v5 migration adds
+> `events.season` (NOT NULL, default 1) and swaps the events unique key to
+> `(name, season)` so a recurring event has one row per season
+> ([#47](https://github.com/aellington89/golfy/issues/47)); because that changes
+> a table constraint, it recreates the `events` table with `TableMigration`,
+> preserving existing events and their `rounds.event_id` links and backfilling
+> every existing row to season 1.
 
 ## Release signing
 

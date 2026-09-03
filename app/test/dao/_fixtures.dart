@@ -23,8 +23,10 @@ class TestFixtures {
     );
   }
 
-  Future<int> insertEvent({String name = 'Club Championship'}) {
-    return db.eventDao.insert(EventsCompanion.insert(name: name));
+  Future<int> insertEvent({String name = 'Club Championship', int season = 1}) {
+    return db.eventDao.insert(
+      EventsCompanion.insert(name: name, season: Value(season)),
+    );
   }
 
   Future<int> insertRound(

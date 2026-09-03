@@ -22,8 +22,10 @@ void main() {
             CoursesCompanion.insert(name: name, gameTitle: gameTitle),
           );
 
-  Future<int> insertEvent({String name = 'Club Championship'}) =>
-      db.into(db.events).insert(EventsCompanion.insert(name: name));
+  Future<int> insertEvent({String name = 'Club Championship', int season = 1}) =>
+      db.into(db.events).insert(
+            EventsCompanion.insert(name: name, season: Value(season)),
+          );
 
   Future<int> insertRound(
     int courseId, {
@@ -144,12 +146,22 @@ void main() {
   });
 
   group('events', () {
-    test('UNIQUE(name) rejects a duplicate name', () async {
+    test('UNIQUE(name, season) rejects a duplicate name in the same season',
+        () async {
       await insertEvent(name: 'Club Championship');
       await expectLater(
         insertEvent(name: 'Club Championship'),
         throwsA(isA<Exception>()),
       );
+    });
+
+    test('allows the same name in a different season (#47)', () async {
+      final s1 = await insertEvent(name: 'Club Championship');
+      final s2 = await insertEvent(name: 'Club Championship', season: 2);
+      expect(s1, isNot(s2)); // distinct rows / ids
+      final rows = await db.select(db.events).get();
+      expect(rows.length, 2);
+      expect(rows.map((e) => e.season).toSet(), {1, 2});
     });
 
     test('deleting an event SET NULLs its rounds (no cascade delete)',

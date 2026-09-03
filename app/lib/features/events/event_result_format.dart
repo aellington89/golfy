@@ -1,9 +1,16 @@
-// Presentation helpers for an [Event]'s recorded result (#35). Kept widget-free
-// and outside the data layer (mirrors features/stats/score_format.dart) so the
-// grouped rounds list — and any later events UI — format results identically and
-// unit-test without pumping a widget.
+// Presentation helpers for an [Event] — its display title (#47) and its
+// recorded result (#35). Kept widget-free and outside the data layer (mirrors
+// features/stats/score_format.dart) so every event surface — the grouped rounds
+// list, the Events tab, the detail screen, the picker — formats identically and
+// unit-tests without pumping a widget.
 
 import '../../data/database.dart';
+
+/// The event's display title: its name with the season appended, e.g.
+/// `"The Legends Championship (Season 2)"`. Because a name recurs across seasons
+/// as distinct occurrences (#47), the season is always shown so occurrences are
+/// told apart wherever an event name appears.
+String formatEventTitle(Event event) => '${event.name} (Season ${event.season})';
 
 /// Formats an event's recorded result for a badge:
 ///   * missed cut    -> `"Cut"`
