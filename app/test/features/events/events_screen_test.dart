@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
+import 'package:golfy_app/data/models/event_stats.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/events/add_event_dialog.dart';
@@ -35,6 +36,14 @@ void main() {
         databaseProvider.overrideWithValue(db),
         eventsStreamProvider.overrideWith((ref) => eventsController.stream),
         roundsStreamProvider.overrideWith((ref) => roundsController.stream),
+        // The detail screen pushed by the "tapping an event" test watches these
+        // keyed families at the top of its build; override them so it never
+        // opens a live drift watcher on the test db (the project's widget-test
+        // reactivity constraint).
+        roundsForEventProvider.overrideWith(
+            (ref, _) => const Stream<List<RoundWithCourse>>.empty()),
+        eventStatsStreamProvider
+            .overrideWith((ref, _) => const Stream<EventStats>.empty()),
       ],
       child: const MaterialApp(home: EventsScreen()),
     );

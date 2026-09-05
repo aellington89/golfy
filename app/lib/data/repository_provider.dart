@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'database.dart';
 import 'database_provider.dart';
 import 'models/dashboard_stats.dart';
+import 'models/event_stats.dart';
 import 'models/round_with_course.dart';
 import 'repository.dart';
 
@@ -69,4 +70,12 @@ final holeResultsStreamProvider =
 /// Reactive aggregated lifetime stats for the dashboard.
 final dashboardStatsStreamProvider = StreamProvider<DashboardStats>((ref) {
   return ref.watch(repositoryProvider).watchDashboardStats();
+});
+
+/// Reactive per-event scoring stats (#56), keyed on event id. The per-event
+/// counterpart to [dashboardStatsStreamProvider]; backs the Event detail
+/// screen's scoring summary card.
+final eventStatsStreamProvider =
+    StreamProvider.family<EventStats, int>((ref, eventId) {
+  return ref.watch(repositoryProvider).watchEventStats(eventId);
 });

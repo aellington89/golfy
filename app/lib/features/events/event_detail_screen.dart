@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/database.dart';
+import '../../data/models/event_stats.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../widgets/empty_state.dart';
@@ -16,7 +17,6 @@ import 'edit_event_dialog.dart';
 import 'edit_event_result_dialog.dart';
 import 'event_result_badge.dart';
 import 'event_result_format.dart';
-import 'event_stats.dart';
 
 enum _EventMenuAction { edit, delete }
 
@@ -24,9 +24,10 @@ enum _EventMenuAction { edit, delete }
 /// Rounds-tab event headers. Shows the event's result, a scoring summary, and
 /// its rounds, with actions to add a round (event pre-selected), edit the
 /// result, rename, or delete. Keyed by [eventId] and re-derived live from
-/// [eventsStreamProvider] + [roundsStreamProvider], so edits elsewhere reflect
-/// here and a delete collapses to a gone-state. Mirrors [ScorecardScreen],
-/// which is likewise keyed by an id.
+/// [eventsStreamProvider], the keyed [roundsForEventProvider], and the keyed
+/// [eventStatsStreamProvider], so edits elsewhere reflect here and a delete
+/// collapses to a gone-state. Mirrors [ScorecardScreen], which is likewise
+/// keyed by an id.
 class EventDetailScreen extends ConsumerWidget {
   const EventDetailScreen({super.key, required this.eventId});
 
@@ -42,7 +43,11 @@ class EventDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final eventsAsync = ref.watch(eventsStreamProvider);
-    final roundsAsync = ref.watch(roundsStreamProvider);
+    final roundsAsync = ref.watch(roundsForEventProvider(eventId));
+    // The scoring card is DB-derived (#56); treat a not-yet-loaded aggregate as
+    // "no data" so the card simply stays hidden until the first emission.
+    final stats = ref.watch(eventStatsStreamProvider(eventId)).value ??
+        EventStats.empty;
 
     return eventsAsync.when(
       loading: () =>
@@ -92,9 +97,7 @@ class EventDetailScreen extends ConsumerWidget {
           body: roundsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Failed to load rounds: $e')),
-            data: (allRounds) {
-              final rounds = roundsForEvent(allRounds, eventId);
-              final summary = computeEventScoringSummary(rounds);
+            data: (rounds) {
               return ListView(
                 padding: const EdgeInsets.only(bottom: 88),
                 children: [
@@ -105,7 +108,7 @@ class EventDetailScreen extends ConsumerWidget {
                       builder: (_) => EditEventResultDialog(event: event),
                     ),
                   ),
-                  if (summary.hasData) _EventStatsCard(summary: summary),
+                  if (stats.hasData) _EventStatsCard(stats: stats),
                   if (rounds.isEmpty)
                     const Padding(
                       padding: EdgeInsets.fromLTRB(16, 32, 16, 16),
@@ -141,9 +144,8 @@ class EventDetailScreen extends ConsumerWidget {
               EditEventDialog(event: event, existingEvents: events),
         );
       case _EventMenuAction.delete:
-        final all = ref.read(roundsStreamProvider).value ??
-            const <RoundWithCourse>[];
-        final count = roundsForEvent(all, event.id).length;
+        final count =
+            ref.read(roundsForEventProvider(eventId)).value?.length ?? 0;
         final confirmed = await confirmDeleteEvent(
           context,
           eventName: formatEventTitle(event),
@@ -161,6 +163,10 @@ class EventDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Event event,
   ) async {
+    // The dialog needs the FULL rounds list (not just this event's) for its
+    // duplicate (date, course, round #) pre-check and auto round-numbering,
+    // which are global concerns. The shell's IndexedStack keeps
+    // roundsStreamProvider warm, so this one-time read is populated.
     final all = ref.read(roundsStreamProvider).value ??
         const <RoundWithCourse>[];
     final newId = await showDialog<int>(
@@ -218,13 +224,14 @@ class _ResultHeader extends StatelessWidget {
   }
 }
 
-/// Per-event scoring summary card (#42), styled to match the Dashboard's stat
-/// cards: rounds scored, average score vs. par, and the best round. Only shown
-/// when the event has at least one scored round.
+/// Per-event scoring summary card, styled to match the Dashboard's stat cards:
+/// rounds scored, average score vs. par, and the best round. Sourced from the
+/// DB-derived [EventStats] (#56); only shown when the event has at least one
+/// scored round.
 class _EventStatsCard extends StatelessWidget {
-  const _EventStatsCard({required this.summary});
+  const _EventStatsCard({required this.stats});
 
-  final EventScoringSummary summary;
+  final EventStats stats;
 
   static final _displayFormat = DateFormat.yMMMMd();
 
@@ -233,7 +240,7 @@ class _EventStatsCard extends StatelessWidget {
     final theme = Theme.of(context);
     // Colour the average to match its displayed value, mirroring the Dashboard:
     // round to one decimal first so a value that renders "E" stays neutral.
-    final avg = summary.avgScoreVsPar;
+    final avg = stats.avgScoreVsPar;
     final avgRounded = avg == null ? null : (avg * 10).round() / 10;
     Color? avgColor;
     if (avgRounded != null && avgRounded > 0) {
@@ -241,7 +248,7 @@ class _EventStatsCard extends StatelessWidget {
     } else if (avgRounded != null && avgRounded < 0) {
       avgColor = scoreToParColor(-1, theme.colorScheme);
     }
-    final best = summary.bestRound;
+    final best = stats.bestRound;
 
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -255,13 +262,13 @@ class _EventStatsCard extends StatelessWidget {
             _row(
               theme,
               'Rounds scored',
-              '${summary.scoredRounds}',
+              '${stats.roundsScored}',
               valueKey: const ValueKey('event_stat_rounds'),
             ),
             _row(
               theme,
               'Avg score vs. par',
-              formatSignedAverage(summary.avgScoreVsPar),
+              formatSignedAverage(stats.avgScoreVsPar),
               valueKey: const ValueKey('event_stat_avg_vs_par'),
               color: avgColor,
             ),
@@ -269,11 +276,10 @@ class _EventStatsCard extends StatelessWidget {
               _row(
                 theme,
                 'Best round',
-                formatRelativeToPar(best.relativeToPar),
+                formatRelativeToPar(best.toPar),
                 valueKey: const ValueKey('event_stat_best'),
-                color: scoreToParColor(best.relativeToPar, theme.colorScheme),
-                subtitle:
-                    '${best.courseName} · ${_formatDate(best.round.date)}',
+                color: scoreToParColor(best.toPar, theme.colorScheme),
+                subtitle: '${best.courseName} · ${_formatDate(best.date)}',
               ),
           ],
         ),

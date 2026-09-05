@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 import '../models/dashboard_stats.dart';
+import '../models/event_stats.dart';
 import '../tables/courses.dart';
 import '../tables/hole_results.dart';
 import '../tables/rounds.dart';
@@ -67,6 +68,39 @@ class DashboardDao extends DatabaseAccessor<GolfyDatabase>
     ORDER BY bucket
   ''';
 
+  /// Per-event counterpart to [_scalarSql], scoped to one event by joining
+  /// `hole_results` to its `rounds` and filtering on `rounds.event_id` (the `?`
+  /// variable). Same `NULLIF`-on-denominator discipline: an event with no scored
+  /// holes yields 0 rounds / 0 holes and NULL averages (→ em-dash in the UI).
+  static const _eventScalarSql = '''
+    SELECT
+      COUNT(DISTINCT h.round_id) AS rounds_scored,
+      COUNT(h.id) AS holes_played,
+      CAST(SUM(h.score) AS REAL)
+        / NULLIF(COUNT(DISTINCT h.round_id), 0) AS avg_score_per_round,
+      CAST(SUM(h.score - h.par) AS REAL)
+        / NULLIF(COUNT(DISTINCT h.round_id), 0) AS avg_score_vs_par
+    FROM hole_results h
+    JOIN rounds r ON r.id = h.round_id
+    WHERE r.event_id = ?
+  ''';
+
+  /// Per-event counterpart to [_bestRoundSql] (adds the `event_id` filter). The
+  /// trailing `r.id DESC` breaks a same-date to-par tie toward the most recently
+  /// inserted round, matching the rounds list's newest-first ordering.
+  static const _eventBestRoundSql = '''
+    SELECT r.id AS round_id, c.name AS course_name, r.date AS date,
+           SUM(h.score - h.par) AS to_par
+    FROM rounds r
+    JOIN courses c ON c.id = r.course_id
+    JOIN hole_results h ON h.round_id = r.id
+    WHERE r.event_id = ?
+    GROUP BY r.id
+    HAVING COUNT(h.id) > 0
+    ORDER BY to_par ASC, r.date DESC, r.id DESC
+    LIMIT 1
+  ''';
+
   /// Reactive lifetime stats. Re-emits whenever any of `hole_results`,
   /// `rounds`, or `courses` changes.
   Stream<DashboardStats> watchStats() {
@@ -120,6 +154,47 @@ class DashboardDao extends DatabaseAccessor<GolfyDatabase>
       avgPenaltyStrokesPerHole:
           scalars.readNullable<double>('avg_penalty_strokes'),
       scoreDistribution: distribution,
+      bestRound: bestRound,
+    );
+  }
+
+  /// Reactive scoring stats for a single event (#56). The per-event counterpart
+  /// to [watchStats]: re-emits whenever any of `hole_results`, `rounds`, or
+  /// `courses` changes (a hole edited, a round attached/detached from the event,
+  /// or a best-round course renamed). Backed by the `idx_rounds_event` index.
+  Stream<EventStats> watchEventStats(int eventId) {
+    return customSelect(
+      'SELECT 1',
+      readsFrom: {holeResults, rounds, courses},
+    ).watch().asyncMap((_) => _computeEventStats(eventId));
+  }
+
+  Future<EventStats> _computeEventStats(int eventId) async {
+    final scalars = await customSelect(
+      _eventScalarSql,
+      variables: [Variable.withInt(eventId)],
+      readsFrom: {holeResults, rounds},
+    ).getSingle();
+    final bestRoundRows = await customSelect(
+      _eventBestRoundSql,
+      variables: [Variable.withInt(eventId)],
+      readsFrom: {rounds, courses, holeResults},
+    ).get();
+
+    final bestRound = bestRoundRows.isEmpty
+        ? null
+        : BestRound(
+            roundId: bestRoundRows.first.read<int>('round_id'),
+            courseName: bestRoundRows.first.read<String>('course_name'),
+            date: bestRoundRows.first.read<String>('date'),
+            toPar: bestRoundRows.first.read<int>('to_par'),
+          );
+
+    return EventStats(
+      roundsScored: scalars.read<int>('rounds_scored'),
+      holesPlayed: scalars.read<int>('holes_played'),
+      avgScorePerRound: scalars.readNullable<double>('avg_score_per_round'),
+      avgScoreVsPar: scalars.readNullable<double>('avg_score_vs_par'),
       bestRound: bestRound,
     );
   }

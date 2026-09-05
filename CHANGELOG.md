@@ -24,6 +24,12 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   event's rounds directly rather than filtering the full rounds stream in
   memory. Data-model groundwork for per-event stats; no user-facing or schema
   change — builds on the existing `rounds.event_id` index from #35 ([#55]).
+- Internal: the Event detail screen's scoring summary (rounds scored, average
+  score vs. par, best round — shipped in #42) is now a **DB-derived aggregate**
+  (`DashboardDao.watchEventStats`, modeled as `EventStats` and surfaced via
+  `eventStatsStreamProvider`), and the screen's rounds list now reads the keyed
+  `event → rounds` query (#55) — replacing the in-memory computation. Mirrors the
+  lifetime dashboard aggregate; no schema or user-facing change ([#56]).
 
 ### Changed
 - Events are now distinct **per season**: the same event name recurs each season
@@ -286,3 +292,4 @@ Phase 1 — data layer and navigation shell.
 [#42]: https://github.com/aellington89/golfy/issues/42
 [#55]: https://github.com/aellington89/golfy/issues/55
 [#47]: https://github.com/aellington89/golfy/issues/47
+[#56]: https://github.com/aellington89/golfy/issues/56

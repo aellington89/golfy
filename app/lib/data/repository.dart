@@ -1,5 +1,6 @@
 import 'database.dart';
 import 'models/dashboard_stats.dart';
+import 'models/event_stats.dart';
 import 'models/round_with_course.dart';
 
 /// Single facade over the four drift DAOs.
@@ -94,4 +95,9 @@ class GolfyRepository {
   // ── Dashboard ──────────────────────────────────────────────────────────
 
   Stream<DashboardStats> watchDashboardStats() => _db.dashboardDao.watchStats();
+
+  /// Reactive scoring stats for a single event (#56). See
+  /// [DashboardDao.watchEventStats].
+  Stream<EventStats> watchEventStats(int eventId) =>
+      _db.dashboardDao.watchEventStats(eventId);
 }
