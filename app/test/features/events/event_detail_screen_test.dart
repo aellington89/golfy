@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
+import 'package:golfy_app/data/models/event_stats.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/events/edit_event_result_dialog.dart';
@@ -16,19 +17,31 @@ import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 void main() {
   late GolfyDatabase db;
   late StreamController<List<Event>> eventsController;
+  // The full rounds stream — the screen reads it only for the Add-round dialog's
+  // (global) duplicate / auto-number pre-check.
   late StreamController<List<RoundWithCourse>> roundsController;
+  // The keyed per-event rounds (roundsForEventProvider) — backs the body list
+  // and the delete-confirmation round count.
+  late StreamController<List<RoundWithCourse>> eventRoundsController;
+  // The keyed per-event scoring aggregate (eventStatsStreamProvider) — backs the
+  // summary card (#56).
+  late StreamController<EventStats> statsController;
   late StreamController<List<Course>> coursesController;
 
   setUp(() {
     db = GolfyDatabase.forTesting(NativeDatabase.memory());
     eventsController = StreamController<List<Event>>.broadcast();
     roundsController = StreamController<List<RoundWithCourse>>.broadcast();
+    eventRoundsController = StreamController<List<RoundWithCourse>>.broadcast();
+    statsController = StreamController<EventStats>.broadcast();
     coursesController = StreamController<List<Course>>.broadcast();
   });
 
   tearDown(() async {
     await eventsController.close();
     await roundsController.close();
+    await eventRoundsController.close();
+    await statsController.close();
     await coursesController.close();
     await db.close();
   });
@@ -39,6 +52,10 @@ void main() {
         databaseProvider.overrideWithValue(db),
         eventsStreamProvider.overrideWith((ref) => eventsController.stream),
         roundsStreamProvider.overrideWith((ref) => roundsController.stream),
+        roundsForEventProvider(eventId)
+            .overrideWith((ref) => eventRoundsController.stream),
+        eventStatsStreamProvider(eventId)
+            .overrideWith((ref) => statsController.stream),
         // The Add-round dialog embeds a CoursePicker watching this — override
         // it so it doesn't open a live drift watcher.
         coursesByNameStreamProvider
@@ -90,13 +107,21 @@ void main() {
     );
   }
 
+  /// Pushes a frame of state onto the overridden providers. [eventRounds]
+  /// defaults to [rounds] (the common case where the body list mirrors what is
+  /// seeded); pass it explicitly to make the keyed body list differ from the
+  /// full rounds stream. [stats] backs the summary card.
   Future<void> emit(
     WidgetTester tester, {
     required List<Event> events,
     List<RoundWithCourse> rounds = const [],
+    List<RoundWithCourse>? eventRounds,
+    EventStats stats = EventStats.empty,
   }) async {
     eventsController.add(events);
     roundsController.add(rounds);
+    eventRoundsController.add(eventRounds ?? rounds);
+    statsController.add(stats);
     await tester.pumpAndSettle();
   }
 
@@ -104,10 +129,17 @@ void main() {
       (tester) async {
     final event = makeEvent(id: 9, finishPosition: 1);
     await tester.pumpWidget(wrap(9));
-    await emit(tester, events: [event], rounds: [
-      makeRound(id: 1, courseName: 'Pebble', event: event),
-      makeRound(id: 2, courseName: 'Casual Course'), // casual — excluded
-    ]);
+    // The full stream carries a casual round too; the body must render only the
+    // keyed per-event rounds, so the casual one never appears.
+    await emit(
+      tester,
+      events: [event],
+      rounds: [
+        makeRound(id: 1, courseName: 'Pebble', event: event),
+        makeRound(id: 2, courseName: 'Casual Course'),
+      ],
+      eventRounds: [makeRound(id: 1, courseName: 'Pebble', event: event)],
+    );
 
     expect(find.text('Club Championship (Season 1)'),
         findsWidgets); // AppBar title
@@ -119,16 +151,32 @@ void main() {
   testWidgets('shows the event scoring summary', (tester) async {
     final event = makeEvent(id: 9);
     await tester.pumpWidget(wrap(9));
-    await emit(tester, events: [event], rounds: [
-      makeRound(id: 1, event: event, totalScore: 75, totalPar: 72), // +3
-      makeRound(id: 2, event: event, totalScore: 70, totalPar: 72), // -2
-    ]);
+    await emit(
+      tester,
+      events: [event],
+      eventRounds: [
+        makeRound(id: 1, event: event),
+        makeRound(id: 2, event: event),
+      ],
+      stats: const EventStats(
+        roundsScored: 2,
+        holesPlayed: 36,
+        avgScorePerRound: 72.5,
+        avgScoreVsPar: 0.5,
+        bestRound: BestRound(
+          roundId: 2,
+          courseName: 'Pebble',
+          date: '2026-05-25',
+          toPar: -2,
+        ),
+      ),
+    );
 
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('event_stat_rounds'))).data,
       '2',
     );
-    // Best of +3 / -2 is -2.
+    // Best round comes straight from the aggregate: -2.
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('event_stat_best'))).data,
       '-2',
@@ -138,7 +186,7 @@ void main() {
   testWidgets('empty event shows the no-rounds hint and no stats card',
       (tester) async {
     await tester.pumpWidget(wrap(9));
-    await emit(tester, events: [makeEvent(id: 9)], rounds: const []);
+    await emit(tester, events: [makeEvent(id: 9)]); // no rounds, empty stats
 
     expect(find.textContaining('No rounds in this event yet'), findsOneWidget);
     expect(find.byKey(const ValueKey('event_stat_rounds')), findsNothing);
@@ -146,7 +194,7 @@ void main() {
 
   testWidgets('Edit result opens the result dialog', (tester) async {
     await tester.pumpWidget(wrap(9));
-    await emit(tester, events: [makeEvent(id: 9)], rounds: const []);
+    await emit(tester, events: [makeEvent(id: 9)]);
 
     await tester.tap(find.byKey(const ValueKey('event_detail_edit_result')));
     await tester.pump(const Duration(milliseconds: 400));
@@ -156,7 +204,7 @@ void main() {
 
   testWidgets('overflow -> Edit opens the edit dialog', (tester) async {
     await tester.pumpWidget(wrap(9));
-    await emit(tester, events: [makeEvent(id: 9)], rounds: const []);
+    await emit(tester, events: [makeEvent(id: 9)]);
 
     await tester.tap(find.byKey(const ValueKey('event_detail_menu')));
     await tester.pumpAndSettle();
@@ -200,7 +248,7 @@ void main() {
       (tester) async {
     final event = makeEvent(id: 9);
     await tester.pumpWidget(wrap(9));
-    await emit(tester, events: [event], rounds: const []);
+    await emit(tester, events: [event]);
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pump(const Duration(milliseconds: 400));
