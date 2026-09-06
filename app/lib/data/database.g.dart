@@ -1848,39 +1848,6 @@ class $HoleResultsTable extends HoleResults
       'CHECK ("sand_save" IN (0, 1))',
     ),
   );
-  static const VerificationMeta _driveDistanceYardsMeta =
-      const VerificationMeta('driveDistanceYards');
-  @override
-  late final GeneratedColumn<int> driveDistanceYards = GeneratedColumn<int>(
-    'drive_distance_yards',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL CHECK (drive_distance_yards >= 0)',
-  );
-  static const VerificationMeta _approachDistanceYardsMeta =
-      const VerificationMeta('approachDistanceYards');
-  @override
-  late final GeneratedColumn<int> approachDistanceYards = GeneratedColumn<int>(
-    'approach_distance_yards',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    $customConstraints: 'CHECK (approach_distance_yards >= 0)',
-  );
-  static const VerificationMeta _teeClubMeta = const VerificationMeta(
-    'teeClub',
-  );
-  @override
-  late final GeneratedColumn<String> teeClub = GeneratedColumn<String>(
-    'tee_club',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -1906,9 +1873,6 @@ class $HoleResultsTable extends HoleResults
     penaltyStrokes,
     bunkerVisited,
     sandSave,
-    driveDistanceYards,
-    approachDistanceYards,
-    teeClub,
     notes,
   ];
   @override
@@ -2040,32 +2004,6 @@ class $HoleResultsTable extends HoleResults
     } else if (isInserting) {
       context.missing(_sandSaveMeta);
     }
-    if (data.containsKey('drive_distance_yards')) {
-      context.handle(
-        _driveDistanceYardsMeta,
-        driveDistanceYards.isAcceptableOrUnknown(
-          data['drive_distance_yards']!,
-          _driveDistanceYardsMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_driveDistanceYardsMeta);
-    }
-    if (data.containsKey('approach_distance_yards')) {
-      context.handle(
-        _approachDistanceYardsMeta,
-        approachDistanceYards.isAcceptableOrUnknown(
-          data['approach_distance_yards']!,
-          _approachDistanceYardsMeta,
-        ),
-      );
-    }
-    if (data.containsKey('tee_club')) {
-      context.handle(
-        _teeClubMeta,
-        teeClub.isAcceptableOrUnknown(data['tee_club']!, _teeClubMeta),
-      );
-    }
     if (data.containsKey('notes')) {
       context.handle(
         _notesMeta,
@@ -2141,18 +2079,6 @@ class $HoleResultsTable extends HoleResults
         DriftSqlType.bool,
         data['${effectivePrefix}sand_save'],
       )!,
-      driveDistanceYards: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}drive_distance_yards'],
-      )!,
-      approachDistanceYards: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}approach_distance_yards'],
-      ),
-      teeClub: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}tee_club'],
-      ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
@@ -2181,9 +2107,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
   final int penaltyStrokes;
   final bool bunkerVisited;
   final bool sandSave;
-  final int driveDistanceYards;
-  final int? approachDistanceYards;
-  final String? teeClub;
   final String? notes;
   const HoleResult({
     required this.id,
@@ -2200,9 +2123,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     required this.penaltyStrokes,
     required this.bunkerVisited,
     required this.sandSave,
-    required this.driveDistanceYards,
-    this.approachDistanceYards,
-    this.teeClub,
     this.notes,
   });
   @override
@@ -2224,13 +2144,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     map['penalty_strokes'] = Variable<int>(penaltyStrokes);
     map['bunker_visited'] = Variable<bool>(bunkerVisited);
     map['sand_save'] = Variable<bool>(sandSave);
-    map['drive_distance_yards'] = Variable<int>(driveDistanceYards);
-    if (!nullToAbsent || approachDistanceYards != null) {
-      map['approach_distance_yards'] = Variable<int>(approachDistanceYards);
-    }
-    if (!nullToAbsent || teeClub != null) {
-      map['tee_club'] = Variable<String>(teeClub);
-    }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
@@ -2255,13 +2168,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
       penaltyStrokes: Value(penaltyStrokes),
       bunkerVisited: Value(bunkerVisited),
       sandSave: Value(sandSave),
-      driveDistanceYards: Value(driveDistanceYards),
-      approachDistanceYards: approachDistanceYards == null && nullToAbsent
-          ? const Value.absent()
-          : Value(approachDistanceYards),
-      teeClub: teeClub == null && nullToAbsent
-          ? const Value.absent()
-          : Value(teeClub),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -2288,11 +2194,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
       penaltyStrokes: serializer.fromJson<int>(json['penaltyStrokes']),
       bunkerVisited: serializer.fromJson<bool>(json['bunkerVisited']),
       sandSave: serializer.fromJson<bool>(json['sandSave']),
-      driveDistanceYards: serializer.fromJson<int>(json['driveDistanceYards']),
-      approachDistanceYards: serializer.fromJson<int?>(
-        json['approachDistanceYards'],
-      ),
-      teeClub: serializer.fromJson<String?>(json['teeClub']),
       notes: serializer.fromJson<String?>(json['notes']),
     );
   }
@@ -2314,9 +2215,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
       'penaltyStrokes': serializer.toJson<int>(penaltyStrokes),
       'bunkerVisited': serializer.toJson<bool>(bunkerVisited),
       'sandSave': serializer.toJson<bool>(sandSave),
-      'driveDistanceYards': serializer.toJson<int>(driveDistanceYards),
-      'approachDistanceYards': serializer.toJson<int?>(approachDistanceYards),
-      'teeClub': serializer.toJson<String?>(teeClub),
       'notes': serializer.toJson<String?>(notes),
     };
   }
@@ -2336,9 +2234,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     int? penaltyStrokes,
     bool? bunkerVisited,
     bool? sandSave,
-    int? driveDistanceYards,
-    Value<int?> approachDistanceYards = const Value.absent(),
-    Value<String?> teeClub = const Value.absent(),
     Value<String?> notes = const Value.absent(),
   }) => HoleResult(
     id: id ?? this.id,
@@ -2355,11 +2250,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     penaltyStrokes: penaltyStrokes ?? this.penaltyStrokes,
     bunkerVisited: bunkerVisited ?? this.bunkerVisited,
     sandSave: sandSave ?? this.sandSave,
-    driveDistanceYards: driveDistanceYards ?? this.driveDistanceYards,
-    approachDistanceYards: approachDistanceYards.present
-        ? approachDistanceYards.value
-        : this.approachDistanceYards,
-    teeClub: teeClub.present ? teeClub.value : this.teeClub,
     notes: notes.present ? notes.value : this.notes,
   );
   HoleResult copyWithCompanion(HoleResultsCompanion data) {
@@ -2390,13 +2280,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
           ? data.bunkerVisited.value
           : this.bunkerVisited,
       sandSave: data.sandSave.present ? data.sandSave.value : this.sandSave,
-      driveDistanceYards: data.driveDistanceYards.present
-          ? data.driveDistanceYards.value
-          : this.driveDistanceYards,
-      approachDistanceYards: data.approachDistanceYards.present
-          ? data.approachDistanceYards.value
-          : this.approachDistanceYards,
-      teeClub: data.teeClub.present ? data.teeClub.value : this.teeClub,
       notes: data.notes.present ? data.notes.value : this.notes,
     );
   }
@@ -2418,9 +2301,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
           ..write('penaltyStrokes: $penaltyStrokes, ')
           ..write('bunkerVisited: $bunkerVisited, ')
           ..write('sandSave: $sandSave, ')
-          ..write('driveDistanceYards: $driveDistanceYards, ')
-          ..write('approachDistanceYards: $approachDistanceYards, ')
-          ..write('teeClub: $teeClub, ')
           ..write('notes: $notes')
           ..write(')'))
         .toString();
@@ -2442,9 +2322,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     penaltyStrokes,
     bunkerVisited,
     sandSave,
-    driveDistanceYards,
-    approachDistanceYards,
-    teeClub,
     notes,
   );
   @override
@@ -2465,9 +2342,6 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
           other.penaltyStrokes == this.penaltyStrokes &&
           other.bunkerVisited == this.bunkerVisited &&
           other.sandSave == this.sandSave &&
-          other.driveDistanceYards == this.driveDistanceYards &&
-          other.approachDistanceYards == this.approachDistanceYards &&
-          other.teeClub == this.teeClub &&
           other.notes == this.notes);
 }
 
@@ -2486,9 +2360,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
   final Value<int> penaltyStrokes;
   final Value<bool> bunkerVisited;
   final Value<bool> sandSave;
-  final Value<int> driveDistanceYards;
-  final Value<int?> approachDistanceYards;
-  final Value<String?> teeClub;
   final Value<String?> notes;
   const HoleResultsCompanion({
     this.id = const Value.absent(),
@@ -2505,9 +2376,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
     this.penaltyStrokes = const Value.absent(),
     this.bunkerVisited = const Value.absent(),
     this.sandSave = const Value.absent(),
-    this.driveDistanceYards = const Value.absent(),
-    this.approachDistanceYards = const Value.absent(),
-    this.teeClub = const Value.absent(),
     this.notes = const Value.absent(),
   });
   HoleResultsCompanion.insert({
@@ -2525,9 +2393,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
     required int penaltyStrokes,
     required bool bunkerVisited,
     required bool sandSave,
-    required int driveDistanceYards,
-    this.approachDistanceYards = const Value.absent(),
-    this.teeClub = const Value.absent(),
     this.notes = const Value.absent(),
   }) : roundId = Value(roundId),
        holeNumber = Value(holeNumber),
@@ -2540,8 +2405,7 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
        upDownSuccess = Value(upDownSuccess),
        penaltyStrokes = Value(penaltyStrokes),
        bunkerVisited = Value(bunkerVisited),
-       sandSave = Value(sandSave),
-       driveDistanceYards = Value(driveDistanceYards);
+       sandSave = Value(sandSave);
   static Insertable<HoleResult> custom({
     Expression<int>? id,
     Expression<int>? roundId,
@@ -2557,9 +2421,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
     Expression<int>? penaltyStrokes,
     Expression<bool>? bunkerVisited,
     Expression<bool>? sandSave,
-    Expression<int>? driveDistanceYards,
-    Expression<int>? approachDistanceYards,
-    Expression<String>? teeClub,
     Expression<String>? notes,
   }) {
     return RawValuesInsertable({
@@ -2577,11 +2438,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
       if (penaltyStrokes != null) 'penalty_strokes': penaltyStrokes,
       if (bunkerVisited != null) 'bunker_visited': bunkerVisited,
       if (sandSave != null) 'sand_save': sandSave,
-      if (driveDistanceYards != null)
-        'drive_distance_yards': driveDistanceYards,
-      if (approachDistanceYards != null)
-        'approach_distance_yards': approachDistanceYards,
-      if (teeClub != null) 'tee_club': teeClub,
       if (notes != null) 'notes': notes,
     });
   }
@@ -2601,9 +2457,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
     Value<int>? penaltyStrokes,
     Value<bool>? bunkerVisited,
     Value<bool>? sandSave,
-    Value<int>? driveDistanceYards,
-    Value<int?>? approachDistanceYards,
-    Value<String?>? teeClub,
     Value<String?>? notes,
   }) {
     return HoleResultsCompanion(
@@ -2621,10 +2474,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
       penaltyStrokes: penaltyStrokes ?? this.penaltyStrokes,
       bunkerVisited: bunkerVisited ?? this.bunkerVisited,
       sandSave: sandSave ?? this.sandSave,
-      driveDistanceYards: driveDistanceYards ?? this.driveDistanceYards,
-      approachDistanceYards:
-          approachDistanceYards ?? this.approachDistanceYards,
-      teeClub: teeClub ?? this.teeClub,
       notes: notes ?? this.notes,
     );
   }
@@ -2674,17 +2523,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
     if (sandSave.present) {
       map['sand_save'] = Variable<bool>(sandSave.value);
     }
-    if (driveDistanceYards.present) {
-      map['drive_distance_yards'] = Variable<int>(driveDistanceYards.value);
-    }
-    if (approachDistanceYards.present) {
-      map['approach_distance_yards'] = Variable<int>(
-        approachDistanceYards.value,
-      );
-    }
-    if (teeClub.present) {
-      map['tee_club'] = Variable<String>(teeClub.value);
-    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -2708,9 +2546,6 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
           ..write('penaltyStrokes: $penaltyStrokes, ')
           ..write('bunkerVisited: $bunkerVisited, ')
           ..write('sandSave: $sandSave, ')
-          ..write('driveDistanceYards: $driveDistanceYards, ')
-          ..write('approachDistanceYards: $approachDistanceYards, ')
-          ..write('teeClub: $teeClub, ')
           ..write('notes: $notes')
           ..write(')'))
         .toString();
@@ -3403,6 +3238,483 @@ class CourseSetYardsCompanion extends UpdateCompanion<CourseSetYard> {
   }
 }
 
+class $HoleShotsTable extends HoleShots
+    with TableInfo<$HoleShotsTable, HoleShot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HoleShotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _holeResultIdMeta = const VerificationMeta(
+    'holeResultId',
+  );
+  @override
+  late final GeneratedColumn<int> holeResultId = GeneratedColumn<int>(
+    'hole_result_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES hole_results (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _shotNumberMeta = const VerificationMeta(
+    'shotNumber',
+  );
+  @override
+  late final GeneratedColumn<int> shotNumber = GeneratedColumn<int>(
+    'shot_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (shot_number >= 1)',
+  );
+  static const VerificationMeta _clubMeta = const VerificationMeta('club');
+  @override
+  late final GeneratedColumn<String> club = GeneratedColumn<String>(
+    'club',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _distanceYardsMeta = const VerificationMeta(
+    'distanceYards',
+  );
+  @override
+  late final GeneratedColumn<int> distanceYards = GeneratedColumn<int>(
+    'distance_yards',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'CHECK (distance_yards >= 0)',
+  );
+  static const VerificationMeta _lieMeta = const VerificationMeta('lie');
+  @override
+  late final GeneratedColumn<String> lie = GeneratedColumn<String>(
+    'lie',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resultMeta = const VerificationMeta('result');
+  @override
+  late final GeneratedColumn<String> result = GeneratedColumn<String>(
+    'result',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    holeResultId,
+    shotNumber,
+    club,
+    distanceYards,
+    lie,
+    result,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'hole_shots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<HoleShot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('hole_result_id')) {
+      context.handle(
+        _holeResultIdMeta,
+        holeResultId.isAcceptableOrUnknown(
+          data['hole_result_id']!,
+          _holeResultIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_holeResultIdMeta);
+    }
+    if (data.containsKey('shot_number')) {
+      context.handle(
+        _shotNumberMeta,
+        shotNumber.isAcceptableOrUnknown(data['shot_number']!, _shotNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shotNumberMeta);
+    }
+    if (data.containsKey('club')) {
+      context.handle(
+        _clubMeta,
+        club.isAcceptableOrUnknown(data['club']!, _clubMeta),
+      );
+    }
+    if (data.containsKey('distance_yards')) {
+      context.handle(
+        _distanceYardsMeta,
+        distanceYards.isAcceptableOrUnknown(
+          data['distance_yards']!,
+          _distanceYardsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('lie')) {
+      context.handle(
+        _lieMeta,
+        lie.isAcceptableOrUnknown(data['lie']!, _lieMeta),
+      );
+    }
+    if (data.containsKey('result')) {
+      context.handle(
+        _resultMeta,
+        result.isAcceptableOrUnknown(data['result']!, _resultMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {holeResultId, shotNumber},
+  ];
+  @override
+  HoleShot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HoleShot(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      holeResultId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hole_result_id'],
+      )!,
+      shotNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shot_number'],
+      )!,
+      club: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}club'],
+      ),
+      distanceYards: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}distance_yards'],
+      ),
+      lie: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lie'],
+      ),
+      result: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result'],
+      ),
+    );
+  }
+
+  @override
+  $HoleShotsTable createAlias(String alias) {
+    return $HoleShotsTable(attachedDatabase, alias);
+  }
+}
+
+class HoleShot extends DataClass implements Insertable<HoleShot> {
+  final int id;
+  final int holeResultId;
+  final int shotNumber;
+  final String? club;
+  final int? distanceYards;
+
+  /// Where the shot was played from — e.g. Tee / Fairway / Rough / Bunker /
+  /// Green / Recovery. Free-ish text (a small preset list in the UI).
+  final String? lie;
+
+  /// Where the shot finished / its outcome — e.g. Fairway / Green / Rough /
+  /// Bunker / Sand / Holed / Penalty. Free-ish text (a small preset list).
+  final String? result;
+  const HoleShot({
+    required this.id,
+    required this.holeResultId,
+    required this.shotNumber,
+    this.club,
+    this.distanceYards,
+    this.lie,
+    this.result,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['hole_result_id'] = Variable<int>(holeResultId);
+    map['shot_number'] = Variable<int>(shotNumber);
+    if (!nullToAbsent || club != null) {
+      map['club'] = Variable<String>(club);
+    }
+    if (!nullToAbsent || distanceYards != null) {
+      map['distance_yards'] = Variable<int>(distanceYards);
+    }
+    if (!nullToAbsent || lie != null) {
+      map['lie'] = Variable<String>(lie);
+    }
+    if (!nullToAbsent || result != null) {
+      map['result'] = Variable<String>(result);
+    }
+    return map;
+  }
+
+  HoleShotsCompanion toCompanion(bool nullToAbsent) {
+    return HoleShotsCompanion(
+      id: Value(id),
+      holeResultId: Value(holeResultId),
+      shotNumber: Value(shotNumber),
+      club: club == null && nullToAbsent ? const Value.absent() : Value(club),
+      distanceYards: distanceYards == null && nullToAbsent
+          ? const Value.absent()
+          : Value(distanceYards),
+      lie: lie == null && nullToAbsent ? const Value.absent() : Value(lie),
+      result: result == null && nullToAbsent
+          ? const Value.absent()
+          : Value(result),
+    );
+  }
+
+  factory HoleShot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HoleShot(
+      id: serializer.fromJson<int>(json['id']),
+      holeResultId: serializer.fromJson<int>(json['holeResultId']),
+      shotNumber: serializer.fromJson<int>(json['shotNumber']),
+      club: serializer.fromJson<String?>(json['club']),
+      distanceYards: serializer.fromJson<int?>(json['distanceYards']),
+      lie: serializer.fromJson<String?>(json['lie']),
+      result: serializer.fromJson<String?>(json['result']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'holeResultId': serializer.toJson<int>(holeResultId),
+      'shotNumber': serializer.toJson<int>(shotNumber),
+      'club': serializer.toJson<String?>(club),
+      'distanceYards': serializer.toJson<int?>(distanceYards),
+      'lie': serializer.toJson<String?>(lie),
+      'result': serializer.toJson<String?>(result),
+    };
+  }
+
+  HoleShot copyWith({
+    int? id,
+    int? holeResultId,
+    int? shotNumber,
+    Value<String?> club = const Value.absent(),
+    Value<int?> distanceYards = const Value.absent(),
+    Value<String?> lie = const Value.absent(),
+    Value<String?> result = const Value.absent(),
+  }) => HoleShot(
+    id: id ?? this.id,
+    holeResultId: holeResultId ?? this.holeResultId,
+    shotNumber: shotNumber ?? this.shotNumber,
+    club: club.present ? club.value : this.club,
+    distanceYards: distanceYards.present
+        ? distanceYards.value
+        : this.distanceYards,
+    lie: lie.present ? lie.value : this.lie,
+    result: result.present ? result.value : this.result,
+  );
+  HoleShot copyWithCompanion(HoleShotsCompanion data) {
+    return HoleShot(
+      id: data.id.present ? data.id.value : this.id,
+      holeResultId: data.holeResultId.present
+          ? data.holeResultId.value
+          : this.holeResultId,
+      shotNumber: data.shotNumber.present
+          ? data.shotNumber.value
+          : this.shotNumber,
+      club: data.club.present ? data.club.value : this.club,
+      distanceYards: data.distanceYards.present
+          ? data.distanceYards.value
+          : this.distanceYards,
+      lie: data.lie.present ? data.lie.value : this.lie,
+      result: data.result.present ? data.result.value : this.result,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HoleShot(')
+          ..write('id: $id, ')
+          ..write('holeResultId: $holeResultId, ')
+          ..write('shotNumber: $shotNumber, ')
+          ..write('club: $club, ')
+          ..write('distanceYards: $distanceYards, ')
+          ..write('lie: $lie, ')
+          ..write('result: $result')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    holeResultId,
+    shotNumber,
+    club,
+    distanceYards,
+    lie,
+    result,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HoleShot &&
+          other.id == this.id &&
+          other.holeResultId == this.holeResultId &&
+          other.shotNumber == this.shotNumber &&
+          other.club == this.club &&
+          other.distanceYards == this.distanceYards &&
+          other.lie == this.lie &&
+          other.result == this.result);
+}
+
+class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
+  final Value<int> id;
+  final Value<int> holeResultId;
+  final Value<int> shotNumber;
+  final Value<String?> club;
+  final Value<int?> distanceYards;
+  final Value<String?> lie;
+  final Value<String?> result;
+  const HoleShotsCompanion({
+    this.id = const Value.absent(),
+    this.holeResultId = const Value.absent(),
+    this.shotNumber = const Value.absent(),
+    this.club = const Value.absent(),
+    this.distanceYards = const Value.absent(),
+    this.lie = const Value.absent(),
+    this.result = const Value.absent(),
+  });
+  HoleShotsCompanion.insert({
+    this.id = const Value.absent(),
+    required int holeResultId,
+    required int shotNumber,
+    this.club = const Value.absent(),
+    this.distanceYards = const Value.absent(),
+    this.lie = const Value.absent(),
+    this.result = const Value.absent(),
+  }) : holeResultId = Value(holeResultId),
+       shotNumber = Value(shotNumber);
+  static Insertable<HoleShot> custom({
+    Expression<int>? id,
+    Expression<int>? holeResultId,
+    Expression<int>? shotNumber,
+    Expression<String>? club,
+    Expression<int>? distanceYards,
+    Expression<String>? lie,
+    Expression<String>? result,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (holeResultId != null) 'hole_result_id': holeResultId,
+      if (shotNumber != null) 'shot_number': shotNumber,
+      if (club != null) 'club': club,
+      if (distanceYards != null) 'distance_yards': distanceYards,
+      if (lie != null) 'lie': lie,
+      if (result != null) 'result': result,
+    });
+  }
+
+  HoleShotsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? holeResultId,
+    Value<int>? shotNumber,
+    Value<String?>? club,
+    Value<int?>? distanceYards,
+    Value<String?>? lie,
+    Value<String?>? result,
+  }) {
+    return HoleShotsCompanion(
+      id: id ?? this.id,
+      holeResultId: holeResultId ?? this.holeResultId,
+      shotNumber: shotNumber ?? this.shotNumber,
+      club: club ?? this.club,
+      distanceYards: distanceYards ?? this.distanceYards,
+      lie: lie ?? this.lie,
+      result: result ?? this.result,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (holeResultId.present) {
+      map['hole_result_id'] = Variable<int>(holeResultId.value);
+    }
+    if (shotNumber.present) {
+      map['shot_number'] = Variable<int>(shotNumber.value);
+    }
+    if (club.present) {
+      map['club'] = Variable<String>(club.value);
+    }
+    if (distanceYards.present) {
+      map['distance_yards'] = Variable<int>(distanceYards.value);
+    }
+    if (lie.present) {
+      map['lie'] = Variable<String>(lie.value);
+    }
+    if (result.present) {
+      map['result'] = Variable<String>(result.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HoleShotsCompanion(')
+          ..write('id: $id, ')
+          ..write('holeResultId: $holeResultId, ')
+          ..write('shotNumber: $shotNumber, ')
+          ..write('club: $club, ')
+          ..write('distanceYards: $distanceYards, ')
+          ..write('lie: $lie, ')
+          ..write('result: $result')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$GolfyDatabase extends GeneratedDatabase {
   _$GolfyDatabase(QueryExecutor e) : super(e);
   $GolfyDatabaseManager get managers => $GolfyDatabaseManager(this);
@@ -3413,6 +3725,7 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
   late final $HoleResultsTable holeResults = $HoleResultsTable(this);
   late final $CourseHolesTable courseHoles = $CourseHolesTable(this);
   late final $CourseSetYardsTable courseSetYards = $CourseSetYardsTable(this);
+  late final $HoleShotsTable holeShots = $HoleShotsTable(this);
   late final Index idxRoundsDate = Index(
     'idx_rounds_date',
     'CREATE INDEX idx_rounds_date ON rounds (date)',
@@ -3445,11 +3758,16 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     'idx_course_set_yards_set',
     'CREATE INDEX idx_course_set_yards_set ON course_set_yards (course_set_id)',
   );
+  late final Index idxHoleShotsResult = Index(
+    'idx_hole_shots_result',
+    'CREATE INDEX idx_hole_shots_result ON hole_shots (hole_result_id)',
+  );
   late final CourseDao courseDao = CourseDao(this as GolfyDatabase);
   late final CourseHoleDao courseHoleDao = CourseHoleDao(this as GolfyDatabase);
   late final CourseSetDao courseSetDao = CourseSetDao(this as GolfyDatabase);
   late final RoundDao roundDao = RoundDao(this as GolfyDatabase);
   late final HoleResultDao holeResultDao = HoleResultDao(this as GolfyDatabase);
+  late final HoleShotDao holeShotDao = HoleShotDao(this as GolfyDatabase);
   late final DashboardDao dashboardDao = DashboardDao(this as GolfyDatabase);
   late final EventDao eventDao = EventDao(this as GolfyDatabase);
   @override
@@ -3464,6 +3782,7 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     holeResults,
     courseHoles,
     courseSetYards,
+    holeShots,
     idxRoundsDate,
     idxRoundsCourse,
     idxRoundsEvent,
@@ -3472,6 +3791,7 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     idxCourseHolesCourse,
     idxCourseSetsCourse,
     idxCourseSetYardsSet,
+    idxHoleShotsResult,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3516,6 +3836,13 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('course_set_yards', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'hole_results',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('hole_shots', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -5492,9 +5819,6 @@ typedef $$HoleResultsTableCreateCompanionBuilder =
       required int penaltyStrokes,
       required bool bunkerVisited,
       required bool sandSave,
-      required int driveDistanceYards,
-      Value<int?> approachDistanceYards,
-      Value<String?> teeClub,
       Value<String?> notes,
     });
 typedef $$HoleResultsTableUpdateCompanionBuilder =
@@ -5513,9 +5837,6 @@ typedef $$HoleResultsTableUpdateCompanionBuilder =
       Value<int> penaltyStrokes,
       Value<bool> bunkerVisited,
       Value<bool> sandSave,
-      Value<int> driveDistanceYards,
-      Value<int?> approachDistanceYards,
-      Value<String?> teeClub,
       Value<String?> notes,
     });
 
@@ -5537,6 +5858,27 @@ final class $$HoleResultsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$HoleShotsTable, List<HoleShot>>
+  _holeShotsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.holeShots,
+    aliasName: $_aliasNameGenerator(
+      db.holeResults.id,
+      db.holeShots.holeResultId,
+    ),
+  );
+
+  $$HoleShotsTableProcessedTableManager get holeShotsRefs {
+    final manager = $$HoleShotsTableTableManager(
+      $_db,
+      $_db.holeShots,
+    ).filter((f) => f.holeResultId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_holeShotsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -5615,21 +5957,6 @@ class $$HoleResultsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get driveDistanceYards => $composableBuilder(
-    column: $table.driveDistanceYards,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get approachDistanceYards => $composableBuilder(
-    column: $table.approachDistanceYards,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get teeClub => $composableBuilder(
-    column: $table.teeClub,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnFilters(column),
@@ -5656,6 +5983,31 @@ class $$HoleResultsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> holeShotsRefs(
+    Expression<bool> Function($$HoleShotsTableFilterComposer f) f,
+  ) {
+    final $$HoleShotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.holeShots,
+      getReferencedColumn: (t) => t.holeResultId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HoleShotsTableFilterComposer(
+            $db: $db,
+            $table: $db.holeShots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -5730,21 +6082,6 @@ class $$HoleResultsTableOrderingComposer
 
   ColumnOrderings<bool> get sandSave => $composableBuilder(
     column: $table.sandSave,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get driveDistanceYards => $composableBuilder(
-    column: $table.driveDistanceYards,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get approachDistanceYards => $composableBuilder(
-    column: $table.approachDistanceYards,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get teeClub => $composableBuilder(
-    column: $table.teeClub,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5837,19 +6174,6 @@ class $$HoleResultsTableAnnotationComposer
   GeneratedColumn<bool> get sandSave =>
       $composableBuilder(column: $table.sandSave, builder: (column) => column);
 
-  GeneratedColumn<int> get driveDistanceYards => $composableBuilder(
-    column: $table.driveDistanceYards,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get approachDistanceYards => $composableBuilder(
-    column: $table.approachDistanceYards,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get teeClub =>
-      $composableBuilder(column: $table.teeClub, builder: (column) => column);
-
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -5875,6 +6199,31 @@ class $$HoleResultsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> holeShotsRefs<T extends Object>(
+    Expression<T> Function($$HoleShotsTableAnnotationComposer a) f,
+  ) {
+    final $$HoleShotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.holeShots,
+      getReferencedColumn: (t) => t.holeResultId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HoleShotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.holeShots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$HoleResultsTableTableManager
@@ -5890,7 +6239,7 @@ class $$HoleResultsTableTableManager
           $$HoleResultsTableUpdateCompanionBuilder,
           (HoleResult, $$HoleResultsTableReferences),
           HoleResult,
-          PrefetchHooks Function({bool roundId})
+          PrefetchHooks Function({bool roundId, bool holeShotsRefs})
         > {
   $$HoleResultsTableTableManager(_$GolfyDatabase db, $HoleResultsTable table)
     : super(
@@ -5919,9 +6268,6 @@ class $$HoleResultsTableTableManager
                 Value<int> penaltyStrokes = const Value.absent(),
                 Value<bool> bunkerVisited = const Value.absent(),
                 Value<bool> sandSave = const Value.absent(),
-                Value<int> driveDistanceYards = const Value.absent(),
-                Value<int?> approachDistanceYards = const Value.absent(),
-                Value<String?> teeClub = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
               }) => HoleResultsCompanion(
                 id: id,
@@ -5938,9 +6284,6 @@ class $$HoleResultsTableTableManager
                 penaltyStrokes: penaltyStrokes,
                 bunkerVisited: bunkerVisited,
                 sandSave: sandSave,
-                driveDistanceYards: driveDistanceYards,
-                approachDistanceYards: approachDistanceYards,
-                teeClub: teeClub,
                 notes: notes,
               ),
           createCompanionCallback:
@@ -5959,9 +6302,6 @@ class $$HoleResultsTableTableManager
                 required int penaltyStrokes,
                 required bool bunkerVisited,
                 required bool sandSave,
-                required int driveDistanceYards,
-                Value<int?> approachDistanceYards = const Value.absent(),
-                Value<String?> teeClub = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
               }) => HoleResultsCompanion.insert(
                 id: id,
@@ -5978,9 +6318,6 @@ class $$HoleResultsTableTableManager
                 penaltyStrokes: penaltyStrokes,
                 bunkerVisited: bunkerVisited,
                 sandSave: sandSave,
-                driveDistanceYards: driveDistanceYards,
-                approachDistanceYards: approachDistanceYards,
-                teeClub: teeClub,
                 notes: notes,
               ),
           withReferenceMapper: (p0) => p0
@@ -5991,10 +6328,10 @@ class $$HoleResultsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({roundId = false}) {
+          prefetchHooksCallback: ({roundId = false, holeShotsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [if (holeShotsRefs) db.holeShots],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -6028,7 +6365,29 @@ class $$HoleResultsTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (holeShotsRefs)
+                    await $_getPrefetchedData<
+                      HoleResult,
+                      $HoleResultsTable,
+                      HoleShot
+                    >(
+                      currentTable: table,
+                      referencedTable: $$HoleResultsTableReferences
+                          ._holeShotsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$HoleResultsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).holeShotsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.holeResultId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
               },
             );
           },
@@ -6048,7 +6407,7 @@ typedef $$HoleResultsTableProcessedTableManager =
       $$HoleResultsTableUpdateCompanionBuilder,
       (HoleResult, $$HoleResultsTableReferences),
       HoleResult,
-      PrefetchHooks Function({bool roundId})
+      PrefetchHooks Function({bool roundId, bool holeShotsRefs})
     >;
 typedef $$CourseHolesTableCreateCompanionBuilder =
     CourseHolesCompanion Function({
@@ -6671,6 +7030,361 @@ typedef $$CourseSetYardsTableProcessedTableManager =
       CourseSetYard,
       PrefetchHooks Function({bool courseSetId})
     >;
+typedef $$HoleShotsTableCreateCompanionBuilder =
+    HoleShotsCompanion Function({
+      Value<int> id,
+      required int holeResultId,
+      required int shotNumber,
+      Value<String?> club,
+      Value<int?> distanceYards,
+      Value<String?> lie,
+      Value<String?> result,
+    });
+typedef $$HoleShotsTableUpdateCompanionBuilder =
+    HoleShotsCompanion Function({
+      Value<int> id,
+      Value<int> holeResultId,
+      Value<int> shotNumber,
+      Value<String?> club,
+      Value<int?> distanceYards,
+      Value<String?> lie,
+      Value<String?> result,
+    });
+
+final class $$HoleShotsTableReferences
+    extends BaseReferences<_$GolfyDatabase, $HoleShotsTable, HoleShot> {
+  $$HoleShotsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $HoleResultsTable _holeResultIdTable(_$GolfyDatabase db) =>
+      db.holeResults.createAlias(
+        $_aliasNameGenerator(db.holeShots.holeResultId, db.holeResults.id),
+      );
+
+  $$HoleResultsTableProcessedTableManager get holeResultId {
+    final $_column = $_itemColumn<int>('hole_result_id')!;
+
+    final manager = $$HoleResultsTableTableManager(
+      $_db,
+      $_db.holeResults,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_holeResultIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$HoleShotsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $HoleShotsTable> {
+  $$HoleShotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get shotNumber => $composableBuilder(
+    column: $table.shotNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get club => $composableBuilder(
+    column: $table.club,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get distanceYards => $composableBuilder(
+    column: $table.distanceYards,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lie => $composableBuilder(
+    column: $table.lie,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get result => $composableBuilder(
+    column: $table.result,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$HoleResultsTableFilterComposer get holeResultId {
+    final $$HoleResultsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.holeResultId,
+      referencedTable: $db.holeResults,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HoleResultsTableFilterComposer(
+            $db: $db,
+            $table: $db.holeResults,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$HoleShotsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $HoleShotsTable> {
+  $$HoleShotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get shotNumber => $composableBuilder(
+    column: $table.shotNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get club => $composableBuilder(
+    column: $table.club,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get distanceYards => $composableBuilder(
+    column: $table.distanceYards,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lie => $composableBuilder(
+    column: $table.lie,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get result => $composableBuilder(
+    column: $table.result,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$HoleResultsTableOrderingComposer get holeResultId {
+    final $$HoleResultsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.holeResultId,
+      referencedTable: $db.holeResults,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HoleResultsTableOrderingComposer(
+            $db: $db,
+            $table: $db.holeResults,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$HoleShotsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $HoleShotsTable> {
+  $$HoleShotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get shotNumber => $composableBuilder(
+    column: $table.shotNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get club =>
+      $composableBuilder(column: $table.club, builder: (column) => column);
+
+  GeneratedColumn<int> get distanceYards => $composableBuilder(
+    column: $table.distanceYards,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lie =>
+      $composableBuilder(column: $table.lie, builder: (column) => column);
+
+  GeneratedColumn<String> get result =>
+      $composableBuilder(column: $table.result, builder: (column) => column);
+
+  $$HoleResultsTableAnnotationComposer get holeResultId {
+    final $$HoleResultsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.holeResultId,
+      referencedTable: $db.holeResults,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HoleResultsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.holeResults,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$HoleShotsTableTableManager
+    extends
+        RootTableManager<
+          _$GolfyDatabase,
+          $HoleShotsTable,
+          HoleShot,
+          $$HoleShotsTableFilterComposer,
+          $$HoleShotsTableOrderingComposer,
+          $$HoleShotsTableAnnotationComposer,
+          $$HoleShotsTableCreateCompanionBuilder,
+          $$HoleShotsTableUpdateCompanionBuilder,
+          (HoleShot, $$HoleShotsTableReferences),
+          HoleShot,
+          PrefetchHooks Function({bool holeResultId})
+        > {
+  $$HoleShotsTableTableManager(_$GolfyDatabase db, $HoleShotsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HoleShotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HoleShotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HoleShotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> holeResultId = const Value.absent(),
+                Value<int> shotNumber = const Value.absent(),
+                Value<String?> club = const Value.absent(),
+                Value<int?> distanceYards = const Value.absent(),
+                Value<String?> lie = const Value.absent(),
+                Value<String?> result = const Value.absent(),
+              }) => HoleShotsCompanion(
+                id: id,
+                holeResultId: holeResultId,
+                shotNumber: shotNumber,
+                club: club,
+                distanceYards: distanceYards,
+                lie: lie,
+                result: result,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int holeResultId,
+                required int shotNumber,
+                Value<String?> club = const Value.absent(),
+                Value<int?> distanceYards = const Value.absent(),
+                Value<String?> lie = const Value.absent(),
+                Value<String?> result = const Value.absent(),
+              }) => HoleShotsCompanion.insert(
+                id: id,
+                holeResultId: holeResultId,
+                shotNumber: shotNumber,
+                club: club,
+                distanceYards: distanceYards,
+                lie: lie,
+                result: result,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$HoleShotsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({holeResultId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (holeResultId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.holeResultId,
+                                referencedTable: $$HoleShotsTableReferences
+                                    ._holeResultIdTable(db),
+                                referencedColumn: $$HoleShotsTableReferences
+                                    ._holeResultIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$HoleShotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GolfyDatabase,
+      $HoleShotsTable,
+      HoleShot,
+      $$HoleShotsTableFilterComposer,
+      $$HoleShotsTableOrderingComposer,
+      $$HoleShotsTableAnnotationComposer,
+      $$HoleShotsTableCreateCompanionBuilder,
+      $$HoleShotsTableUpdateCompanionBuilder,
+      (HoleShot, $$HoleShotsTableReferences),
+      HoleShot,
+      PrefetchHooks Function({bool holeResultId})
+    >;
 
 class $GolfyDatabaseManager {
   final _$GolfyDatabase _db;
@@ -6689,4 +7403,6 @@ class $GolfyDatabaseManager {
       $$CourseHolesTableTableManager(_db, _db.courseHoles);
   $$CourseSetYardsTableTableManager get courseSetYards =>
       $$CourseSetYardsTableTableManager(_db, _db.courseSetYards);
+  $$HoleShotsTableTableManager get holeShots =>
+      $$HoleShotsTableTableManager(_db, _db.holeShots);
 }

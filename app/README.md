@@ -119,8 +119,9 @@ app/test/
   grouped under stage headers in course-play order (Tee → Approach & Around the
   Green → Putting → Score), so **Score is entered last**. Par and yardage
   pre-fill from the round's course template and chosen yardage set (#36),
-  editable per hole; the per-round shot fields (drive / approach distance, club)
-  stay placeholder until [#22](https://github.com/aellington89/golfy/issues/22).
+  editable per hole; each hole also carries an ordered **shot list** — club /
+  distance / lie / result per shot (#22) — persisted to `hole_shots` alongside
+  the hole via `GolfyRepository.saveHole`.
 - **Presentation logic is pure and shared.** [`features/stats/`](lib/features/stats/)
   holds widget-free helpers — `score_format` / `stat_format` (formatting) and
   `scoreToParColor` (colour bands) — so the rounds list, scorecard, and dashboard
@@ -227,7 +228,11 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > `course_holes` (shared par + stroke index), `course_sets` (named yardage
 > sets), `course_set_yards` (a set's 18-hole yardage card), and a nullable
 > `rounds.course_set_id` FK (`SET NULL` on delete) with their indexes — a plain
-> additive change, no data backfill.
+> additive change, no data backfill. The v7 migration adds the `hole_shots`
+> table (an ordered per-hole shot list, cascading from `hole_results`) for #22
+> and **drops** the three superseded flat columns (`tee_club`,
+> `drive_distance_yards`, `approach_distance_yards`) by rebuilding `hole_results`
+> with a `TableMigration`, preserving every existing hole's scoring data.
 
 ## Release signing
 

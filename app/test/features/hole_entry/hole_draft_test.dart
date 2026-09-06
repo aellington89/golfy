@@ -49,4 +49,42 @@ void main() {
       expect(base.copyWith(yards: 400).hashCode, base.hashCode);
     });
   });
+
+  group('HoleDraft shots (#22)', () {
+    test('initial has no shots', () {
+      expect(HoleDraft.initial().shots, isEmpty);
+    });
+
+    test('shotInputs maps shots in order and drops fully-empty ones', () {
+      final draft = HoleDraft.initial().copyWith(shots: const [
+        ShotDraft(club: 'Driver', distanceYards: 268, lie: 'Tee'),
+        ShotDraft(), // fully empty — dropped
+        ShotDraft(club: '7 Iron', distanceYards: 150, result: 'Holed'),
+      ]);
+      final inputs = draft.shotInputs();
+      expect(inputs, hasLength(2));
+      expect(inputs.first.club, 'Driver');
+      expect(inputs.first.distanceYards, 268);
+      expect(inputs[1].club, '7 Iron');
+      expect(inputs[1].result, 'Holed');
+    });
+
+    test('equality and hashCode track the shot list deeply', () {
+      final a = HoleDraft.initial()
+          .copyWith(shots: const [ShotDraft(club: 'Driver')]);
+      final b = HoleDraft.initial()
+          .copyWith(shots: const [ShotDraft(club: 'Driver')]);
+      final c = HoleDraft.initial()
+          .copyWith(shots: const [ShotDraft(club: '3 wood')]);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a == c, isFalse);
+    });
+
+    test('ShotDraft.copyWith can clear a field to null', () {
+      const s = ShotDraft(club: 'Driver', lie: 'Tee');
+      expect(s.copyWith(club: null).club, isNull);
+      expect(s.copyWith(club: null).lie, 'Tee');
+    });
+  });
 }

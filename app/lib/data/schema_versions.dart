@@ -1093,12 +1093,307 @@ i1.GeneratedColumn<int> _column_36(String aliasedName) =>
       $customConstraints:
           'NOT NULL REFERENCES course_sets(id)ON DELETE CASCADE',
     );
+
+final class Schema7 extends i0.VersionedSchema {
+  Schema7({required super.database}) : super(version: 7);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    courses,
+    courseSets,
+    events,
+    rounds,
+    holeResults,
+    courseHoles,
+    courseSetYards,
+    holeShots,
+    idxRoundsDate,
+    idxRoundsCourse,
+    idxRoundsEvent,
+    idxRoundsCourseSet,
+    idxHolesRound,
+    idxCourseHolesCourse,
+    idxCourseSetsCourse,
+    idxCourseSetYardsSet,
+    idxHoleShotsResult,
+  ];
+  late final Shape0 courses = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'courses',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(name, game_title)'],
+      columns: [_column_0, _column_1, _column_2],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 courseSets = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'course_sets',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(course_id, name)'],
+      columns: [_column_0, _column_33, _column_1],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 events = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'events',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(name, season)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_32,
+        _column_28,
+        _column_29,
+        _column_30,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 rounds = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'rounds',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(date, course_id, round_number)'],
+      columns: [
+        _column_0,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_34,
+        _column_7,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_31,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape10 holeResults = Shape10(
+    source: i0.VersionedTable(
+      entityName: 'hole_results',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(round_id, hole_number)'],
+      columns: [
+        _column_0,
+        _column_12,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+        _column_18,
+        _column_19,
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_10,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 courseHoles = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'course_holes',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(course_id, hole_number)'],
+      columns: [_column_0, _column_33, _column_13, _column_14, _column_35],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 courseSetYards = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'course_set_yards',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(course_set_id, hole_number)'],
+      columns: [_column_0, _column_36, _column_13, _column_16],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape11 holeShots = Shape11(
+    source: i0.VersionedTable(
+      entityName: 'hole_shots',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['UNIQUE(hole_result_id, shot_number)'],
+      columns: [
+        _column_0,
+        _column_37,
+        _column_38,
+        _column_39,
+        _column_40,
+        _column_41,
+        _column_42,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index idxRoundsDate = i1.Index(
+    'idx_rounds_date',
+    'CREATE INDEX idx_rounds_date ON rounds (date)',
+  );
+  final i1.Index idxRoundsCourse = i1.Index(
+    'idx_rounds_course',
+    'CREATE INDEX idx_rounds_course ON rounds (course_id)',
+  );
+  final i1.Index idxRoundsEvent = i1.Index(
+    'idx_rounds_event',
+    'CREATE INDEX idx_rounds_event ON rounds (event_id)',
+  );
+  final i1.Index idxRoundsCourseSet = i1.Index(
+    'idx_rounds_course_set',
+    'CREATE INDEX idx_rounds_course_set ON rounds (course_set_id)',
+  );
+  final i1.Index idxHolesRound = i1.Index(
+    'idx_holes_round',
+    'CREATE INDEX idx_holes_round ON hole_results (round_id)',
+  );
+  final i1.Index idxCourseHolesCourse = i1.Index(
+    'idx_course_holes_course',
+    'CREATE INDEX idx_course_holes_course ON course_holes (course_id)',
+  );
+  final i1.Index idxCourseSetsCourse = i1.Index(
+    'idx_course_sets_course',
+    'CREATE INDEX idx_course_sets_course ON course_sets (course_id)',
+  );
+  final i1.Index idxCourseSetYardsSet = i1.Index(
+    'idx_course_set_yards_set',
+    'CREATE INDEX idx_course_set_yards_set ON course_set_yards (course_set_id)',
+  );
+  final i1.Index idxHoleShotsResult = i1.Index(
+    'idx_hole_shots_result',
+    'CREATE INDEX idx_hole_shots_result ON hole_shots (hole_result_id)',
+  );
+}
+
+class Shape10 extends i0.VersionedTable {
+  Shape10({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get roundId =>
+      columnsByName['round_id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get holeNumber =>
+      columnsByName['hole_number']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get par =>
+      columnsByName['par']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get score =>
+      columnsByName['score']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get yards =>
+      columnsByName['yards']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get fairwayHit =>
+      columnsByName['fairway_hit']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get gir =>
+      columnsByName['gir']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get putts =>
+      columnsByName['putts']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get upDownAttempt =>
+      columnsByName['up_down_attempt']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get upDownSuccess =>
+      columnsByName['up_down_success']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get penaltyStrokes =>
+      columnsByName['penalty_strokes']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get bunkerVisited =>
+      columnsByName['bunker_visited']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get sandSave =>
+      columnsByName['sand_save']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get notes =>
+      columnsByName['notes']! as i1.GeneratedColumn<String>;
+}
+
+class Shape11 extends i0.VersionedTable {
+  Shape11({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get holeResultId =>
+      columnsByName['hole_result_id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get shotNumber =>
+      columnsByName['shot_number']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get club =>
+      columnsByName['club']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get distanceYards =>
+      columnsByName['distance_yards']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get lie =>
+      columnsByName['lie']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get result =>
+      columnsByName['result']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<int> _column_37(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'hole_result_id',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints:
+          'NOT NULL REFERENCES hole_results(id)ON DELETE CASCADE',
+    );
+i1.GeneratedColumn<int> _column_38(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'shot_number',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL CHECK (shot_number >= 1)',
+    );
+i1.GeneratedColumn<String> _column_39(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'club',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_40(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'distance_yards',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'CHECK (distance_yards >= 0)',
+    );
+i1.GeneratedColumn<String> _column_41(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'lie',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_42(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'result',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
   required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
   required Future<void> Function(i1.Migrator m, Schema5 schema) from4To5,
   required Future<void> Function(i1.Migrator m, Schema6 schema) from5To6,
+  required Future<void> Function(i1.Migrator m, Schema7 schema) from6To7,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -1127,6 +1422,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from5To6(migrator, schema);
         return 6;
+      case 6:
+        final schema = Schema7(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from6To7(migrator, schema);
+        return 7;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -1139,6 +1439,7 @@ i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
   required Future<void> Function(i1.Migrator m, Schema5 schema) from4To5,
   required Future<void> Function(i1.Migrator m, Schema6 schema) from5To6,
+  required Future<void> Function(i1.Migrator m, Schema7 schema) from6To7,
 }) => i0.VersionedSchema.stepByStepHelper(
   step: migrationSteps(
     from1To2: from1To2,
@@ -1146,5 +1447,6 @@ i1.OnUpgrade stepByStep({
     from3To4: from3To4,
     from4To5: from4To5,
     from5To6: from5To6,
+    from6To7: from6To7,
   ),
 );

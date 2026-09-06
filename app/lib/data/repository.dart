@@ -1,6 +1,9 @@
+import 'package:drift/drift.dart' show Value;
+
 import 'database.dart';
 import 'models/dashboard_stats.dart';
 import 'models/event_stats.dart';
+import 'models/hole_shot_input.dart';
 import 'models/round_with_course.dart';
 
 /// Single facade over the four drift DAOs.
@@ -151,8 +154,37 @@ class GolfyRepository {
   Future<int> upsertHoleResult(HoleResultsCompanion hole) =>
       _db.holeResultDao.upsert(hole);
 
+  /// Saves a hole and its ordered shot list (#22) in one transaction: upserts
+  /// the `hole_results` row, reads back its id, then replaces its `hole_shots`.
+  /// [shots] are ordered — `shotNumber` is assigned from position (1-based).
+  /// Returns the hole_results row id.
+  Future<int> saveHole(
+    HoleResultsCompanion hole,
+    List<HoleShotInput> shots,
+  ) {
+    return _db.transaction(() async {
+      final id = await _db.holeResultDao.upsert(hole);
+      await _db.holeShotDao.replaceForHole(id, [
+        for (var i = 0; i < shots.length; i++)
+          HoleShotsCompanion.insert(
+            holeResultId: id,
+            shotNumber: i + 1,
+            club: Value(shots[i].club),
+            distanceYards: Value(shots[i].distanceYards),
+            lie: Value(shots[i].lie),
+            result: Value(shots[i].result),
+          ),
+      ]);
+      return id;
+    });
+  }
+
   Stream<List<HoleResult>> watchHoleResults(int roundId) =>
       _db.holeResultDao.watchForRound(roundId);
+
+  /// Reactive shots for every hole of a round, keyed by hole number (#22).
+  Stream<Map<int, List<HoleShot>>> watchHoleShots(int roundId) =>
+      _db.holeShotDao.watchForRound(roundId);
 
   Future<int> holeCount(int roundId) => _db.holeResultDao.countForRound(roundId);
 

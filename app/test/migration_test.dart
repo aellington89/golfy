@@ -21,6 +21,7 @@ import 'generated_migrations/schema_v2.dart' as v2;
 import 'generated_migrations/schema_v3.dart' as v3;
 import 'generated_migrations/schema_v4.dart' as v4;
 import 'generated_migrations/schema_v5.dart' as v5;
+import 'generated_migrations/schema_v6.dart' as v6;
 
 void main() {
   late SchemaVerifier verifier;
@@ -339,6 +340,80 @@ void main() {
     final yards = await db.courseSetDao.watchYardsForSet(setId).first;
     expect(yards.single.yards, 420);
     expect((await db.roundDao.getById(roundId))!.courseSetId, setId);
+  });
+
+  test('migrates the schema from v6 to v7', () async {
+    final connection = await verifier.startAt(6);
+    final db = GolfyDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    // Adds the hole_shots table and recreates hole_results without the three
+    // flat shot columns (#22); the resulting schema must match the v7 snapshot.
+    await verifier.migrateAndValidate(db, 7);
+  });
+
+  test('v6 -> v7 adds hole_shots and drops the flat columns, preserving data '
+      '(#22)', () async {
+    final schema = await verifier.schemaAt(6);
+
+    // Seed a course + round + hole_result (with the flat shot columns) through
+    // the v6-shaped database.
+    final oldDb = v6.DatabaseAtV6(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v6.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    final roundId = await oldDb.into(oldDb.rounds).insert(
+          v6.RoundsCompanion.insert(date: '2026-05-19', courseId: courseId),
+        );
+    await oldDb.into(oldDb.holeResults).insert(
+          v6.HoleResultsCompanion.insert(
+            roundId: roundId,
+            holeNumber: 1,
+            par: 4,
+            score: 5,
+            yards: 400,
+            gir: 0,
+            putts: 2,
+            upDownAttempt: 0,
+            upDownSuccess: 0,
+            penaltyStrokes: 0,
+            bunkerVisited: 0,
+            sandSave: 0,
+            driveDistanceYards: 250,
+          ),
+        );
+    await oldDb.close();
+
+    // Migrate the same underlying database with the real app schema (v7).
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 7);
+
+    // The hole_result survives the column drop with its id and scoring intact.
+    final holes = await db.holeResultDao.watchForRound(roundId).first;
+    expect(holes, hasLength(1));
+    expect(holes.single.score, 5);
+    final holeResultId = holes.single.id;
+
+    // hole_shots is live and its FK to the (preserved) hole_results id holds.
+    expect(await db.holeShotDao.watchForRound(roundId).first, isEmpty);
+    await db.holeShotDao.replaceForHole(holeResultId, [
+      HoleShotsCompanion.insert(
+        holeResultId: holeResultId,
+        shotNumber: 1,
+        club: const Value('Driver'),
+        distanceYards: const Value(268),
+        lie: const Value('Tee'),
+        result: const Value('Fairway'),
+      ),
+    ]);
+    final shots = await db.holeShotDao.watchForRound(roundId).first;
+    expect(shots[1], hasLength(1));
+    expect(shots[1]!.single.club, 'Driver');
+    expect(shots[1]!.single.distanceYards, 268);
   });
 
   test('a freshly created database matches the generated schema', () async {

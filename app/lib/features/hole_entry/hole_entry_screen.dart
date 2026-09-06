@@ -51,6 +51,11 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   Map<int, int> _parByHole = const {};
   Map<int, int> _yardsByHole = const {};
 
+  /// Saved shots for the round, keyed by hole number (#22). Refreshed each build
+  /// from [holeShotsStreamProvider] and attached to a saved hole's draft in
+  /// [_seedFromSaved]. Empty for holes with no shots.
+  Map<int, List<ShotDraft>> _shotsByHole = const {};
+
   /// Whether the round was already complete (18/18 saved) the first time
   /// its hole stream emitted this session. Drives the Finish FAB label:
   /// re-opening a finished round from the scorecard's Edit action reads
@@ -98,7 +103,8 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   void _seedFromSaved(Map<int, HoleResult> savedByHole) {
     for (final entry in savedByHole.entries) {
       if (_dirty.contains(entry.key)) continue;
-      _drafts[entry.key] = HoleDraft.fromHoleResult(entry.value);
+      _drafts[entry.key] = HoleDraft.fromHoleResult(entry.value)
+          .copyWith(shots: _shotsByHole[entry.key] ?? const []);
     }
   }
 
@@ -122,7 +128,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     );
     final repo = ref.read(repositoryProvider);
     try {
-      await repo.upsertHoleResult(companion);
+      await repo.saveHole(companion, draft.shotInputs());
       if (!mounted) return;
       setState(() => _dirty.remove(holeNumber));
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -189,6 +195,16 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     }
     _parByHole = parByHole;
     _yardsByHole = yardsByHole;
+
+    // Saved shots per hole (#22), attached to a saved hole's draft below. Built
+    // before `_seedFromSaved` runs so seeding sees them.
+    final shotsByHole = <int, List<ShotDraft>>{};
+    ref.watch(holeShotsStreamProvider(activeRoundId)).whenData((byHole) {
+      byHole.forEach((hole, shots) {
+        shotsByHole[hole] = [for (final s in shots) ShotDraft.fromHoleShot(s)];
+      });
+    });
+    _shotsByHole = shotsByHole;
 
     final savedByHole = <int, HoleResult>{};
     holesAsync.whenData((holes) {

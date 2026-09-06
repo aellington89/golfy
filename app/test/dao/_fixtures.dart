@@ -106,7 +106,6 @@ class TestFixtures {
     int penaltyStrokes = 0,
     bool bunkerVisited = false,
     bool sandSave = false,
-    int driveDistanceYards = 250,
   }) {
     return HoleResultsCompanion.insert(
       roundId: roundId,
@@ -122,7 +121,6 @@ class TestFixtures {
       penaltyStrokes: penaltyStrokes,
       bunkerVisited: bunkerVisited,
       sandSave: sandSave,
-      driveDistanceYards: driveDistanceYards,
     );
   }
 

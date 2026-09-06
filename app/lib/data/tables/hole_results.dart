@@ -25,12 +25,6 @@ class HoleResults extends Table {
       .customConstraint('NOT NULL CHECK (penalty_strokes >= 0)')();
   BoolColumn get bunkerVisited => boolean()();
   BoolColumn get sandSave => boolean()();
-  IntColumn get driveDistanceYards => integer()
-      .customConstraint('NOT NULL CHECK (drive_distance_yards >= 0)')();
-  IntColumn get approachDistanceYards => integer()
-      .nullable()
-      .customConstraint('CHECK (approach_distance_yards >= 0)')();
-  TextColumn get teeClub => text().nullable()();
   TextColumn get notes => text().nullable()();
 
   @override
