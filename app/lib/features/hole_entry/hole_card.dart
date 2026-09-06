@@ -59,10 +59,40 @@ class HoleCard extends StatefulWidget {
 class _HoleCardState extends State<HoleCard> {
   bool _notesExpanded = false;
 
+  /// Controller for the free-entry yards field. Kept in state (rather than a
+  /// `TextFormField.initialValue`) so an auto-fill that arrives after the first
+  /// build — the course template stream emitting `yards` — updates the field,
+  /// while active typing is never clobbered. A `0` shows as empty so an
+  /// un-set / template-less hole reads blank rather than a misleading "0".
+  late final TextEditingController _yardsController;
+
   @override
   void initState() {
     super.initState();
     _notesExpanded = widget.draft.notes.isNotEmpty;
+    _yardsController = TextEditingController(text: _yardsText(widget.draft.yards));
+  }
+
+  static String _yardsText(int yards) => yards == 0 ? '' : yards.toString();
+
+  @override
+  void didUpdateWidget(covariant HoleCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync the field only when the incoming yards differ from what's already
+    // shown — e.g. the template auto-fill landing — so we don't fight the
+    // cursor while the user is typing (a self-originated change round-trips to
+    // the same value and is a no-op here).
+    final incoming = widget.draft.yards;
+    final shown = int.tryParse(_yardsController.text) ?? 0;
+    if (incoming != shown) {
+      _yardsController.text = _yardsText(incoming);
+    }
+  }
+
+  @override
+  void dispose() {
+    _yardsController.dispose();
+    super.dispose();
   }
 
   @override
@@ -118,6 +148,16 @@ class _HoleCardState extends State<HoleCard> {
                     score: d.score < 1 ? 1 : d.score,
                     fairwayHit: newPar == 3 ? null : d.fairwayHit,
                   ));
+                },
+              ),
+              const SizedBox(height: 12),
+              _YardsRow(
+                controller: _yardsController,
+                onChanged: (v) {
+                  // Numeric keyboard + a >= 0 floor mirror the `yards >= 0`
+                  // CHECK; an empty field means "unknown" and stores 0.
+                  final yards = (int.tryParse(v) ?? 0).clamp(0, 100000);
+                  widget.onChanged(d.copyWith(yards: yards));
                 },
               ),
               const SizedBox(height: 12),
@@ -303,6 +343,33 @@ class _ParRow extends StatelessWidget {
           onSelectionChanged: (sel) => onChanged(sel.first),
         ),
       ),
+    );
+  }
+}
+
+/// Free-entry field for the hole's length. A plain [TextField] (driven by a
+/// parent-owned controller) rather than a stepper — yardages span a wide range,
+/// so tapping +/- hundreds of times would be absurd. Auto-filled from the
+/// course template when one exists (#36) and freely editable per round.
+class _YardsRow extends StatelessWidget {
+  const _YardsRow({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      key: const ValueKey('yards'),
+      controller: controller,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(
+        labelText: 'Yards',
+        border: OutlineInputBorder(),
+        hintText: 'e.g. 420',
+        suffixText: 'yds',
+      ),
+      onChanged: onChanged,
     );
   }
 }

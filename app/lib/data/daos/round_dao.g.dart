@@ -5,6 +5,7 @@ part of 'round_dao.dart';
 // ignore_for_file: type=lint
 mixin _$RoundDaoMixin on DatabaseAccessor<GolfyDatabase> {
   $CoursesTable get courses => attachedDatabase.courses;
+  $CourseSetsTable get courseSets => attachedDatabase.courseSets;
   $EventsTable get events => attachedDatabase.events;
   $RoundsTable get rounds => attachedDatabase.rounds;
   $HoleResultsTable get holeResults => attachedDatabase.holeResults;
@@ -16,6 +17,8 @@ class RoundDaoManager {
   RoundDaoManager(this._db);
   $$CoursesTableTableManager get courses =>
       $$CoursesTableTableManager(_db.attachedDatabase, _db.courses);
+  $$CourseSetsTableTableManager get courseSets =>
+      $$CourseSetsTableTableManager(_db.attachedDatabase, _db.courseSets);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db.attachedDatabase, _db.events);
   $$RoundsTableTableManager get rounds =>

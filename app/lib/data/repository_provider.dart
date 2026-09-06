@@ -26,6 +26,29 @@ final coursesByNameStreamProvider = StreamProvider<List<Course>>((ref) {
   return ref.watch(repositoryProvider).watchCoursesByName();
 });
 
+/// Reactive shared per-hole card (par + stroke index) for a course (#36),
+/// keyed on course id. Ordered by hole number; empty for a course with no card.
+/// Backs the par/SI editor and the Hole Entry par auto-fill.
+final courseHolesStreamProvider =
+    StreamProvider.family<List<CourseHole>, int>((ref, courseId) {
+  return ref.watch(repositoryProvider).watchCourseHoles(courseId);
+});
+
+/// Reactive list of a course's named yardage sets (#36), keyed on course id,
+/// ordered by name. Backs the sets list and the New Round set picker.
+final courseSetsStreamProvider =
+    StreamProvider.family<List<CourseSet>, int>((ref, courseId) {
+  return ref.watch(repositoryProvider).watchCourseSets(courseId);
+});
+
+/// Reactive per-hole yardage for a single yardage set (#36), keyed on set id.
+/// Ordered by hole number; empty for a set with no yardages. Backs the set
+/// yardage editor and the Hole Entry yards auto-fill.
+final courseSetYardsStreamProvider =
+    StreamProvider.family<List<CourseSetYard>, int>((ref, setId) {
+  return ref.watch(repositoryProvider).watchCourseSetYards(setId);
+});
+
 /// Reactive list of events, ordered alphabetically by name. Used by the
 /// event picker UI (mirrors [coursesByNameStreamProvider]).
 final eventsStreamProvider = StreamProvider<List<Event>>((ref) {

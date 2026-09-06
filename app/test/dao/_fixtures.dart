@@ -29,20 +29,63 @@ class TestFixtures {
     );
   }
 
+  /// Saves a course's shared per-hole card (par + optional stroke index).
+  /// Defaults to a full 18-hole par-4 card; pass [count]/[par]/[strokeIndex].
+  Future<void> insertCourseHoles(
+    int courseId, {
+    int count = 18,
+    int par = 4,
+    int? strokeIndex,
+  }) {
+    return db.courseHoleDao.replaceForCourse(courseId, [
+      for (var h = 1; h <= count; h++)
+        CourseHolesCompanion.insert(
+          courseId: courseId,
+          holeNumber: h,
+          par: par,
+          strokeIndex: Value(strokeIndex),
+        ),
+    ]);
+  }
+
+  /// Inserts a named yardage set for a course and returns its id.
+  Future<int> insertCourseSet(int courseId, {String name = 'Blue tees'}) {
+    return db.courseSetDao.insertSet(
+      CourseSetsCompanion.insert(courseId: courseId, name: name),
+    );
+  }
+
+  /// Saves a set's per-hole yardage. Defaults to a full 18-hole card of
+  /// [yards]-yard holes; pass [count] for fewer.
+  Future<void> insertCourseSetYards(
+    int setId, {
+    int count = 18,
+    int yards = 400,
+  }) {
+    return db.courseSetDao.replaceYardsForSet(setId, [
+      for (var h = 1; h <= count; h++)
+        CourseSetYardsCompanion.insert(
+          courseSetId: setId,
+          holeNumber: h,
+          yards: yards,
+        ),
+    ]);
+  }
+
   Future<int> insertRound(
     int courseId, {
     String date = '2026-05-19',
     int roundNumber = 1,
-    String? teeSet,
     int? eventId,
+    int? courseSetId,
   }) {
     return db.roundDao.insert(
       RoundsCompanion.insert(
         date: date,
         courseId: courseId,
         roundNumber: Value(roundNumber),
-        teeSet: Value(teeSet),
         eventId: Value(eventId),
+        courseSetId: Value(courseSetId),
       ),
     );
   }

@@ -19,9 +19,73 @@ class GolfyRepository {
   Future<int> insertCourse(CoursesCompanion course) =>
       _db.courseDao.insert(course);
 
+  /// Updates a course's identity (name / game title). A duplicate
+  /// `(name, gameTitle)` throws (schema-level UNIQUE); the caller pre-checks and
+  /// also catches this as a safety net. See [CourseDao.updateById].
+  Future<int> updateCourse(int id, CoursesCompanion course) =>
+      _db.courseDao.updateById(id, course);
+
+  /// Deletes a course. Throws if any round still references it (FK RESTRICT);
+  /// its `course_holes` template cascades away. See [CourseDao.deleteById].
+  Future<int> deleteCourse(int id) => _db.courseDao.deleteById(id);
+
   Stream<List<Course>> watchCourses() => _db.courseDao.watchAll();
 
   Stream<List<Course>> watchCoursesByName() => _db.courseDao.watchAllByName();
+
+  // ── Course holes (shared par / stroke index) ─────────────────────────────
+
+  /// Reactive shared per-hole card for a course (par + stroke index, #36),
+  /// ordered by hole number.
+  Stream<List<CourseHole>> watchCourseHoles(int courseId) =>
+      _db.courseHoleDao.watchForCourse(courseId);
+
+  /// One-shot read of a course's shared per-hole card, used to seed Hole Entry.
+  Future<List<CourseHole>> getCourseHoles(int courseId) =>
+      _db.courseHoleDao.getForCourse(courseId);
+
+  /// Replaces a course's entire shared per-hole card in one transaction. See
+  /// [CourseHoleDao.replaceForCourse].
+  Future<void> replaceCourseHoles(
+    int courseId,
+    List<CourseHolesCompanion> holes,
+  ) =>
+      _db.courseHoleDao.replaceForCourse(courseId, holes);
+
+  // ── Course yardage sets (#36) ─────────────────────────────────────────────
+
+  /// Reactive list of a course's named yardage sets, ordered by name.
+  Stream<List<CourseSet>> watchCourseSets(int courseId) =>
+      _db.courseSetDao.watchSetsForCourse(courseId);
+
+  /// Inserts a yardage set and returns its id. A duplicate `(courseId, name)`
+  /// throws (schema-level UNIQUE).
+  Future<int> insertCourseSet(CourseSetsCompanion set) =>
+      _db.courseSetDao.insertSet(set);
+
+  /// Renames a yardage set. A duplicate `(courseId, name)` throws.
+  Future<int> renameCourseSet(int id, String name) =>
+      _db.courseSetDao.renameSet(id, name);
+
+  /// Deletes a yardage set; its yardages cascade and rounds on it detach
+  /// (`rounds.course_set_id` SET NULL).
+  Future<int> deleteCourseSet(int id) => _db.courseSetDao.deleteSet(id);
+
+  /// Reactive per-hole yardage for a set, ordered by hole number.
+  Stream<List<CourseSetYard>> watchCourseSetYards(int setId) =>
+      _db.courseSetDao.watchYardsForSet(setId);
+
+  /// One-shot read of a set's per-hole yardage, used to seed Hole Entry.
+  Future<List<CourseSetYard>> getCourseSetYards(int setId) =>
+      _db.courseSetDao.getYardsForSet(setId);
+
+  /// Replaces a set's entire yardage card in one transaction. See
+  /// [CourseSetDao.replaceYardsForSet].
+  Future<void> replaceCourseSetYards(
+    int setId,
+    List<CourseSetYardsCompanion> yards,
+  ) =>
+      _db.courseSetDao.replaceYardsForSet(setId, yards);
 
   // ── Rounds ─────────────────────────────────────────────────────────────
 

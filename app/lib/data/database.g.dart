@@ -250,6 +250,261 @@ class CoursesCompanion extends UpdateCompanion<Course> {
   }
 }
 
+class $CourseSetsTable extends CourseSets
+    with TableInfo<$CourseSetsTable, CourseSet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CourseSetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _courseIdMeta = const VerificationMeta(
+    'courseId',
+  );
+  @override
+  late final GeneratedColumn<int> courseId = GeneratedColumn<int>(
+    'course_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES courses (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, courseId, name];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'course_sets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CourseSet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('course_id')) {
+      context.handle(
+        _courseIdMeta,
+        courseId.isAcceptableOrUnknown(data['course_id']!, _courseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_courseIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {courseId, name},
+  ];
+  @override
+  CourseSet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CourseSet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      courseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}course_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+    );
+  }
+
+  @override
+  $CourseSetsTable createAlias(String alias) {
+    return $CourseSetsTable(attachedDatabase, alias);
+  }
+}
+
+class CourseSet extends DataClass implements Insertable<CourseSet> {
+  final int id;
+  final int courseId;
+  final String name;
+  const CourseSet({
+    required this.id,
+    required this.courseId,
+    required this.name,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['course_id'] = Variable<int>(courseId);
+    map['name'] = Variable<String>(name);
+    return map;
+  }
+
+  CourseSetsCompanion toCompanion(bool nullToAbsent) {
+    return CourseSetsCompanion(
+      id: Value(id),
+      courseId: Value(courseId),
+      name: Value(name),
+    );
+  }
+
+  factory CourseSet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CourseSet(
+      id: serializer.fromJson<int>(json['id']),
+      courseId: serializer.fromJson<int>(json['courseId']),
+      name: serializer.fromJson<String>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'courseId': serializer.toJson<int>(courseId),
+      'name': serializer.toJson<String>(name),
+    };
+  }
+
+  CourseSet copyWith({int? id, int? courseId, String? name}) => CourseSet(
+    id: id ?? this.id,
+    courseId: courseId ?? this.courseId,
+    name: name ?? this.name,
+  );
+  CourseSet copyWithCompanion(CourseSetsCompanion data) {
+    return CourseSet(
+      id: data.id.present ? data.id.value : this.id,
+      courseId: data.courseId.present ? data.courseId.value : this.courseId,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseSet(')
+          ..write('id: $id, ')
+          ..write('courseId: $courseId, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, courseId, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CourseSet &&
+          other.id == this.id &&
+          other.courseId == this.courseId &&
+          other.name == this.name);
+}
+
+class CourseSetsCompanion extends UpdateCompanion<CourseSet> {
+  final Value<int> id;
+  final Value<int> courseId;
+  final Value<String> name;
+  const CourseSetsCompanion({
+    this.id = const Value.absent(),
+    this.courseId = const Value.absent(),
+    this.name = const Value.absent(),
+  });
+  CourseSetsCompanion.insert({
+    this.id = const Value.absent(),
+    required int courseId,
+    required String name,
+  }) : courseId = Value(courseId),
+       name = Value(name);
+  static Insertable<CourseSet> custom({
+    Expression<int>? id,
+    Expression<int>? courseId,
+    Expression<String>? name,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (courseId != null) 'course_id': courseId,
+      if (name != null) 'name': name,
+    });
+  }
+
+  CourseSetsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? courseId,
+    Value<String>? name,
+  }) {
+    return CourseSetsCompanion(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      name: name ?? this.name,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (courseId.present) {
+      map['course_id'] = Variable<int>(courseId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseSetsCompanion(')
+          ..write('id: $id, ')
+          ..write('courseId: $courseId, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -728,6 +983,20 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _courseSetIdMeta = const VerificationMeta(
+    'courseSetId',
+  );
+  @override
+  late final GeneratedColumn<int> courseSetId = GeneratedColumn<int>(
+    'course_set_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES course_sets (id) ON DELETE SET NULL',
+    ),
+  );
   static const VerificationMeta _weatherMeta = const VerificationMeta(
     'weather',
   );
@@ -802,6 +1071,7 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
     courseId,
     roundNumber,
     teeSet,
+    courseSetId,
     weather,
     windSpeedMph,
     difficulty,
@@ -853,6 +1123,15 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
       context.handle(
         _teeSetMeta,
         teeSet.isAcceptableOrUnknown(data['tee_set']!, _teeSetMeta),
+      );
+    }
+    if (data.containsKey('course_set_id')) {
+      context.handle(
+        _courseSetIdMeta,
+        courseSetId.isAcceptableOrUnknown(
+          data['course_set_id']!,
+          _courseSetIdMeta,
+        ),
       );
     }
     if (data.containsKey('weather')) {
@@ -930,6 +1209,10 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
         DriftSqlType.string,
         data['${effectivePrefix}tee_set'],
       ),
+      courseSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}course_set_id'],
+      ),
       weather: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}weather'],
@@ -968,7 +1251,17 @@ class Round extends DataClass implements Insertable<Round> {
   final String date;
   final int courseId;
   final int roundNumber;
+
+  /// Legacy free-text tee-set label from the original schema. Never written by
+  /// the app; superseded by [courseSetId] (#36) and left in place only so the
+  /// v6 migration stays additive. Safe to drop in a later tidy.
   final String? teeSet;
+
+  /// The [CourseSets] yardage set this round was played on (#36), or null for a
+  /// round with no set chosen. `SET NULL` on delete so removing a set detaches
+  /// its rounds rather than destroying them; Hole Entry pulls the round's
+  /// yardages from this set.
+  final int? courseSetId;
   final String? weather;
   final int? windSpeedMph;
   final String? difficulty;
@@ -990,6 +1283,7 @@ class Round extends DataClass implements Insertable<Round> {
     required this.courseId,
     required this.roundNumber,
     this.teeSet,
+    this.courseSetId,
     this.weather,
     this.windSpeedMph,
     this.difficulty,
@@ -1006,6 +1300,9 @@ class Round extends DataClass implements Insertable<Round> {
     map['round_number'] = Variable<int>(roundNumber);
     if (!nullToAbsent || teeSet != null) {
       map['tee_set'] = Variable<String>(teeSet);
+    }
+    if (!nullToAbsent || courseSetId != null) {
+      map['course_set_id'] = Variable<int>(courseSetId);
     }
     if (!nullToAbsent || weather != null) {
       map['weather'] = Variable<String>(weather);
@@ -1037,6 +1334,9 @@ class Round extends DataClass implements Insertable<Round> {
       teeSet: teeSet == null && nullToAbsent
           ? const Value.absent()
           : Value(teeSet),
+      courseSetId: courseSetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(courseSetId),
       weather: weather == null && nullToAbsent
           ? const Value.absent()
           : Value(weather),
@@ -1069,6 +1369,7 @@ class Round extends DataClass implements Insertable<Round> {
       courseId: serializer.fromJson<int>(json['courseId']),
       roundNumber: serializer.fromJson<int>(json['roundNumber']),
       teeSet: serializer.fromJson<String?>(json['teeSet']),
+      courseSetId: serializer.fromJson<int?>(json['courseSetId']),
       weather: serializer.fromJson<String?>(json['weather']),
       windSpeedMph: serializer.fromJson<int?>(json['windSpeedMph']),
       difficulty: serializer.fromJson<String?>(json['difficulty']),
@@ -1086,6 +1387,7 @@ class Round extends DataClass implements Insertable<Round> {
       'courseId': serializer.toJson<int>(courseId),
       'roundNumber': serializer.toJson<int>(roundNumber),
       'teeSet': serializer.toJson<String?>(teeSet),
+      'courseSetId': serializer.toJson<int?>(courseSetId),
       'weather': serializer.toJson<String?>(weather),
       'windSpeedMph': serializer.toJson<int?>(windSpeedMph),
       'difficulty': serializer.toJson<String?>(difficulty),
@@ -1101,6 +1403,7 @@ class Round extends DataClass implements Insertable<Round> {
     int? courseId,
     int? roundNumber,
     Value<String?> teeSet = const Value.absent(),
+    Value<int?> courseSetId = const Value.absent(),
     Value<String?> weather = const Value.absent(),
     Value<int?> windSpeedMph = const Value.absent(),
     Value<String?> difficulty = const Value.absent(),
@@ -1113,6 +1416,7 @@ class Round extends DataClass implements Insertable<Round> {
     courseId: courseId ?? this.courseId,
     roundNumber: roundNumber ?? this.roundNumber,
     teeSet: teeSet.present ? teeSet.value : this.teeSet,
+    courseSetId: courseSetId.present ? courseSetId.value : this.courseSetId,
     weather: weather.present ? weather.value : this.weather,
     windSpeedMph: windSpeedMph.present ? windSpeedMph.value : this.windSpeedMph,
     difficulty: difficulty.present ? difficulty.value : this.difficulty,
@@ -1131,6 +1435,9 @@ class Round extends DataClass implements Insertable<Round> {
           ? data.roundNumber.value
           : this.roundNumber,
       teeSet: data.teeSet.present ? data.teeSet.value : this.teeSet,
+      courseSetId: data.courseSetId.present
+          ? data.courseSetId.value
+          : this.courseSetId,
       weather: data.weather.present ? data.weather.value : this.weather,
       windSpeedMph: data.windSpeedMph.present
           ? data.windSpeedMph.value
@@ -1154,6 +1461,7 @@ class Round extends DataClass implements Insertable<Round> {
           ..write('courseId: $courseId, ')
           ..write('roundNumber: $roundNumber, ')
           ..write('teeSet: $teeSet, ')
+          ..write('courseSetId: $courseSetId, ')
           ..write('weather: $weather, ')
           ..write('windSpeedMph: $windSpeedMph, ')
           ..write('difficulty: $difficulty, ')
@@ -1171,6 +1479,7 @@ class Round extends DataClass implements Insertable<Round> {
     courseId,
     roundNumber,
     teeSet,
+    courseSetId,
     weather,
     windSpeedMph,
     difficulty,
@@ -1187,6 +1496,7 @@ class Round extends DataClass implements Insertable<Round> {
           other.courseId == this.courseId &&
           other.roundNumber == this.roundNumber &&
           other.teeSet == this.teeSet &&
+          other.courseSetId == this.courseSetId &&
           other.weather == this.weather &&
           other.windSpeedMph == this.windSpeedMph &&
           other.difficulty == this.difficulty &&
@@ -1201,6 +1511,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
   final Value<int> courseId;
   final Value<int> roundNumber;
   final Value<String?> teeSet;
+  final Value<int?> courseSetId;
   final Value<String?> weather;
   final Value<int?> windSpeedMph;
   final Value<String?> difficulty;
@@ -1213,6 +1524,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     this.courseId = const Value.absent(),
     this.roundNumber = const Value.absent(),
     this.teeSet = const Value.absent(),
+    this.courseSetId = const Value.absent(),
     this.weather = const Value.absent(),
     this.windSpeedMph = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -1226,6 +1538,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     required int courseId,
     this.roundNumber = const Value.absent(),
     this.teeSet = const Value.absent(),
+    this.courseSetId = const Value.absent(),
     this.weather = const Value.absent(),
     this.windSpeedMph = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -1240,6 +1553,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     Expression<int>? courseId,
     Expression<int>? roundNumber,
     Expression<String>? teeSet,
+    Expression<int>? courseSetId,
     Expression<String>? weather,
     Expression<int>? windSpeedMph,
     Expression<String>? difficulty,
@@ -1253,6 +1567,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
       if (courseId != null) 'course_id': courseId,
       if (roundNumber != null) 'round_number': roundNumber,
       if (teeSet != null) 'tee_set': teeSet,
+      if (courseSetId != null) 'course_set_id': courseSetId,
       if (weather != null) 'weather': weather,
       if (windSpeedMph != null) 'wind_speed_mph': windSpeedMph,
       if (difficulty != null) 'difficulty': difficulty,
@@ -1268,6 +1583,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     Value<int>? courseId,
     Value<int>? roundNumber,
     Value<String?>? teeSet,
+    Value<int?>? courseSetId,
     Value<String?>? weather,
     Value<int?>? windSpeedMph,
     Value<String?>? difficulty,
@@ -1281,6 +1597,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
       courseId: courseId ?? this.courseId,
       roundNumber: roundNumber ?? this.roundNumber,
       teeSet: teeSet ?? this.teeSet,
+      courseSetId: courseSetId ?? this.courseSetId,
       weather: weather ?? this.weather,
       windSpeedMph: windSpeedMph ?? this.windSpeedMph,
       difficulty: difficulty ?? this.difficulty,
@@ -1307,6 +1624,9 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     }
     if (teeSet.present) {
       map['tee_set'] = Variable<String>(teeSet.value);
+    }
+    if (courseSetId.present) {
+      map['course_set_id'] = Variable<int>(courseSetId.value);
     }
     if (weather.present) {
       map['weather'] = Variable<String>(weather.value);
@@ -1337,6 +1657,7 @@ class RoundsCompanion extends UpdateCompanion<Round> {
           ..write('courseId: $courseId, ')
           ..write('roundNumber: $roundNumber, ')
           ..write('teeSet: $teeSet, ')
+          ..write('courseSetId: $courseSetId, ')
           ..write('weather: $weather, ')
           ..write('windSpeedMph: $windSpeedMph, ')
           ..write('difficulty: $difficulty, ')
@@ -2396,13 +2717,702 @@ class HoleResultsCompanion extends UpdateCompanion<HoleResult> {
   }
 }
 
+class $CourseHolesTable extends CourseHoles
+    with TableInfo<$CourseHolesTable, CourseHole> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CourseHolesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _courseIdMeta = const VerificationMeta(
+    'courseId',
+  );
+  @override
+  late final GeneratedColumn<int> courseId = GeneratedColumn<int>(
+    'course_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES courses (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _holeNumberMeta = const VerificationMeta(
+    'holeNumber',
+  );
+  @override
+  late final GeneratedColumn<int> holeNumber = GeneratedColumn<int>(
+    'hole_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (hole_number BETWEEN 1 AND 18)',
+  );
+  static const VerificationMeta _parMeta = const VerificationMeta('par');
+  @override
+  late final GeneratedColumn<int> par = GeneratedColumn<int>(
+    'par',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (par BETWEEN 3 AND 5)',
+  );
+  static const VerificationMeta _strokeIndexMeta = const VerificationMeta(
+    'strokeIndex',
+  );
+  @override
+  late final GeneratedColumn<int> strokeIndex = GeneratedColumn<int>(
+    'stroke_index',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'CHECK (stroke_index BETWEEN 1 AND 18)',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    courseId,
+    holeNumber,
+    par,
+    strokeIndex,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'course_holes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CourseHole> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('course_id')) {
+      context.handle(
+        _courseIdMeta,
+        courseId.isAcceptableOrUnknown(data['course_id']!, _courseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_courseIdMeta);
+    }
+    if (data.containsKey('hole_number')) {
+      context.handle(
+        _holeNumberMeta,
+        holeNumber.isAcceptableOrUnknown(data['hole_number']!, _holeNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_holeNumberMeta);
+    }
+    if (data.containsKey('par')) {
+      context.handle(
+        _parMeta,
+        par.isAcceptableOrUnknown(data['par']!, _parMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_parMeta);
+    }
+    if (data.containsKey('stroke_index')) {
+      context.handle(
+        _strokeIndexMeta,
+        strokeIndex.isAcceptableOrUnknown(
+          data['stroke_index']!,
+          _strokeIndexMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {courseId, holeNumber},
+  ];
+  @override
+  CourseHole map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CourseHole(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      courseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}course_id'],
+      )!,
+      holeNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hole_number'],
+      )!,
+      par: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}par'],
+      )!,
+      strokeIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stroke_index'],
+      ),
+    );
+  }
+
+  @override
+  $CourseHolesTable createAlias(String alias) {
+    return $CourseHolesTable(attachedDatabase, alias);
+  }
+}
+
+class CourseHole extends DataClass implements Insertable<CourseHole> {
+  final int id;
+  final int courseId;
+  final int holeNumber;
+  final int par;
+
+  /// Handicap stroke index (1 = hardest hole … 18 = easiest). Optional — many
+  /// video-game courses don't surface it — so nullable, with the 1–18 CHECK
+  /// applied only when a value is present.
+  final int? strokeIndex;
+  const CourseHole({
+    required this.id,
+    required this.courseId,
+    required this.holeNumber,
+    required this.par,
+    this.strokeIndex,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['course_id'] = Variable<int>(courseId);
+    map['hole_number'] = Variable<int>(holeNumber);
+    map['par'] = Variable<int>(par);
+    if (!nullToAbsent || strokeIndex != null) {
+      map['stroke_index'] = Variable<int>(strokeIndex);
+    }
+    return map;
+  }
+
+  CourseHolesCompanion toCompanion(bool nullToAbsent) {
+    return CourseHolesCompanion(
+      id: Value(id),
+      courseId: Value(courseId),
+      holeNumber: Value(holeNumber),
+      par: Value(par),
+      strokeIndex: strokeIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(strokeIndex),
+    );
+  }
+
+  factory CourseHole.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CourseHole(
+      id: serializer.fromJson<int>(json['id']),
+      courseId: serializer.fromJson<int>(json['courseId']),
+      holeNumber: serializer.fromJson<int>(json['holeNumber']),
+      par: serializer.fromJson<int>(json['par']),
+      strokeIndex: serializer.fromJson<int?>(json['strokeIndex']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'courseId': serializer.toJson<int>(courseId),
+      'holeNumber': serializer.toJson<int>(holeNumber),
+      'par': serializer.toJson<int>(par),
+      'strokeIndex': serializer.toJson<int?>(strokeIndex),
+    };
+  }
+
+  CourseHole copyWith({
+    int? id,
+    int? courseId,
+    int? holeNumber,
+    int? par,
+    Value<int?> strokeIndex = const Value.absent(),
+  }) => CourseHole(
+    id: id ?? this.id,
+    courseId: courseId ?? this.courseId,
+    holeNumber: holeNumber ?? this.holeNumber,
+    par: par ?? this.par,
+    strokeIndex: strokeIndex.present ? strokeIndex.value : this.strokeIndex,
+  );
+  CourseHole copyWithCompanion(CourseHolesCompanion data) {
+    return CourseHole(
+      id: data.id.present ? data.id.value : this.id,
+      courseId: data.courseId.present ? data.courseId.value : this.courseId,
+      holeNumber: data.holeNumber.present
+          ? data.holeNumber.value
+          : this.holeNumber,
+      par: data.par.present ? data.par.value : this.par,
+      strokeIndex: data.strokeIndex.present
+          ? data.strokeIndex.value
+          : this.strokeIndex,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseHole(')
+          ..write('id: $id, ')
+          ..write('courseId: $courseId, ')
+          ..write('holeNumber: $holeNumber, ')
+          ..write('par: $par, ')
+          ..write('strokeIndex: $strokeIndex')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, courseId, holeNumber, par, strokeIndex);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CourseHole &&
+          other.id == this.id &&
+          other.courseId == this.courseId &&
+          other.holeNumber == this.holeNumber &&
+          other.par == this.par &&
+          other.strokeIndex == this.strokeIndex);
+}
+
+class CourseHolesCompanion extends UpdateCompanion<CourseHole> {
+  final Value<int> id;
+  final Value<int> courseId;
+  final Value<int> holeNumber;
+  final Value<int> par;
+  final Value<int?> strokeIndex;
+  const CourseHolesCompanion({
+    this.id = const Value.absent(),
+    this.courseId = const Value.absent(),
+    this.holeNumber = const Value.absent(),
+    this.par = const Value.absent(),
+    this.strokeIndex = const Value.absent(),
+  });
+  CourseHolesCompanion.insert({
+    this.id = const Value.absent(),
+    required int courseId,
+    required int holeNumber,
+    required int par,
+    this.strokeIndex = const Value.absent(),
+  }) : courseId = Value(courseId),
+       holeNumber = Value(holeNumber),
+       par = Value(par);
+  static Insertable<CourseHole> custom({
+    Expression<int>? id,
+    Expression<int>? courseId,
+    Expression<int>? holeNumber,
+    Expression<int>? par,
+    Expression<int>? strokeIndex,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (courseId != null) 'course_id': courseId,
+      if (holeNumber != null) 'hole_number': holeNumber,
+      if (par != null) 'par': par,
+      if (strokeIndex != null) 'stroke_index': strokeIndex,
+    });
+  }
+
+  CourseHolesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? courseId,
+    Value<int>? holeNumber,
+    Value<int>? par,
+    Value<int?>? strokeIndex,
+  }) {
+    return CourseHolesCompanion(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      holeNumber: holeNumber ?? this.holeNumber,
+      par: par ?? this.par,
+      strokeIndex: strokeIndex ?? this.strokeIndex,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (courseId.present) {
+      map['course_id'] = Variable<int>(courseId.value);
+    }
+    if (holeNumber.present) {
+      map['hole_number'] = Variable<int>(holeNumber.value);
+    }
+    if (par.present) {
+      map['par'] = Variable<int>(par.value);
+    }
+    if (strokeIndex.present) {
+      map['stroke_index'] = Variable<int>(strokeIndex.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseHolesCompanion(')
+          ..write('id: $id, ')
+          ..write('courseId: $courseId, ')
+          ..write('holeNumber: $holeNumber, ')
+          ..write('par: $par, ')
+          ..write('strokeIndex: $strokeIndex')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CourseSetYardsTable extends CourseSetYards
+    with TableInfo<$CourseSetYardsTable, CourseSetYard> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CourseSetYardsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _courseSetIdMeta = const VerificationMeta(
+    'courseSetId',
+  );
+  @override
+  late final GeneratedColumn<int> courseSetId = GeneratedColumn<int>(
+    'course_set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES course_sets (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _holeNumberMeta = const VerificationMeta(
+    'holeNumber',
+  );
+  @override
+  late final GeneratedColumn<int> holeNumber = GeneratedColumn<int>(
+    'hole_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (hole_number BETWEEN 1 AND 18)',
+  );
+  static const VerificationMeta _yardsMeta = const VerificationMeta('yards');
+  @override
+  late final GeneratedColumn<int> yards = GeneratedColumn<int>(
+    'yards',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (yards >= 0)',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, courseSetId, holeNumber, yards];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'course_set_yards';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CourseSetYard> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('course_set_id')) {
+      context.handle(
+        _courseSetIdMeta,
+        courseSetId.isAcceptableOrUnknown(
+          data['course_set_id']!,
+          _courseSetIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_courseSetIdMeta);
+    }
+    if (data.containsKey('hole_number')) {
+      context.handle(
+        _holeNumberMeta,
+        holeNumber.isAcceptableOrUnknown(data['hole_number']!, _holeNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_holeNumberMeta);
+    }
+    if (data.containsKey('yards')) {
+      context.handle(
+        _yardsMeta,
+        yards.isAcceptableOrUnknown(data['yards']!, _yardsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yardsMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {courseSetId, holeNumber},
+  ];
+  @override
+  CourseSetYard map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CourseSetYard(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      courseSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}course_set_id'],
+      )!,
+      holeNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hole_number'],
+      )!,
+      yards: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}yards'],
+      )!,
+    );
+  }
+
+  @override
+  $CourseSetYardsTable createAlias(String alias) {
+    return $CourseSetYardsTable(attachedDatabase, alias);
+  }
+}
+
+class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
+  final int id;
+  final int courseSetId;
+  final int holeNumber;
+  final int yards;
+  const CourseSetYard({
+    required this.id,
+    required this.courseSetId,
+    required this.holeNumber,
+    required this.yards,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['course_set_id'] = Variable<int>(courseSetId);
+    map['hole_number'] = Variable<int>(holeNumber);
+    map['yards'] = Variable<int>(yards);
+    return map;
+  }
+
+  CourseSetYardsCompanion toCompanion(bool nullToAbsent) {
+    return CourseSetYardsCompanion(
+      id: Value(id),
+      courseSetId: Value(courseSetId),
+      holeNumber: Value(holeNumber),
+      yards: Value(yards),
+    );
+  }
+
+  factory CourseSetYard.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CourseSetYard(
+      id: serializer.fromJson<int>(json['id']),
+      courseSetId: serializer.fromJson<int>(json['courseSetId']),
+      holeNumber: serializer.fromJson<int>(json['holeNumber']),
+      yards: serializer.fromJson<int>(json['yards']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'courseSetId': serializer.toJson<int>(courseSetId),
+      'holeNumber': serializer.toJson<int>(holeNumber),
+      'yards': serializer.toJson<int>(yards),
+    };
+  }
+
+  CourseSetYard copyWith({
+    int? id,
+    int? courseSetId,
+    int? holeNumber,
+    int? yards,
+  }) => CourseSetYard(
+    id: id ?? this.id,
+    courseSetId: courseSetId ?? this.courseSetId,
+    holeNumber: holeNumber ?? this.holeNumber,
+    yards: yards ?? this.yards,
+  );
+  CourseSetYard copyWithCompanion(CourseSetYardsCompanion data) {
+    return CourseSetYard(
+      id: data.id.present ? data.id.value : this.id,
+      courseSetId: data.courseSetId.present
+          ? data.courseSetId.value
+          : this.courseSetId,
+      holeNumber: data.holeNumber.present
+          ? data.holeNumber.value
+          : this.holeNumber,
+      yards: data.yards.present ? data.yards.value : this.yards,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseSetYard(')
+          ..write('id: $id, ')
+          ..write('courseSetId: $courseSetId, ')
+          ..write('holeNumber: $holeNumber, ')
+          ..write('yards: $yards')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, courseSetId, holeNumber, yards);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CourseSetYard &&
+          other.id == this.id &&
+          other.courseSetId == this.courseSetId &&
+          other.holeNumber == this.holeNumber &&
+          other.yards == this.yards);
+}
+
+class CourseSetYardsCompanion extends UpdateCompanion<CourseSetYard> {
+  final Value<int> id;
+  final Value<int> courseSetId;
+  final Value<int> holeNumber;
+  final Value<int> yards;
+  const CourseSetYardsCompanion({
+    this.id = const Value.absent(),
+    this.courseSetId = const Value.absent(),
+    this.holeNumber = const Value.absent(),
+    this.yards = const Value.absent(),
+  });
+  CourseSetYardsCompanion.insert({
+    this.id = const Value.absent(),
+    required int courseSetId,
+    required int holeNumber,
+    required int yards,
+  }) : courseSetId = Value(courseSetId),
+       holeNumber = Value(holeNumber),
+       yards = Value(yards);
+  static Insertable<CourseSetYard> custom({
+    Expression<int>? id,
+    Expression<int>? courseSetId,
+    Expression<int>? holeNumber,
+    Expression<int>? yards,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (courseSetId != null) 'course_set_id': courseSetId,
+      if (holeNumber != null) 'hole_number': holeNumber,
+      if (yards != null) 'yards': yards,
+    });
+  }
+
+  CourseSetYardsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? courseSetId,
+    Value<int>? holeNumber,
+    Value<int>? yards,
+  }) {
+    return CourseSetYardsCompanion(
+      id: id ?? this.id,
+      courseSetId: courseSetId ?? this.courseSetId,
+      holeNumber: holeNumber ?? this.holeNumber,
+      yards: yards ?? this.yards,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (courseSetId.present) {
+      map['course_set_id'] = Variable<int>(courseSetId.value);
+    }
+    if (holeNumber.present) {
+      map['hole_number'] = Variable<int>(holeNumber.value);
+    }
+    if (yards.present) {
+      map['yards'] = Variable<int>(yards.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CourseSetYardsCompanion(')
+          ..write('id: $id, ')
+          ..write('courseSetId: $courseSetId, ')
+          ..write('holeNumber: $holeNumber, ')
+          ..write('yards: $yards')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$GolfyDatabase extends GeneratedDatabase {
   _$GolfyDatabase(QueryExecutor e) : super(e);
   $GolfyDatabaseManager get managers => $GolfyDatabaseManager(this);
   late final $CoursesTable courses = $CoursesTable(this);
+  late final $CourseSetsTable courseSets = $CourseSetsTable(this);
   late final $EventsTable events = $EventsTable(this);
   late final $RoundsTable rounds = $RoundsTable(this);
   late final $HoleResultsTable holeResults = $HoleResultsTable(this);
+  late final $CourseHolesTable courseHoles = $CourseHolesTable(this);
+  late final $CourseSetYardsTable courseSetYards = $CourseSetYardsTable(this);
   late final Index idxRoundsDate = Index(
     'idx_rounds_date',
     'CREATE INDEX idx_rounds_date ON rounds (date)',
@@ -2415,11 +3425,29 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     'idx_rounds_event',
     'CREATE INDEX idx_rounds_event ON rounds (event_id)',
   );
+  late final Index idxRoundsCourseSet = Index(
+    'idx_rounds_course_set',
+    'CREATE INDEX idx_rounds_course_set ON rounds (course_set_id)',
+  );
   late final Index idxHolesRound = Index(
     'idx_holes_round',
     'CREATE INDEX idx_holes_round ON hole_results (round_id)',
   );
+  late final Index idxCourseHolesCourse = Index(
+    'idx_course_holes_course',
+    'CREATE INDEX idx_course_holes_course ON course_holes (course_id)',
+  );
+  late final Index idxCourseSetsCourse = Index(
+    'idx_course_sets_course',
+    'CREATE INDEX idx_course_sets_course ON course_sets (course_id)',
+  );
+  late final Index idxCourseSetYardsSet = Index(
+    'idx_course_set_yards_set',
+    'CREATE INDEX idx_course_set_yards_set ON course_set_yards (course_set_id)',
+  );
   late final CourseDao courseDao = CourseDao(this as GolfyDatabase);
+  late final CourseHoleDao courseHoleDao = CourseHoleDao(this as GolfyDatabase);
+  late final CourseSetDao courseSetDao = CourseSetDao(this as GolfyDatabase);
   late final RoundDao roundDao = RoundDao(this as GolfyDatabase);
   late final HoleResultDao holeResultDao = HoleResultDao(this as GolfyDatabase);
   late final DashboardDao dashboardDao = DashboardDao(this as GolfyDatabase);
@@ -2430,16 +3458,37 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     courses,
+    courseSets,
     events,
     rounds,
     holeResults,
+    courseHoles,
+    courseSetYards,
     idxRoundsDate,
     idxRoundsCourse,
     idxRoundsEvent,
+    idxRoundsCourseSet,
     idxHolesRound,
+    idxCourseHolesCourse,
+    idxCourseSetsCourse,
+    idxCourseSetYardsSet,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'courses',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('course_sets', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'course_sets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('rounds', kind: UpdateKind.update)],
+    ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'events',
@@ -2453,6 +3502,20 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('hole_results', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'courses',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('course_holes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'course_sets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('course_set_yards', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -2474,6 +3537,24 @@ final class $$CoursesTableReferences
     extends BaseReferences<_$GolfyDatabase, $CoursesTable, Course> {
   $$CoursesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
+  static MultiTypedResultKey<$CourseSetsTable, List<CourseSet>>
+  _courseSetsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.courseSets,
+    aliasName: $_aliasNameGenerator(db.courses.id, db.courseSets.courseId),
+  );
+
+  $$CourseSetsTableProcessedTableManager get courseSetsRefs {
+    final manager = $$CourseSetsTableTableManager(
+      $_db,
+      $_db.courseSets,
+    ).filter((f) => f.courseId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_courseSetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$RoundsTable, List<Round>> _roundsRefsTable(
     _$GolfyDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -2488,6 +3569,24 @@ final class $$CoursesTableReferences
     ).filter((f) => f.courseId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_roundsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CourseHolesTable, List<CourseHole>>
+  _courseHolesRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.courseHoles,
+    aliasName: $_aliasNameGenerator(db.courses.id, db.courseHoles.courseId),
+  );
+
+  $$CourseHolesTableProcessedTableManager get courseHolesRefs {
+    final manager = $$CourseHolesTableTableManager(
+      $_db,
+      $_db.courseHoles,
+    ).filter((f) => f.courseId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_courseHolesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -2518,6 +3617,31 @@ class $$CoursesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  Expression<bool> courseSetsRefs(
+    Expression<bool> Function($$CourseSetsTableFilterComposer f) f,
+  ) {
+    final $$CourseSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.courseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> roundsRefs(
     Expression<bool> Function($$RoundsTableFilterComposer f) f,
   ) {
@@ -2534,6 +3658,31 @@ class $$CoursesTableFilterComposer
           }) => $$RoundsTableFilterComposer(
             $db: $db,
             $table: $db.rounds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> courseHolesRefs(
+    Expression<bool> Function($$CourseHolesTableFilterComposer f) f,
+  ) {
+    final $$CourseHolesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseHoles,
+      getReferencedColumn: (t) => t.courseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseHolesTableFilterComposer(
+            $db: $db,
+            $table: $db.courseHoles,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2587,6 +3736,31 @@ class $$CoursesTableAnnotationComposer
   GeneratedColumn<String> get gameTitle =>
       $composableBuilder(column: $table.gameTitle, builder: (column) => column);
 
+  Expression<T> courseSetsRefs<T extends Object>(
+    Expression<T> Function($$CourseSetsTableAnnotationComposer a) f,
+  ) {
+    final $$CourseSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.courseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> roundsRefs<T extends Object>(
     Expression<T> Function($$RoundsTableAnnotationComposer a) f,
   ) {
@@ -2611,6 +3785,31 @@ class $$CoursesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> courseHolesRefs<T extends Object>(
+    Expression<T> Function($$CourseHolesTableAnnotationComposer a) f,
+  ) {
+    final $$CourseHolesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseHoles,
+      getReferencedColumn: (t) => t.courseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseHolesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courseHoles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CoursesTableTableManager
@@ -2626,7 +3825,11 @@ class $$CoursesTableTableManager
           $$CoursesTableUpdateCompanionBuilder,
           (Course, $$CoursesTableReferences),
           Course,
-          PrefetchHooks Function({bool roundsRefs})
+          PrefetchHooks Function({
+            bool courseSetsRefs,
+            bool roundsRefs,
+            bool courseHolesRefs,
+          })
         > {
   $$CoursesTableTableManager(_$GolfyDatabase db, $CoursesTable table)
     : super(
@@ -2663,28 +3866,85 @@ class $$CoursesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({roundsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (roundsRefs) db.rounds],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (roundsRefs)
-                    await $_getPrefetchedData<Course, $CoursesTable, Round>(
-                      currentTable: table,
-                      referencedTable: $$CoursesTableReferences
-                          ._roundsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$CoursesTableReferences(db, table, p0).roundsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.courseId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({
+                courseSetsRefs = false,
+                roundsRefs = false,
+                courseHolesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (courseSetsRefs) db.courseSets,
+                    if (roundsRefs) db.rounds,
+                    if (courseHolesRefs) db.courseHoles,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (courseSetsRefs)
+                        await $_getPrefetchedData<
+                          Course,
+                          $CoursesTable,
+                          CourseSet
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CoursesTableReferences
+                              ._courseSetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CoursesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseSetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (roundsRefs)
+                        await $_getPrefetchedData<Course, $CoursesTable, Round>(
+                          currentTable: table,
+                          referencedTable: $$CoursesTableReferences
+                              ._roundsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CoursesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).roundsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (courseHolesRefs)
+                        await $_getPrefetchedData<
+                          Course,
+                          $CoursesTable,
+                          CourseHole
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CoursesTableReferences
+                              ._courseHolesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CoursesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseHolesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2701,7 +3961,480 @@ typedef $$CoursesTableProcessedTableManager =
       $$CoursesTableUpdateCompanionBuilder,
       (Course, $$CoursesTableReferences),
       Course,
-      PrefetchHooks Function({bool roundsRefs})
+      PrefetchHooks Function({
+        bool courseSetsRefs,
+        bool roundsRefs,
+        bool courseHolesRefs,
+      })
+    >;
+typedef $$CourseSetsTableCreateCompanionBuilder =
+    CourseSetsCompanion Function({
+      Value<int> id,
+      required int courseId,
+      required String name,
+    });
+typedef $$CourseSetsTableUpdateCompanionBuilder =
+    CourseSetsCompanion Function({
+      Value<int> id,
+      Value<int> courseId,
+      Value<String> name,
+    });
+
+final class $$CourseSetsTableReferences
+    extends BaseReferences<_$GolfyDatabase, $CourseSetsTable, CourseSet> {
+  $$CourseSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CoursesTable _courseIdTable(_$GolfyDatabase db) => db.courses
+      .createAlias($_aliasNameGenerator(db.courseSets.courseId, db.courses.id));
+
+  $$CoursesTableProcessedTableManager get courseId {
+    final $_column = $_itemColumn<int>('course_id')!;
+
+    final manager = $$CoursesTableTableManager(
+      $_db,
+      $_db.courses,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_courseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$RoundsTable, List<Round>> _roundsRefsTable(
+    _$GolfyDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.rounds,
+    aliasName: $_aliasNameGenerator(db.courseSets.id, db.rounds.courseSetId),
+  );
+
+  $$RoundsTableProcessedTableManager get roundsRefs {
+    final manager = $$RoundsTableTableManager(
+      $_db,
+      $_db.rounds,
+    ).filter((f) => f.courseSetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_roundsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CourseSetYardsTable, List<CourseSetYard>>
+  _courseSetYardsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.courseSetYards,
+    aliasName: $_aliasNameGenerator(
+      db.courseSets.id,
+      db.courseSetYards.courseSetId,
+    ),
+  );
+
+  $$CourseSetYardsTableProcessedTableManager get courseSetYardsRefs {
+    final manager = $$CourseSetYardsTableTableManager(
+      $_db,
+      $_db.courseSetYards,
+    ).filter((f) => f.courseSetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_courseSetYardsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$CourseSetsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $CourseSetsTable> {
+  $$CourseSetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CoursesTableFilterComposer get courseId {
+    final $$CoursesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableFilterComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> roundsRefs(
+    Expression<bool> Function($$RoundsTableFilterComposer f) f,
+  ) {
+    final $$RoundsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.rounds,
+      getReferencedColumn: (t) => t.courseSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoundsTableFilterComposer(
+            $db: $db,
+            $table: $db.rounds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> courseSetYardsRefs(
+    Expression<bool> Function($$CourseSetYardsTableFilterComposer f) f,
+  ) {
+    final $$CourseSetYardsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseSetYards,
+      getReferencedColumn: (t) => t.courseSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetYardsTableFilterComposer(
+            $db: $db,
+            $table: $db.courseSetYards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CourseSetsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $CourseSetsTable> {
+  $$CourseSetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CoursesTableOrderingComposer get courseId {
+    final $$CoursesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableOrderingComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseSetsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $CourseSetsTable> {
+  $$CourseSetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  $$CoursesTableAnnotationComposer get courseId {
+    final $$CoursesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> roundsRefs<T extends Object>(
+    Expression<T> Function($$RoundsTableAnnotationComposer a) f,
+  ) {
+    final $$RoundsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.rounds,
+      getReferencedColumn: (t) => t.courseSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoundsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.rounds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> courseSetYardsRefs<T extends Object>(
+    Expression<T> Function($$CourseSetYardsTableAnnotationComposer a) f,
+  ) {
+    final $$CourseSetYardsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.courseSetYards,
+      getReferencedColumn: (t) => t.courseSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetYardsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courseSetYards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CourseSetsTableTableManager
+    extends
+        RootTableManager<
+          _$GolfyDatabase,
+          $CourseSetsTable,
+          CourseSet,
+          $$CourseSetsTableFilterComposer,
+          $$CourseSetsTableOrderingComposer,
+          $$CourseSetsTableAnnotationComposer,
+          $$CourseSetsTableCreateCompanionBuilder,
+          $$CourseSetsTableUpdateCompanionBuilder,
+          (CourseSet, $$CourseSetsTableReferences),
+          CourseSet,
+          PrefetchHooks Function({
+            bool courseId,
+            bool roundsRefs,
+            bool courseSetYardsRefs,
+          })
+        > {
+  $$CourseSetsTableTableManager(_$GolfyDatabase db, $CourseSetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CourseSetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CourseSetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CourseSetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> courseId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+              }) => CourseSetsCompanion(id: id, courseId: courseId, name: name),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int courseId,
+                required String name,
+              }) => CourseSetsCompanion.insert(
+                id: id,
+                courseId: courseId,
+                name: name,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CourseSetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                courseId = false,
+                roundsRefs = false,
+                courseSetYardsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (roundsRefs) db.rounds,
+                    if (courseSetYardsRefs) db.courseSetYards,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (courseId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.courseId,
+                                    referencedTable: $$CourseSetsTableReferences
+                                        ._courseIdTable(db),
+                                    referencedColumn:
+                                        $$CourseSetsTableReferences
+                                            ._courseIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (roundsRefs)
+                        await $_getPrefetchedData<
+                          CourseSet,
+                          $CourseSetsTable,
+                          Round
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CourseSetsTableReferences
+                              ._roundsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CourseSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).roundsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseSetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (courseSetYardsRefs)
+                        await $_getPrefetchedData<
+                          CourseSet,
+                          $CourseSetsTable,
+                          CourseSetYard
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CourseSetsTableReferences
+                              ._courseSetYardsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CourseSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).courseSetYardsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseSetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$CourseSetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GolfyDatabase,
+      $CourseSetsTable,
+      CourseSet,
+      $$CourseSetsTableFilterComposer,
+      $$CourseSetsTableOrderingComposer,
+      $$CourseSetsTableAnnotationComposer,
+      $$CourseSetsTableCreateCompanionBuilder,
+      $$CourseSetsTableUpdateCompanionBuilder,
+      (CourseSet, $$CourseSetsTableReferences),
+      CourseSet,
+      PrefetchHooks Function({
+        bool courseId,
+        bool roundsRefs,
+        bool courseSetYardsRefs,
+      })
     >;
 typedef $$EventsTableCreateCompanionBuilder =
     EventsCompanion Function({
@@ -3018,6 +4751,7 @@ typedef $$RoundsTableCreateCompanionBuilder =
       required int courseId,
       Value<int> roundNumber,
       Value<String?> teeSet,
+      Value<int?> courseSetId,
       Value<String?> weather,
       Value<int?> windSpeedMph,
       Value<String?> difficulty,
@@ -3032,6 +4766,7 @@ typedef $$RoundsTableUpdateCompanionBuilder =
       Value<int> courseId,
       Value<int> roundNumber,
       Value<String?> teeSet,
+      Value<int?> courseSetId,
       Value<String?> weather,
       Value<int?> windSpeedMph,
       Value<String?> difficulty,
@@ -3055,6 +4790,25 @@ final class $$RoundsTableReferences
       $_db.courses,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_courseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) =>
+      db.courseSets.createAlias(
+        $_aliasNameGenerator(db.rounds.courseSetId, db.courseSets.id),
+      );
+
+  $$CourseSetsTableProcessedTableManager? get courseSetId {
+    final $_column = $_itemColumn<int>('course_set_id');
+    if ($_column == null) return null;
+    final manager = $$CourseSetsTableTableManager(
+      $_db,
+      $_db.courseSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_courseSetIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -3165,6 +4919,29 @@ class $$RoundsTableFilterComposer
           }) => $$CoursesTableFilterComposer(
             $db: $db,
             $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CourseSetsTableFilterComposer get courseSetId {
+    final $$CourseSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.courseSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3300,6 +5077,29 @@ class $$RoundsTableOrderingComposer
     return composer;
   }
 
+  $$CourseSetsTableOrderingComposer get courseSetId {
+    final $$CourseSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$EventsTableOrderingComposer get eventId {
     final $$EventsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -3391,6 +5191,29 @@ class $$RoundsTableAnnotationComposer
     return composer;
   }
 
+  $$CourseSetsTableAnnotationComposer get courseSetId {
+    final $$CourseSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$EventsTableAnnotationComposer get eventId {
     final $$EventsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -3455,6 +5278,7 @@ class $$RoundsTableTableManager
           Round,
           PrefetchHooks Function({
             bool courseId,
+            bool courseSetId,
             bool eventId,
             bool holeResultsRefs,
           })
@@ -3477,6 +5301,7 @@ class $$RoundsTableTableManager
                 Value<int> courseId = const Value.absent(),
                 Value<int> roundNumber = const Value.absent(),
                 Value<String?> teeSet = const Value.absent(),
+                Value<int?> courseSetId = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
                 Value<int?> windSpeedMph = const Value.absent(),
                 Value<String?> difficulty = const Value.absent(),
@@ -3489,6 +5314,7 @@ class $$RoundsTableTableManager
                 courseId: courseId,
                 roundNumber: roundNumber,
                 teeSet: teeSet,
+                courseSetId: courseSetId,
                 weather: weather,
                 windSpeedMph: windSpeedMph,
                 difficulty: difficulty,
@@ -3503,6 +5329,7 @@ class $$RoundsTableTableManager
                 required int courseId,
                 Value<int> roundNumber = const Value.absent(),
                 Value<String?> teeSet = const Value.absent(),
+                Value<int?> courseSetId = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
                 Value<int?> windSpeedMph = const Value.absent(),
                 Value<String?> difficulty = const Value.absent(),
@@ -3515,6 +5342,7 @@ class $$RoundsTableTableManager
                 courseId: courseId,
                 roundNumber: roundNumber,
                 teeSet: teeSet,
+                courseSetId: courseSetId,
                 weather: weather,
                 windSpeedMph: windSpeedMph,
                 difficulty: difficulty,
@@ -3529,7 +5357,12 @@ class $$RoundsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({courseId = false, eventId = false, holeResultsRefs = false}) {
+              ({
+                courseId = false,
+                courseSetId = false,
+                eventId = false,
+                holeResultsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
@@ -3560,6 +5393,19 @@ class $$RoundsTableTableManager
                                         ._courseIdTable(db),
                                     referencedColumn: $$RoundsTableReferences
                                         ._courseIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (courseSetId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.courseSetId,
+                                    referencedTable: $$RoundsTableReferences
+                                        ._courseSetIdTable(db),
+                                    referencedColumn: $$RoundsTableReferences
+                                        ._courseSetIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -3625,6 +5471,7 @@ typedef $$RoundsTableProcessedTableManager =
       Round,
       PrefetchHooks Function({
         bool courseId,
+        bool courseSetId,
         bool eventId,
         bool holeResultsRefs,
       })
@@ -4203,16 +6050,643 @@ typedef $$HoleResultsTableProcessedTableManager =
       HoleResult,
       PrefetchHooks Function({bool roundId})
     >;
+typedef $$CourseHolesTableCreateCompanionBuilder =
+    CourseHolesCompanion Function({
+      Value<int> id,
+      required int courseId,
+      required int holeNumber,
+      required int par,
+      Value<int?> strokeIndex,
+    });
+typedef $$CourseHolesTableUpdateCompanionBuilder =
+    CourseHolesCompanion Function({
+      Value<int> id,
+      Value<int> courseId,
+      Value<int> holeNumber,
+      Value<int> par,
+      Value<int?> strokeIndex,
+    });
+
+final class $$CourseHolesTableReferences
+    extends BaseReferences<_$GolfyDatabase, $CourseHolesTable, CourseHole> {
+  $$CourseHolesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CoursesTable _courseIdTable(_$GolfyDatabase db) =>
+      db.courses.createAlias(
+        $_aliasNameGenerator(db.courseHoles.courseId, db.courses.id),
+      );
+
+  $$CoursesTableProcessedTableManager get courseId {
+    final $_column = $_itemColumn<int>('course_id')!;
+
+    final manager = $$CoursesTableTableManager(
+      $_db,
+      $_db.courses,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_courseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CourseHolesTableFilterComposer
+    extends Composer<_$GolfyDatabase, $CourseHolesTable> {
+  $$CourseHolesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get par => $composableBuilder(
+    column: $table.par,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get strokeIndex => $composableBuilder(
+    column: $table.strokeIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CoursesTableFilterComposer get courseId {
+    final $$CoursesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableFilterComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseHolesTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $CourseHolesTable> {
+  $$CourseHolesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get par => $composableBuilder(
+    column: $table.par,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get strokeIndex => $composableBuilder(
+    column: $table.strokeIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CoursesTableOrderingComposer get courseId {
+    final $$CoursesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableOrderingComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseHolesTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $CourseHolesTable> {
+  $$CourseHolesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get par =>
+      $composableBuilder(column: $table.par, builder: (column) => column);
+
+  GeneratedColumn<int> get strokeIndex => $composableBuilder(
+    column: $table.strokeIndex,
+    builder: (column) => column,
+  );
+
+  $$CoursesTableAnnotationComposer get courseId {
+    final $$CoursesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseHolesTableTableManager
+    extends
+        RootTableManager<
+          _$GolfyDatabase,
+          $CourseHolesTable,
+          CourseHole,
+          $$CourseHolesTableFilterComposer,
+          $$CourseHolesTableOrderingComposer,
+          $$CourseHolesTableAnnotationComposer,
+          $$CourseHolesTableCreateCompanionBuilder,
+          $$CourseHolesTableUpdateCompanionBuilder,
+          (CourseHole, $$CourseHolesTableReferences),
+          CourseHole,
+          PrefetchHooks Function({bool courseId})
+        > {
+  $$CourseHolesTableTableManager(_$GolfyDatabase db, $CourseHolesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CourseHolesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CourseHolesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CourseHolesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> courseId = const Value.absent(),
+                Value<int> holeNumber = const Value.absent(),
+                Value<int> par = const Value.absent(),
+                Value<int?> strokeIndex = const Value.absent(),
+              }) => CourseHolesCompanion(
+                id: id,
+                courseId: courseId,
+                holeNumber: holeNumber,
+                par: par,
+                strokeIndex: strokeIndex,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int courseId,
+                required int holeNumber,
+                required int par,
+                Value<int?> strokeIndex = const Value.absent(),
+              }) => CourseHolesCompanion.insert(
+                id: id,
+                courseId: courseId,
+                holeNumber: holeNumber,
+                par: par,
+                strokeIndex: strokeIndex,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CourseHolesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({courseId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (courseId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.courseId,
+                                referencedTable: $$CourseHolesTableReferences
+                                    ._courseIdTable(db),
+                                referencedColumn: $$CourseHolesTableReferences
+                                    ._courseIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CourseHolesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GolfyDatabase,
+      $CourseHolesTable,
+      CourseHole,
+      $$CourseHolesTableFilterComposer,
+      $$CourseHolesTableOrderingComposer,
+      $$CourseHolesTableAnnotationComposer,
+      $$CourseHolesTableCreateCompanionBuilder,
+      $$CourseHolesTableUpdateCompanionBuilder,
+      (CourseHole, $$CourseHolesTableReferences),
+      CourseHole,
+      PrefetchHooks Function({bool courseId})
+    >;
+typedef $$CourseSetYardsTableCreateCompanionBuilder =
+    CourseSetYardsCompanion Function({
+      Value<int> id,
+      required int courseSetId,
+      required int holeNumber,
+      required int yards,
+    });
+typedef $$CourseSetYardsTableUpdateCompanionBuilder =
+    CourseSetYardsCompanion Function({
+      Value<int> id,
+      Value<int> courseSetId,
+      Value<int> holeNumber,
+      Value<int> yards,
+    });
+
+final class $$CourseSetYardsTableReferences
+    extends
+        BaseReferences<_$GolfyDatabase, $CourseSetYardsTable, CourseSetYard> {
+  $$CourseSetYardsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) =>
+      db.courseSets.createAlias(
+        $_aliasNameGenerator(db.courseSetYards.courseSetId, db.courseSets.id),
+      );
+
+  $$CourseSetsTableProcessedTableManager get courseSetId {
+    final $_column = $_itemColumn<int>('course_set_id')!;
+
+    final manager = $$CourseSetsTableTableManager(
+      $_db,
+      $_db.courseSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_courseSetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CourseSetYardsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $CourseSetYardsTable> {
+  $$CourseSetYardsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get yards => $composableBuilder(
+    column: $table.yards,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CourseSetsTableFilterComposer get courseSetId {
+    final $$CourseSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseSetYardsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $CourseSetYardsTable> {
+  $$CourseSetYardsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get yards => $composableBuilder(
+    column: $table.yards,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CourseSetsTableOrderingComposer get courseSetId {
+    final $$CourseSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseSetYardsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $CourseSetYardsTable> {
+  $$CourseSetYardsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get yards =>
+      $composableBuilder(column: $table.yards, builder: (column) => column);
+
+  $$CourseSetsTableAnnotationComposer get courseSetId {
+    final $$CourseSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CourseSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courseSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CourseSetYardsTableTableManager
+    extends
+        RootTableManager<
+          _$GolfyDatabase,
+          $CourseSetYardsTable,
+          CourseSetYard,
+          $$CourseSetYardsTableFilterComposer,
+          $$CourseSetYardsTableOrderingComposer,
+          $$CourseSetYardsTableAnnotationComposer,
+          $$CourseSetYardsTableCreateCompanionBuilder,
+          $$CourseSetYardsTableUpdateCompanionBuilder,
+          (CourseSetYard, $$CourseSetYardsTableReferences),
+          CourseSetYard,
+          PrefetchHooks Function({bool courseSetId})
+        > {
+  $$CourseSetYardsTableTableManager(
+    _$GolfyDatabase db,
+    $CourseSetYardsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CourseSetYardsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CourseSetYardsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CourseSetYardsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> courseSetId = const Value.absent(),
+                Value<int> holeNumber = const Value.absent(),
+                Value<int> yards = const Value.absent(),
+              }) => CourseSetYardsCompanion(
+                id: id,
+                courseSetId: courseSetId,
+                holeNumber: holeNumber,
+                yards: yards,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int courseSetId,
+                required int holeNumber,
+                required int yards,
+              }) => CourseSetYardsCompanion.insert(
+                id: id,
+                courseSetId: courseSetId,
+                holeNumber: holeNumber,
+                yards: yards,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CourseSetYardsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({courseSetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (courseSetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.courseSetId,
+                                referencedTable: $$CourseSetYardsTableReferences
+                                    ._courseSetIdTable(db),
+                                referencedColumn:
+                                    $$CourseSetYardsTableReferences
+                                        ._courseSetIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CourseSetYardsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GolfyDatabase,
+      $CourseSetYardsTable,
+      CourseSetYard,
+      $$CourseSetYardsTableFilterComposer,
+      $$CourseSetYardsTableOrderingComposer,
+      $$CourseSetYardsTableAnnotationComposer,
+      $$CourseSetYardsTableCreateCompanionBuilder,
+      $$CourseSetYardsTableUpdateCompanionBuilder,
+      (CourseSetYard, $$CourseSetYardsTableReferences),
+      CourseSetYard,
+      PrefetchHooks Function({bool courseSetId})
+    >;
 
 class $GolfyDatabaseManager {
   final _$GolfyDatabase _db;
   $GolfyDatabaseManager(this._db);
   $$CoursesTableTableManager get courses =>
       $$CoursesTableTableManager(_db, _db.courses);
+  $$CourseSetsTableTableManager get courseSets =>
+      $$CourseSetsTableTableManager(_db, _db.courseSets);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db, _db.events);
   $$RoundsTableTableManager get rounds =>
       $$RoundsTableTableManager(_db, _db.rounds);
   $$HoleResultsTableTableManager get holeResults =>
       $$HoleResultsTableTableManager(_db, _db.holeResults);
+  $$CourseHolesTableTableManager get courseHoles =>
+      $$CourseHolesTableTableManager(_db, _db.courseHoles);
+  $$CourseSetYardsTableTableManager get courseSetYards =>
+      $$CourseSetYardsTableTableManager(_db, _db.courseSetYards);
 }

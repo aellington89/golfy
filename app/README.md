@@ -117,9 +117,10 @@ app/test/
   [`HoleDraft`](lib/features/hole_entry/hole_draft.dart) kept across `PageView`
   swipes; **Save Hole** upserts it via `HoleResultDao`. The card's fields are
   grouped under stage headers in course-play order (Tee → Approach & Around the
-  Green → Putting → Score), so **Score is entered last**. Course-yardage fields
-  are stamped with placeholder defaults until
-  [#22](https://github.com/aellington89/golfy/issues/22) adds real yardage entry.
+  Green → Putting → Score), so **Score is entered last**. Par and yardage
+  pre-fill from the round's course template and chosen yardage set (#36),
+  editable per hole; the per-round shot fields (drive / approach distance, club)
+  stay placeholder until [#22](https://github.com/aellington89/golfy/issues/22).
 - **Presentation logic is pure and shared.** [`features/stats/`](lib/features/stats/)
   holds widget-free helpers — `score_format` / `stat_format` (formatting) and
   `scoreToParColor` (colour bands) — so the rounds list, scorecard, and dashboard
@@ -222,7 +223,11 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > ([#47](https://github.com/aellington89/golfy/issues/47)); because that changes
 > a table constraint, it recreates the `events` table with `TableMigration`,
 > preserving existing events and their `rounds.event_id` links and backfilling
-> every existing row to season 1.
+> every existing row to season 1. The v6 migration adds course templates (#36):
+> `course_holes` (shared par + stroke index), `course_sets` (named yardage
+> sets), `course_set_yards` (a set's 18-hole yardage card), and a nullable
+> `rounds.course_set_id` FK (`SET NULL` on delete) with their indexes — a plain
+> additive change, no data backfill.
 
 ## Release signing
 

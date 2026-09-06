@@ -9,6 +9,20 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 ## [Unreleased]
 
 ### Added
+- **Course templates with multiple yardage sets** ([#36]): a course now saves a
+  shared per-hole **par + stroke index** card, plus any number of named
+  **yardage sets** (a "pin set" or tee box), each with its own 18-hole yardage
+  card — so the same course can be played at different yardages. A new
+  course-management screen (reached from the Rounds tab's **Manage courses**
+  action and the course picker) edits the par/SI card and adds / renames /
+  deletes sets and their yardages; a course can also be renamed or deleted
+  (delete is blocked while it still has rounds). Starting a round lets you pick
+  one of the course's sets; Hole Entry then **pre-fills par from the course and
+  yardage from the chosen set**, still editable per round (the round keeps its
+  own copy, so template edits never rewrite past rounds). Adds `course_holes`
+  (par + stroke index), `course_sets`, `course_set_yards`, and a nullable
+  `rounds.course_set_id` (`SET NULL` on delete) at schema **v6** — a plain
+  additive migration.
 - A dedicated **Events** tab ([#42]): create an event up front — including an
   empty one with no rounds yet — from a `+` action, rather than only as a side
   effect of starting a round. Open an event to see its rounds, add a round with
@@ -283,6 +297,7 @@ Phase 1 — data layer and navigation shell.
 [#33]: https://github.com/aellington89/golfy/issues/33
 [#34]: https://github.com/aellington89/golfy/issues/34
 [#35]: https://github.com/aellington89/golfy/issues/35
+[#36]: https://github.com/aellington89/golfy/issues/36
 [#37]: https://github.com/aellington89/golfy/issues/37
 [#39]: https://github.com/aellington89/golfy/issues/39
 [#45]: https://github.com/aellington89/golfy/issues/45

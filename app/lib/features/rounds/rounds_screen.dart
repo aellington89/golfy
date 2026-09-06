@@ -7,6 +7,7 @@ import '../../data/repository_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../events/edit_event_result_dialog.dart';
 import '../events/event_detail_screen.dart';
+import '../courses/courses_screen.dart';
 import '../events/event_result_badge.dart';
 import '../events/event_result_format.dart';
 import 'new_round_dialog.dart';
@@ -20,7 +21,19 @@ class RoundsScreen extends ConsumerWidget {
     final roundsAsync = ref.watch(roundsStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rounds')),
+      appBar: AppBar(
+        title: const Text('Rounds'),
+        actions: [
+          IconButton(
+            key: const ValueKey('manage_courses'),
+            icon: const Icon(Icons.golf_course_outlined),
+            tooltip: 'Manage courses',
+            onPressed: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute<void>(builder: (_) => const CoursesScreen()),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: roundsAsync.when(
         loading: () => null,
         error: (_, _) => null,

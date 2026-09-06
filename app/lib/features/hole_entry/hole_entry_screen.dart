@@ -41,6 +41,15 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   /// be cleared.
   int? _draftsRoundId;
 
+  /// The active round's template auto-fill sources, keyed by hole number (#36),
+  /// refreshed each build and read by [_initialForHole] (so a hole the user
+  /// never opened still saves the course's par/yards). `par` comes from the
+  /// course's shared per-hole card ([courseHolesStreamProvider]); `yards` from
+  /// the round's chosen yardage set ([courseSetYardsStreamProvider]). Either is
+  /// empty when absent — the graceful "no data" fallback (par 4 / blank yards).
+  Map<int, int> _parByHole = const {};
+  Map<int, int> _yardsByHole = const {};
+
   /// Whether the round was already complete (18/18 saved) the first time
   /// its hole stream emitted this session. Drives the Finish FAB label:
   /// re-opening a finished round from the scorecard's Edit action reads
@@ -92,8 +101,20 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     }
   }
 
+  /// The starting draft for a hole the user hasn't touched or saved: par from
+  /// the course's shared card and yards from the round's set (#36), each falling
+  /// back to the plain default when absent. Saved holes are seeded separately in
+  /// [_seedFromSaved] and take precedence via `_drafts[hole] ??` at the call
+  /// sites.
+  HoleDraft _initialForHole(int holeNumber) {
+    return HoleDraft.initial(
+      par: _parByHole[holeNumber] ?? 4,
+      yards: _yardsByHole[holeNumber] ?? 0,
+    );
+  }
+
   Future<void> _saveHole(int roundId, int holeNumber) async {
-    final draft = _drafts[holeNumber] ?? HoleDraft.initial();
+    final draft = _drafts[holeNumber] ?? _initialForHole(holeNumber);
     final companion = draft.toCompanion(
       roundId: roundId,
       holeNumber: holeNumber,
@@ -142,6 +163,32 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     final roundAsync = ref.watch(roundWithCourseProvider(activeRoundId));
     final holesAsync = ref.watch(holeResultsStreamProvider(activeRoundId));
 
+    // The active round's template auto-fill (#36): par from the course's shared
+    // per-hole card, yards from the round's chosen yardage set. Both refresh
+    // when the round (hence course / set) changes; each is empty until it loads
+    // or when the course has no card / the round has no set.
+    final round = roundAsync.value?.round;
+    final courseId = round?.courseId;
+    final courseSetId = round?.courseSetId;
+    final parByHole = <int, int>{};
+    if (courseId != null) {
+      ref.watch(courseHolesStreamProvider(courseId)).whenData((holes) {
+        for (final h in holes) {
+          parByHole[h.holeNumber] = h.par;
+        }
+      });
+    }
+    final yardsByHole = <int, int>{};
+    if (courseSetId != null) {
+      ref.watch(courseSetYardsStreamProvider(courseSetId)).whenData((yards) {
+        for (final y in yards) {
+          yardsByHole[y.holeNumber] = y.yards;
+        }
+      });
+    }
+    _parByHole = parByHole;
+    _yardsByHole = yardsByHole;
+
     final savedByHole = <int, HoleResult>{};
     holesAsync.whenData((holes) {
       for (final h in holes) {
@@ -186,7 +233,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
         onPageChanged: (i) => setState(() => _currentPage = i),
         itemBuilder: (context, index) {
           final holeNumber = index + 1;
-          final draft = _drafts[holeNumber] ?? HoleDraft.initial();
+          final draft = _drafts[holeNumber] ?? _initialForHole(holeNumber);
           final savedDraft = savedByHole.containsKey(holeNumber)
               ? HoleDraft.fromHoleResult(savedByHole[holeNumber]!)
               : null;

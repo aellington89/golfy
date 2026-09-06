@@ -32,6 +32,7 @@ void main() {
     String date = '2026-05-19',
     int roundNumber = 1,
     int? eventId,
+    int? courseSetId,
   }) =>
       db.into(db.rounds).insert(
             RoundsCompanion.insert(
@@ -39,6 +40,7 @@ void main() {
               courseId: courseId,
               roundNumber: Value(roundNumber),
               eventId: Value(eventId),
+              courseSetId: Value(courseSetId),
             ),
           );
 
@@ -87,6 +89,35 @@ void main() {
             score: score,
             putts: putts,
             penaltyStrokes: penaltyStrokes,
+          ));
+
+  Future<void> insertCourseHole(
+    int courseId,
+    int holeNumber, {
+    int par = 4,
+    int? strokeIndex,
+  }) =>
+      db.into(db.courseHoles).insert(CourseHolesCompanion.insert(
+            courseId: courseId,
+            holeNumber: holeNumber,
+            par: par,
+            strokeIndex: Value(strokeIndex),
+          ));
+
+  Future<int> insertCourseSet(int courseId, {String name = 'Blue tees'}) =>
+      db.into(db.courseSets).insert(
+            CourseSetsCompanion.insert(courseId: courseId, name: name),
+          );
+
+  Future<void> insertCourseSetYard(
+    int setId,
+    int holeNumber, {
+    int yards = 400,
+  }) =>
+      db.into(db.courseSetYards).insert(CourseSetYardsCompanion.insert(
+            courseSetId: setId,
+            holeNumber: holeNumber,
+            yards: yards,
           ));
 
   group('foreign_keys pragma', () {
@@ -303,6 +334,153 @@ void main() {
       final row = (await db.select(db.holeResults).get()).single;
       expect(row.upDownSuccess, isTrue);
       expect(row.sandSave, isTrue);
+    });
+  });
+
+  group('course_holes', () {
+    test('UNIQUE(course_id, hole_number) rejects duplicate', () async {
+      final cid = await insertCourse();
+      await insertCourseHole(cid, 1);
+      await expectLater(
+        insertCourseHole(cid, 1),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('same hole number allowed across different courses', () async {
+      final a = await insertCourse(name: 'A');
+      final b = await insertCourse(name: 'B');
+      await insertCourseHole(a, 1);
+      await insertCourseHole(b, 1);
+      expect((await db.select(db.courseHoles).get()).length, 2);
+    });
+
+    test('CASCADE deletes course_holes when its course is deleted', () async {
+      final cid = await insertCourse();
+      for (var h = 1; h <= 18; h++) {
+        await insertCourseHole(cid, h);
+      }
+      expect((await db.select(db.courseHoles).get()).length, 18);
+      await (db.delete(db.courses)..where((c) => c.id.equals(cid))).go();
+      expect((await db.select(db.courseHoles).get()).length, 0);
+    });
+
+    test('CHECK rejects par outside 3..5', () async {
+      final cid = await insertCourse();
+      await expectLater(
+        insertCourseHole(cid, 1, par: 2),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertCourseHole(cid, 2, par: 6),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('CHECK rejects hole_number outside 1..18', () async {
+      final cid = await insertCourse();
+      await expectLater(
+        insertCourseHole(cid, 0),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertCourseHole(cid, 19),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('stroke_index is nullable and 1..18 when present', () async {
+      final cid = await insertCourse();
+      await insertCourseHole(cid, 1); // null stroke index is fine
+      await insertCourseHole(cid, 2, strokeIndex: 18);
+      await expectLater(
+        insertCourseHole(cid, 3, strokeIndex: 0),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertCourseHole(cid, 4, strokeIndex: 19),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('course_sets', () {
+    test('UNIQUE(course_id, name) rejects a duplicate name in a course',
+        () async {
+      final cid = await insertCourse();
+      await insertCourseSet(cid, name: 'Blue');
+      await expectLater(
+        insertCourseSet(cid, name: 'Blue'),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('the same set name is allowed across different courses', () async {
+      final a = await insertCourse(name: 'A');
+      final b = await insertCourse(name: 'B');
+      await insertCourseSet(a, name: 'Blue');
+      await insertCourseSet(b, name: 'Blue');
+      expect((await db.select(db.courseSets).get()).length, 2);
+    });
+
+    test('CASCADE deletes sets when the course is deleted', () async {
+      final cid = await insertCourse();
+      await insertCourseSet(cid, name: 'Blue');
+      await insertCourseSet(cid, name: 'White');
+      await (db.delete(db.courses)..where((c) => c.id.equals(cid))).go();
+      expect((await db.select(db.courseSets).get()), isEmpty);
+    });
+  });
+
+  group('course_set_yards', () {
+    test('UNIQUE(course_set_id, hole_number) rejects duplicate', () async {
+      final cid = await insertCourse();
+      final sid = await insertCourseSet(cid);
+      await insertCourseSetYard(sid, 1);
+      await expectLater(
+        insertCourseSetYard(sid, 1),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('CASCADE deletes yardages when the set is deleted', () async {
+      final cid = await insertCourse();
+      final sid = await insertCourseSet(cid);
+      for (var h = 1; h <= 18; h++) {
+        await insertCourseSetYard(sid, h);
+      }
+      expect((await db.select(db.courseSetYards).get()).length, 18);
+      await (db.delete(db.courseSets)..where((s) => s.id.equals(sid))).go();
+      expect((await db.select(db.courseSetYards).get()), isEmpty);
+    });
+
+    test('CHECK rejects negative yards and out-of-range hole numbers',
+        () async {
+      final cid = await insertCourse();
+      final sid = await insertCourseSet(cid);
+      await expectLater(
+        insertCourseSetYard(sid, 1, yards: -1),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertCourseSetYard(sid, 0),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('rounds.course_set_id', () {
+    test('deleting a set SET NULLs the rounds played on it', () async {
+      final cid = await insertCourse();
+      final sid = await insertCourseSet(cid);
+      final rid = await insertRound(cid, courseSetId: sid);
+
+      await (db.delete(db.courseSets)..where((s) => s.id.equals(sid))).go();
+
+      final round =
+          await (db.select(db.rounds)..where((r) => r.id.equals(rid)))
+              .getSingle();
+      expect(round.courseSetId, isNull);
     });
   });
 }

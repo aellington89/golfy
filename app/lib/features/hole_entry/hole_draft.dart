@@ -6,15 +6,16 @@ import '../../data/database.dart';
 /// parent [HoleEntryScreen]'s state map so the user can swipe between holes
 /// in the PageView without losing un-saved edits.
 ///
-/// Holds only the 10 fields surfaced in #10's spec plus the
-/// `bunkerVisited` / `sandSave` pair (parallel to up/down, per the field-
-/// scope decision in the plan). The four remaining `hole_results` columns
-/// (`yards`, `driveDistanceYards`, `approachDistanceYards`, `teeClub`) are
-/// written with placeholder defaults until the course-yardage feature ships
-/// (tracked in issue #22).
+/// Holds the fields surfaced in #10's spec, the `bunkerVisited` / `sandSave`
+/// pair, and `yards` — the hole's length, auto-filled from the course template
+/// when one exists and editable per round (#36). The three remaining
+/// `hole_results` columns (`driveDistanceYards`, `approachDistanceYards`,
+/// `teeClub`) are still written with placeholder defaults until the per-round
+/// shot-tracking inputs ship (tracked in issue #22).
 class HoleDraft {
   const HoleDraft({
     required this.par,
+    required this.yards,
     required this.score,
     required this.fairwayHit,
     required this.gir,
@@ -32,9 +33,10 @@ class HoleDraft {
   /// distinct on the dashboard if it wasn't intentional. Putts default to 1,
   /// the common case for a routine one-putt / regulation hole, so the typical
   /// entry needs fewer taps.
-  factory HoleDraft.initial({int par = 4}) {
+  factory HoleDraft.initial({int par = 4, int yards = 0}) {
     return HoleDraft(
       par: par,
+      yards: yards,
       score: par,
       fairwayHit: null,
       gir: false,
@@ -48,12 +50,14 @@ class HoleDraft {
     );
   }
 
-  /// Seed a draft from a previously-saved row. Reads only the fields the
-  /// form exposes — the deferred columns are ignored on load and re-written
-  /// with their placeholder defaults on the next upsert.
+  /// Seed a draft from a previously-saved row. Reads the fields the form
+  /// exposes (now including `yards`); the three shot columns still deferred to
+  /// #22 are ignored on load and re-written with their placeholder defaults on
+  /// the next upsert.
   factory HoleDraft.fromHoleResult(HoleResult h) {
     return HoleDraft(
       par: h.par,
+      yards: h.yards,
       score: h.score,
       fairwayHit: h.fairwayHit,
       gir: h.gir,
@@ -68,6 +72,7 @@ class HoleDraft {
   }
 
   final int par;
+  final int yards;
   final int score;
   final bool? fairwayHit;
   final bool gir;
@@ -81,6 +86,7 @@ class HoleDraft {
 
   HoleDraft copyWith({
     int? par,
+    int? yards,
     int? score,
     Object? fairwayHit = _sentinel,
     bool? gir,
@@ -94,6 +100,7 @@ class HoleDraft {
   }) {
     return HoleDraft(
       par: par ?? this.par,
+      yards: yards ?? this.yards,
       score: score ?? this.score,
       fairwayHit: identical(fairwayHit, _sentinel)
           ? this.fairwayHit
@@ -109,10 +116,11 @@ class HoleDraft {
     );
   }
 
-  /// Builds the drift companion for an upsert. The four deferred columns
-  /// (`yards`, `driveDistanceYards`, `approachDistanceYards`, `teeClub`)
-  /// are stamped with placeholder defaults — they'll be replaced by real
-  /// inputs when issue #22 ships.
+  /// Builds the drift companion for an upsert. `yards` now carries the real
+  /// value (auto-filled from the course template, editable per round — #36).
+  /// The three shot columns (`driveDistanceYards`, `approachDistanceYards`,
+  /// `teeClub`) are still stamped with placeholder defaults until issue #22
+  /// adds their inputs.
   HoleResultsCompanion toCompanion({
     required int roundId,
     required int holeNumber,
@@ -123,7 +131,7 @@ class HoleDraft {
       holeNumber: holeNumber,
       par: par,
       score: score,
-      yards: 0,
+      yards: yards,
       fairwayHit: Value(fairwayHit),
       gir: gir,
       putts: putts,
@@ -143,6 +151,7 @@ class HoleDraft {
       other is HoleDraft &&
           runtimeType == other.runtimeType &&
           par == other.par &&
+          yards == other.yards &&
           score == other.score &&
           fairwayHit == other.fairwayHit &&
           gir == other.gir &&
@@ -157,6 +166,7 @@ class HoleDraft {
   @override
   int get hashCode => Object.hash(
         par,
+        yards,
         score,
         fairwayHit,
         gir,
