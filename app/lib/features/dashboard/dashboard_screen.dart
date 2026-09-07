@@ -121,19 +121,12 @@ class _ScoringSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Colour the average to match its displayed value: round to one decimal
-    // first so a value that renders as "E" stays neutral. The over/under
-    // bands come from scoreToParColor so the dashboard agrees with the rounds
-    // list and scorecard — under par is green, not the theme's primary.
-    final avgVsPar = stats.avgScoreVsPar;
-    final avgVsParRounded =
-        avgVsPar == null ? null : (avgVsPar * 10).round() / 10;
-    Color? avgVsParColor;
-    if (avgVsParRounded != null && avgVsParRounded > 0) {
-      avgVsParColor = scoreToParColor(2, theme.colorScheme);
-    } else if (avgVsParRounded != null && avgVsParRounded < 0) {
-      avgVsParColor = scoreToParColor(-1, theme.colorScheme);
-    }
+    // Colour the average to match its displayed value; the shared helper rounds
+    // to one decimal first so a value that renders as "E" stays neutral, then
+    // maps the sign onto scoreToParColor's bands (under par → green) so the
+    // dashboard, the event detail card, and the events list all agree.
+    final avgVsParColor =
+        avgScoreVsParColor(stats.avgScoreVsPar, theme.colorScheme);
 
     return _StatSection(
       title: 'Scoring',

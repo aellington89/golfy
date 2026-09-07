@@ -41,6 +41,13 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   through to the same detail screen. No schema change: builds on the #35 data
   layer and the existing `eventsStreamProvider`, adding only an event-details
   update method on `EventDao` (`rename`, generalized to name + season in #47).
+- The **Events list tiles** now carry a compact scoring line ([#63]): an event
+  with at least one scored round shows its **average score vs. par** and **best
+  round to-par** (colour-banded like the detail card) next to the round count —
+  e.g. `3 rounds · +2.0 · Best -3`. Events with no scored holes keep the plain
+  count / "No rounds yet". Computed in-memory from the rounds stream the screen
+  already watches, so the list opens no per-tile DB watcher and needs no new
+  query.
 - Internal: a keyed `event → rounds` query (`RoundDao.watchRoundsForEvent`,
   surfaced as `roundsForEventProvider`) so the Events feature can fetch a single
   event's rounds directly rather than filtering the full rounds stream in
@@ -316,3 +323,4 @@ Phase 1 — data layer and navigation shell.
 [#55]: https://github.com/aellington89/golfy/issues/55
 [#47]: https://github.com/aellington89/golfy/issues/47
 [#56]: https://github.com/aellington89/golfy/issues/56
+[#63]: https://github.com/aellington89/golfy/issues/63
