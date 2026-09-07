@@ -25,32 +25,35 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.1.4
+## Status — v0.2.0
 
-**v0.1.4** is the latest release — it gives Golfy a golf-appropriate look and
-smooths a couple of hole-entry rough edges:
-
-| Feature | Issue | What it delivered |
-|---|---|---|
-| Golf-themed palette | [#53](https://github.com/aellington89/golfy/issues/53) | The app is re-themed from a single deep-purple seed to a golf palette — a fairway-green primary with flag-yellow and sky-blue accents — across light and dark, with the score-to-par colour bands kept coordinated |
-| One-putt default | [#52](https://github.com/aellington89/golfy/issues/52) | A new, untouched hole now starts at one putt instead of two — fewer taps for the common one-putt or regulation hole |
-| Event picker dropdown | [#51](https://github.com/aellington89/golfy/issues/51) | The Event field in the New / Edit Round dialogs is now a pick-from-list dropdown + modal sheet mirroring the Course picker; a brand-new event is added only via an explicit action, so a typo no longer spawns a duplicate |
-
-It builds on **v0.1.3**, which tightened hole-entry data integrity and finished
-the play-order form redesign ([#34](https://github.com/aellington89/golfy/issues/34),
-[#37](https://github.com/aellington89/golfy/issues/37)).
-
-It builds on **v0.1.2**, a hotfix on v0.1.1 that made a round's event, course,
-date, round number and notes editable after creation
-([#45](https://github.com/aellington89/golfy/issues/45)).
-
-It builds on **v0.1.1**, which added event organisation and richer scoring
-context:
+**v0.2.0** is the latest release — Golfy's largest yet. It completes the
+**Courses & yardage** milestone and gives **Events** a home of their own:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
-| Event tracking | [#35](https://github.com/aellington89/golfy/issues/35) | Rounds can belong to a named event (tournament / league / casual); the Rounds list groups by event and each event carries a recorded result — a finishing position, a tie, or a missed cut |
-| Score-distribution % | [#39](https://github.com/aellington89/golfy/issues/39) | The dashboard's score-distribution card shows each category's share of total holes as a percentage above the raw count |
+| Course templates & yardage sets | [#36](https://github.com/aellington89/golfy/issues/36) | A course saves a shared per-hole par + stroke-index card plus any number of named yardage sets (tee boxes / pin sets); starting a round picks a set and pre-fills each hole's par and yardage, still editable per round. A new Courses screen (nav drawer) manages templates and sets, and renames or deletes a course |
+| Per-shot tracking | [#22](https://github.com/aellington89/golfy/issues/22) | Each hole captures an ordered shot list — club, distance, lie and result per shot — replacing the old flat tee-club / drive / approach fields, and independent of scoring |
+| Dedicated Events tab | [#42](https://github.com/aellington89/golfy/issues/42) | Events graduate from a field on a round to their own tab with event-first navigation: create an event up front, open it for its rounds and a per-event scoring summary, and edit or delete it |
+| Events per season | [#47](https://github.com/aellington89/golfy/issues/47) | The same event name recurs each season as its own occurrence — its own result, rounds and edits — with the season a typed, editable field |
+| Event tile scoring | [#63](https://github.com/aellington89/golfy/issues/63) | The Events list tiles carry a compact scoring line — average score vs. par and best round to-par — beside the round count |
+
+It ships schema versions **v5–v7**, each a migration-tested, data-preserving
+upgrade.
+
+It builds on **v0.1.4**, which re-themed the app to a green / yellow / blue golf
+palette and smoothed a couple of hole-entry rough edges
+([#51](https://github.com/aellington89/golfy/issues/51),
+[#52](https://github.com/aellington89/golfy/issues/52),
+[#53](https://github.com/aellington89/golfy/issues/53)); **v0.1.3**, which
+tightened hole-entry data integrity and finished the play-order form redesign
+([#34](https://github.com/aellington89/golfy/issues/34),
+[#37](https://github.com/aellington89/golfy/issues/37)); **v0.1.2**, a hotfix
+making a round's details editable after creation
+([#45](https://github.com/aellington89/golfy/issues/45)); and **v0.1.1**, which
+added event organisation and the score-distribution percentage
+([#35](https://github.com/aellington89/golfy/issues/35),
+[#39](https://github.com/aellington89/golfy/issues/39)).
 
 **v0.1.0** was Golfy's first stable release and completed Phase 4 of the
 [roadmap](https://github.com/aellington89/golfy/issues/1): a signed Android APK,
@@ -78,8 +81,7 @@ and each hole carries an ordered **per-shot list** — club, distance, lie and
 result ([#22](https://github.com/aellington89/golfy/issues/22)).
 
 **What's next** lives in GitHub, not here — the per-release
-[milestones](https://github.com/aellington89/golfy/milestones) (Phases 5–7,
-through v0.2.0) and the
+[milestones](https://github.com/aellington89/golfy/milestones) and the
 [Golfy Release Tracking](https://github.com/users/aellington89/projects/29)
 project board. [`CHANGELOG.md`](CHANGELOG.md) remains the record of shipped
 releases.
@@ -139,7 +141,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 284 passing tests
+flutter test                           # 390 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

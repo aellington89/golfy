@@ -8,6 +8,18 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-07
+
+Golfy's largest release yet. It completes the **Courses & yardage** milestone and
+gives **Events** a home of their own. Courses gain reusable templates — a shared
+par + stroke-index card plus any number of named yardage sets — that pre-fill
+each new round, and every hole now records an ordered per-shot list (club,
+distance, lie, result). Events graduate from a field on a round to a dedicated
+tab with event-first navigation, become distinct per season, and carry a
+per-event scoring summary surfaced on both the detail screen and the list tiles.
+It ships schema versions **v5–v7**, each a migration-tested, data-preserving
+upgrade.
+
 ### Added
 - **Course templates with multiple yardage sets** ([#36]): a course now saves a
   shared per-hole **par + stroke index** card, plus any number of named
@@ -280,7 +292,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/aellington89/golfy/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/aellington89/golfy/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/aellington89/golfy/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/aellington89/golfy/compare/v0.1.1...v0.1.2
