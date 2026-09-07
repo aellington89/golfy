@@ -349,6 +349,93 @@ void main() {
   });
 
   testWidgets(
+      'pre-fills an untouched hole: par from the course, yards from the '
+      "round's set (#36)", (tester) async {
+    final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+    // Distinctive values (default is par 4) so the auto-fill is unmistakable:
+    // par from the shared course card, yards from the round's chosen set.
+    await fx.insertCourseHoles(cid, par: 5);
+    final setId = await fx.insertCourseSet(cid, name: 'Blue');
+    await fx.insertCourseSetYards(setId, yards: 540);
+    final rid = await fx.insertRound(cid, date: '2026-05-25', courseSetId: setId);
+
+    final container = makeContainer(activeRoundId: rid);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Hole 1's par control is pre-selected to 5 and its yards field shows 540.
+    final parButton = tester.widget<SegmentedButton<int>>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('hole_card_1')),
+            matching: find.byType(SegmentedButton<int>),
+          )
+          .first,
+    );
+    expect(parButton.selected, {5});
+
+    final yards = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const ValueKey('hole_card_1')),
+        matching: find.byKey(const ValueKey('yards')),
+      ),
+    );
+    expect(yards.controller!.text, '540');
+
+    // Saving the untouched hole persists the auto-filled par/yards.
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final rows = await tester
+        .runAsync(() => db.holeResultDao.watchForRound(rid).first);
+    expect(rows!.single.par, 5);
+    expect(rows.single.yards, 540);
+  });
+
+  testWidgets(
+      'a course with no template falls back to defaults (par 4, blank yards)',
+      (tester) async {
+    final seed = await seedRound(); // no course_holes inserted
+
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final parButton = tester.widget<SegmentedButton<int>>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('hole_card_1')),
+            matching: find.byType(SegmentedButton<int>),
+          )
+          .first,
+    );
+    expect(parButton.selected, {4});
+
+    final yards = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const ValueKey('hole_card_1')),
+        matching: find.byKey(const ValueKey('yards')),
+      ),
+    );
+    expect(yards.controller!.text, '');
+  });
+
+  testWidgets(
       'completing the final hole during entry shows a "Finish Round" FAB',
       (tester) async {
     final seed = await seedRound();

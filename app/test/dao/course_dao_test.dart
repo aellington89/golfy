@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -67,6 +68,57 @@ void main() {
       expect(results.last.map((c) => c.name).toList(), ['A']);
 
       await sub.cancel();
+    });
+  });
+
+  group('CourseDao.updateById', () {
+    test('changes name and game title', () async {
+      final id = await fx.insertCourse(name: 'Pebbel', gameTitle: 'PGA 2K25');
+      final updated = await db.courseDao.updateById(
+        id,
+        const CoursesCompanion(
+          name: Value('Pebble Beach'),
+          gameTitle: Value('EA Sports PGA Tour'),
+        ),
+      );
+      expect(updated, 1);
+      final row = await (db.select(db.courses)..where((c) => c.id.equals(id)))
+          .getSingle();
+      expect(row.name, 'Pebble Beach');
+      expect(row.gameTitle, 'EA Sports PGA Tour');
+    });
+
+    test('throws when the new identity collides with another course', () async {
+      await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA 2K25');
+      final other = await fx.insertCourse(name: 'Pebble', gameTitle: 'PGA 2K25');
+      await expectLater(
+        db.courseDao.updateById(
+          other,
+          const CoursesCompanion(name: Value('Augusta')),
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('CourseDao.deleteById', () {
+    test('deletes an unused course', () async {
+      final id = await fx.insertCourse();
+      final deleted = await db.courseDao.deleteById(id);
+      expect(deleted, 1);
+      expect(await db.courseDao.watchAll().first, isEmpty);
+    });
+
+    test('throws when a round still references the course (RESTRICT)',
+        () async {
+      final id = await fx.insertCourse();
+      await fx.insertRound(id);
+      await expectLater(
+        db.courseDao.deleteById(id),
+        throwsA(isA<Exception>()),
+      );
+      // The course is still there.
+      expect(await db.courseDao.watchAll().first, hasLength(1));
     });
   });
 

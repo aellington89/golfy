@@ -55,6 +55,11 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
   Event? _event;
 
   Course? _course;
+
+  /// The chosen yardage set for [_course] (#36), or null for "no set" — Hole
+  /// Entry pre-fills yardages from it. Reset whenever the course changes.
+  CourseSet? _courseSet;
+
   late DateTime _date;
   int _roundNumber = 1;
   bool _userOverrodeRoundNumber = false;
@@ -103,6 +108,8 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
   void _onCourseChanged(Course? course) {
     setState(() {
       _course = course;
+      // A set belongs to a course, so it can't survive a course change.
+      _courseSet = null;
       _courseError = null;
       _roundNumberError = null;
       _recomputeRoundNumber();
@@ -169,11 +176,14 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
       final repo = ref.read(repositoryProvider);
       final eventId = _event?.id;
       final notes = _notesController.text.trim();
+      final courseSetId = _courseSet?.id;
       final companion = RoundsCompanion.insert(
         date: _isoDate,
         courseId: course.id,
         roundNumber: Value(_roundNumber),
         eventId: eventId == null ? const Value.absent() : Value(eventId),
+        courseSetId:
+            courseSetId == null ? const Value.absent() : Value(courseSetId),
         notes: notes.isEmpty ? const Value.absent() : Value(notes),
       );
       final newId = await repo.insertRound(companion);
@@ -214,6 +224,16 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.error),
                 ),
+              ),
+            ],
+            if (_course != null) ...[
+              const SizedBox(height: 12),
+              _SetPicker(
+                courseId: _course!.id,
+                value: _courseSet,
+                onChanged: _submitting
+                    ? (_) {}
+                    : (s) => setState(() => _courseSet = s),
               ),
             ],
             const SizedBox(height: 12),
@@ -291,6 +311,70 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
           child: const Text('Start Round'),
         ),
       ],
+    );
+  }
+}
+
+/// Controlled dropdown of a course's yardage sets (#36) — the parent owns the
+/// selected [CourseSet]. Always offers a "No set" choice (leaves the round's
+/// yardages blank); when the course has no sets, that's the only option, with a
+/// hint to add one on the course. Sourced live from [courseSetsStreamProvider].
+class _SetPicker extends ConsumerWidget {
+  const _SetPicker({
+    required this.courseId,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final int courseId;
+  final CourseSet? value;
+  final ValueChanged<CourseSet?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final setsAsync = ref.watch(courseSetsStreamProvider(courseId));
+    return setsAsync.when(
+      loading: () => const InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Yardage set',
+          border: OutlineInputBorder(),
+        ),
+        child: Text('Loading sets…'),
+      ),
+      error: (e, _) => const InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Yardage set',
+          border: OutlineInputBorder(),
+        ),
+        child: Text('Could not load sets'),
+      ),
+      data: (sets) {
+        // The selected set may have been deleted; fall back to "No set".
+        final selectedId =
+            sets.any((s) => s.id == value?.id) ? value?.id : null;
+        return DropdownButtonFormField<int?>(
+          key: const ValueKey('set_picker'),
+          initialValue: selectedId,
+          decoration: InputDecoration(
+            labelText: 'Yardage set',
+            border: const OutlineInputBorder(),
+            helperText: sets.isEmpty
+                ? 'No sets yet — add one on the course to pre-fill yardages'
+                : null,
+          ),
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('No set'),
+            ),
+            for (final s in sets)
+              DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+          ],
+          onChanged: (id) => onChanged(
+            id == null ? null : sets.firstWhere((s) => s.id == id),
+          ),
+        );
+      },
     );
   }
 }

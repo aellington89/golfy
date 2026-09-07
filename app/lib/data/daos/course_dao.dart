@@ -15,6 +15,24 @@ class CourseDao extends DatabaseAccessor<GolfyDatabase> with _$CourseDaoMixin {
   Future<int> insert(CoursesCompanion course) =>
       into(courses).insert(course);
 
+  /// Updates a course's identity (name / game title) in place. Pass a companion
+  /// carrying only the columns to change. The `(name, game_title)` UNIQUE still
+  /// applies, so an update colliding with another course throws — callers
+  /// pre-check and also catch the DB-level error as a safety net (mirroring
+  /// [insert]). Returns the number of rows updated (1 if the course existed).
+  Future<int> updateById(int id, CoursesCompanion course) {
+    return (update(courses)..where((c) => c.id.equals(id))).write(course);
+  }
+
+  /// Deletes a course by id. The `rounds.course_id` foreign key is RESTRICT, so
+  /// this throws if any round still references the course — callers gate on the
+  /// course's round count first and catch the DB error as a safety net. Its
+  /// `course_holes` template rows cascade away. Returns the number of rows
+  /// deleted (1 if the course existed, 0 otherwise).
+  Future<int> deleteById(int id) {
+    return (delete(courses)..where((c) => c.id.equals(id))).go();
+  }
+
   /// Reactive list of every course, ordered by game title then course name.
   Stream<List<Course>> watchAll() {
     return (select(courses)

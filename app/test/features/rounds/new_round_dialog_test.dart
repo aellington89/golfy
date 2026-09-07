@@ -35,6 +35,7 @@ void main() {
     List<RoundWithCourse> existing = const [],
     Event? initialEvent,
     void Function(int?)? onResult,
+    List<CourseSet> sets = const [],
   }) {
     return ProviderScope(
       overrides: [
@@ -42,6 +43,10 @@ void main() {
         coursesByNameStreamProvider
             .overrideWith((ref) => coursesController.stream),
         eventsStreamProvider.overrideWith((ref) => eventsController.stream),
+        // The set picker (shown once a course is chosen) watches this; feed it a
+        // single-value stream so it never opens a live drift watch on the test
+        // db (the project's widget-test reactivity constraint).
+        courseSetsStreamProvider.overrideWith((ref, id) => Stream.value(sets)),
       ],
       child: MaterialApp(
         home: Builder(
@@ -78,11 +83,13 @@ void main() {
     List<RoundWithCourse> existing = const [],
     Event? initialEvent,
     void Function(int?)? onResult,
+    List<CourseSet> sets = const [],
   }) async {
     await tester.pumpWidget(wrap(
       existing: existing,
       initialEvent: initialEvent,
       onResult: onResult,
+      sets: sets,
     ));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
@@ -269,6 +276,44 @@ void main() {
     expect(rounds.single.round.roundNumber, 1);
     // No event typed -> casual round.
     expect(rounds.single.round.eventId, isNull);
+  });
+
+  testWidgets('choosing a yardage set links it to the started round (#36)',
+      (tester) async {
+    // Real db needs the course + set for the round's FKs (first inserts → id 1).
+    await db.courseDao.insert(
+      CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+    );
+    await db.courseSetDao.insertSet(
+      CourseSetsCompanion.insert(courseId: 1, name: 'Blue tees'),
+    );
+
+    await openDialog(
+      tester,
+      sets: const [CourseSet(id: 1, courseId: 1, name: 'Blue tees')],
+    );
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
+    );
+    await selectCourse(tester, 'Augusta');
+
+    // The set picker appears once a course is chosen; pick "Blue tees".
+    await tester.tap(find.byKey(const ValueKey('set_picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Blue tees').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds!.single.round.courseSetId, 1);
   });
 
   testWidgets('adding a new event via "Add new event…" creates and links it',

@@ -14,6 +14,7 @@ import 'package:golfy_app/features/rounds/active_round_provider.dart';
 import 'package:golfy_app/features/rounds/edit_round_dialog.dart';
 import 'package:golfy_app/features/rounds/new_round_dialog.dart';
 import 'package:golfy_app/features/rounds/rounds_screen.dart';
+import 'package:golfy_app/widgets/empty_state.dart';
 import 'package:golfy_app/features/rounds/scorecard/scorecard_screen.dart';
 import 'package:golfy_app/shell/tab_index_provider.dart';
 
@@ -127,7 +128,15 @@ void main() {
       find.text('No rounds yet. Tap + to start your first round.'),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.golf_course_outlined), findsOneWidget);
+    // Scoped to the empty state to stay robust to other golf icons in the shell
+    // chrome (e.g. the nav drawer's Courses entry).
+    expect(
+      find.descendant(
+        of: find.byType(EmptyState),
+        matching: find.byIcon(Icons.golf_course_outlined),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

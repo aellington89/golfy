@@ -119,6 +119,39 @@ void main() {
     });
   });
 
+  group('HoleCard — yards (#36)', () {
+    testWidgets('shows the auto-filled yards value', (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial(par: 4, yards: 420));
+      final field =
+          tester.widget<TextField>(find.byKey(const ValueKey('yards')));
+      expect(field.controller!.text, '420');
+    });
+
+    testWidgets('a zero-yard hole shows an empty field, not "0"',
+        (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial(yards: 0));
+      final field =
+          tester.widget<TextField>(find.byKey(const ValueKey('yards')));
+      expect(field.controller!.text, '');
+    });
+
+    testWidgets('editing yards updates the draft', (tester) async {
+      final state =
+          await pumpCard(tester, initial: HoleDraft.initial(yards: 400));
+      await tester.enterText(find.byKey(const ValueKey('yards')), '455');
+      await tester.pump();
+      expect(state.draft.yards, 455);
+    });
+
+    testWidgets('clearing yards stores 0', (tester) async {
+      final state =
+          await pumpCard(tester, initial: HoleDraft.initial(yards: 400));
+      await tester.enterText(find.byKey(const ValueKey('yards')), '');
+      await tester.pump();
+      expect(state.draft.yards, 0);
+    });
+  });
+
   group('HoleCard — up/down + bunker conditionals', () {
     testWidgets('up/down success switch is disabled when attempt is false',
         (tester) async {

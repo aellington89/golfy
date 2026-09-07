@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/models/dashboard_stats.dart';
 import '../../data/repository_provider.dart';
+import '../../shell/app_drawer.dart';
 import '../../widgets/empty_state.dart';
 import '../stats/score_color.dart';
 import '../stats/score_format.dart';
@@ -22,6 +23,7 @@ class DashboardScreen extends ConsumerWidget {
     final statsAsync = ref.watch(dashboardStatsStreamProvider);
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(title: const Text('Dashboard')),
       body: statsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

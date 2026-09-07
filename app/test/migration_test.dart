@@ -20,6 +20,7 @@ import 'generated_migrations/schema_v1.dart' as v1;
 import 'generated_migrations/schema_v2.dart' as v2;
 import 'generated_migrations/schema_v3.dart' as v3;
 import 'generated_migrations/schema_v4.dart' as v4;
+import 'generated_migrations/schema_v5.dart' as v5;
 
 void main() {
   late SchemaVerifier verifier;
@@ -262,6 +263,82 @@ void main() {
       db.eventDao.insert(EventsCompanion.insert(name: 'Club Championship')),
       throwsA(isA<Exception>()),
     );
+  });
+
+  test('migrates the schema from v5 to v6', () async {
+    final connection = await verifier.startAt(5);
+    final db = GolfyDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    // Opens the db (running `onUpgrade`) and asserts the resulting sqlite schema
+    // — the new course_holes / course_sets / course_set_yards tables, their
+    // indexes, and rounds.course_set_id — matches the generated v6 snapshot.
+    await verifier.migrateAndValidate(db, 6);
+  });
+
+  test('v5 -> v6 adds the course-template tables and preserves data (#36)',
+      () async {
+    final schema = await verifier.schemaAt(5);
+
+    // Seed a course + round through the v5-shaped database (none of the new
+    // tables, no rounds.course_set_id yet).
+    final oldDb = v5.DatabaseAtV5(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v5.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    final roundId = await oldDb.into(oldDb.rounds).insert(
+          v5.RoundsCompanion.insert(date: '2026-05-19', courseId: courseId),
+        );
+    await oldDb.close();
+
+    // Migrate the same underlying database with the real app schema (v6).
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 6);
+
+    // The pre-existing rows survive; the new tables start empty and the round's
+    // new course_set_id is null (no backfill).
+    final course = await db.select(db.courses).getSingle();
+    expect(course.name, 'Pebble Beach');
+    expect(await db.courseHoleDao.watchForCourse(courseId).first, isEmpty);
+    expect(await db.courseSetDao.watchSetsForCourse(courseId).first, isEmpty);
+    final round = await db.roundDao.getById(roundId);
+    expect(round!.courseSetId, isNull);
+
+    // The new tables are live: par/SI card, a named set, and its yardages — and
+    // linking the round to the set.
+    await db.courseHoleDao.replaceForCourse(courseId, [
+      CourseHolesCompanion.insert(
+        courseId: courseId,
+        holeNumber: 1,
+        par: 4,
+        strokeIndex: const Value(7),
+      ),
+    ]);
+    final setId = await db.courseSetDao.insertSet(
+      CourseSetsCompanion.insert(courseId: courseId, name: 'Blue tees'),
+    );
+    await db.courseSetDao.replaceYardsForSet(setId, [
+      CourseSetYardsCompanion.insert(
+        courseSetId: setId,
+        holeNumber: 1,
+        yards: 420,
+      ),
+    ]);
+    await db.roundDao.updateById(
+      roundId,
+      RoundsCompanion(courseSetId: Value(setId)),
+    );
+
+    final card = await db.courseHoleDao.watchForCourse(courseId).first;
+    expect(card.single.par, 4);
+    expect(card.single.strokeIndex, 7);
+    final yards = await db.courseSetDao.watchYardsForSet(setId).first;
+    expect(yards.single.yards, 420);
+    expect((await db.roundDao.getById(roundId))!.courseSetId, setId);
   });
 
   test('a freshly created database matches the generated schema', () async {
