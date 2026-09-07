@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../data/repository_provider.dart';
 import 'add_course_dialog.dart';
-import 'courses_screen.dart';
 
 /// Controlled course picker: parent owns the selected [Course] and supplies
 /// [value] + [onChanged]. Tapping the field opens a modal sheet listing all
@@ -76,17 +75,6 @@ class CoursePicker extends ConsumerWidget {
 
     if (result == null) return;
 
-    if (result.manage) {
-      if (!context.mounted) return;
-      // Push over the current route (including the New/Edit Round dialog this
-      // picker sits in) — the dialog is still there on return, and reopening
-      // the picker re-reads the (now-updated) course list from its stream.
-      await Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute<void>(builder: (_) => const CoursesScreen()),
-      );
-      return;
-    }
-
     if (result.addNew) {
       if (!context.mounted) return;
       final newCourse = await showDialog<Course>(
@@ -102,21 +90,13 @@ class CoursePicker extends ConsumerWidget {
 }
 
 class _PickerResult {
-  const _PickerResult.course(this.course)
-      : addNew = false,
-        manage = false;
+  const _PickerResult.course(this.course) : addNew = false;
   const _PickerResult.addNew()
       : course = null,
-        addNew = true,
-        manage = false;
-  const _PickerResult.manage()
-      : course = null,
-        addNew = false,
-        manage = true;
+        addNew = true;
 
   final Course? course;
   final bool addNew;
-  final bool manage;
 }
 
 class _CoursePickerSheet extends StatelessWidget {
@@ -153,12 +133,6 @@ class _CoursePickerSheet extends StatelessWidget {
             title: const Text('Add new course…'),
             onTap: () =>
                 Navigator.of(context).pop(const _PickerResult.addNew()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.golf_course_outlined),
-            title: const Text('Manage courses…'),
-            onTap: () =>
-                Navigator.of(context).pop(const _PickerResult.manage()),
           ),
         ],
       ),

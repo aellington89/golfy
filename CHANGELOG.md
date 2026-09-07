@@ -13,8 +13,8 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   shared per-hole **par + stroke index** card, plus any number of named
   **yardage sets** (a "pin set" or tee box), each with its own 18-hole yardage
   card — so the same course can be played at different yardages. A new
-  course-management screen (reached from the Rounds tab's **Manage courses**
-  action and the course picker) edits the par/SI card and adds / renames /
+  course-management screen (reached from the app's **navigation drawer →
+  Courses**) edits the par/SI card and adds / renames /
   deletes sets and their yardages; a course can also be renamed or deleted
   (delete is blocked while it still has rounds). Starting a round lets you pick
   one of the course's sets; Hole Entry then **pre-fills par from the course and

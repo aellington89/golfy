@@ -128,8 +128,8 @@ void main() {
       find.text('No rounds yet. Tap + to start your first round.'),
       findsOneWidget,
     );
-    // Scoped to the empty state — the AppBar's "Manage courses" action uses the
-    // same golf icon, so an unscoped finder would match both.
+    // Scoped to the empty state to stay robust to other golf icons in the shell
+    // chrome (e.g. the nav drawer's Courses entry).
     expect(
       find.descendant(
         of: find.byType(EmptyState),

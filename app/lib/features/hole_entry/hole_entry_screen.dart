@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
+import '../../shell/app_drawer.dart';
 import '../../shell/tab_index_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../rounds/active_round_provider.dart';
@@ -210,6 +211,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     final allSaved = savedCount == _holeCount;
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
         title: _AppBarTitle(roundAsync: roundAsync),
         bottom: _HoleNavBar(
@@ -417,6 +419,7 @@ class _NoActiveRound extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(title: const Text('Hole Entry')),
       body: EmptyState(
         icon: Icons.flag_outlined,

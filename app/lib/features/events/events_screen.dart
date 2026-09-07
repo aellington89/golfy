@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
+import '../../shell/app_drawer.dart';
 import '../../widgets/empty_state.dart';
 import 'add_event_dialog.dart';
 import 'event_detail_screen.dart';
@@ -25,6 +26,7 @@ class EventsScreen extends ConsumerWidget {
         ref.watch(roundsStreamProvider).value ?? const <RoundWithCourse>[];
 
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(title: const Text('Events')),
       floatingActionButton: eventsAsync.when(
         loading: () => null,

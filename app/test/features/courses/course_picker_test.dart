@@ -61,10 +61,10 @@ void main() {
     await settle(tester);
 
     final tiles = find.byType(ListTile);
-    // 3 courses + "Add new course…" + "Manage courses…"
-    expect(tiles, findsNWidgets(5));
+    // 3 courses + "Add new course…" (course management lives in the nav drawer).
+    expect(tiles, findsNWidgets(4));
     expect(find.text('Add new course…'), findsOneWidget);
-    expect(find.text('Manage courses…'), findsOneWidget);
+    expect(find.text('Manage courses…'), findsNothing);
 
     final names = tester
         .widgetList<ListTile>(tiles)
