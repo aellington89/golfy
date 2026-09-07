@@ -139,7 +139,7 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (214 tests)
+flutter test                           # everything (390 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
