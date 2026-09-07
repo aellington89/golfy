@@ -58,7 +58,6 @@ void main() {
     int penaltyStrokes = 0,
     bool bunkerVisited = false,
     bool sandSave = false,
-    int driveDistanceYards = 250,
   }) =>
       HoleResultsCompanion.insert(
         roundId: roundId,
@@ -74,7 +73,6 @@ void main() {
         penaltyStrokes: penaltyStrokes,
         bunkerVisited: bunkerVisited,
         sandSave: sandSave,
-        driveDistanceYards: driveDistanceYards,
       );
 
   Future<void> insertHole(int roundId, int holeNumber,
@@ -118,6 +116,17 @@ void main() {
             courseSetId: setId,
             holeNumber: holeNumber,
             yards: yards,
+          ));
+
+  Future<void> insertHoleShot(
+    int holeResultId,
+    int shotNumber, {
+    int? distanceYards,
+  }) =>
+      db.into(db.holeShots).insert(HoleShotsCompanion.insert(
+            holeResultId: holeResultId,
+            shotNumber: shotNumber,
+            distanceYards: Value(distanceYards),
           ));
 
   group('foreign_keys pragma', () {
@@ -481,6 +490,52 @@ void main() {
           await (db.select(db.rounds)..where((r) => r.id.equals(rid)))
               .getSingle();
       expect(round.courseSetId, isNull);
+    });
+  });
+
+  group('hole_shots', () {
+    Future<int> seedHoleResult() async {
+      final cid = await insertCourse();
+      final rid = await insertRound(cid);
+      return db.into(db.holeResults).insert(holeCompanion(rid, 1));
+    }
+
+    test('UNIQUE(hole_result_id, shot_number) rejects duplicate', () async {
+      final hrid = await seedHoleResult();
+      await insertHoleShot(hrid, 1);
+      await expectLater(
+        insertHoleShot(hrid, 1),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('CASCADE deletes shots when the hole_results row is deleted',
+        () async {
+      final hrid = await seedHoleResult();
+      await insertHoleShot(hrid, 1);
+      await insertHoleShot(hrid, 2);
+      expect((await db.select(db.holeShots).get()).length, 2);
+      await (db.delete(db.holeResults)..where((h) => h.id.equals(hrid))).go();
+      expect((await db.select(db.holeShots).get()), isEmpty);
+    });
+
+    test('CHECK rejects shot_number < 1 and negative distance', () async {
+      final hrid = await seedHoleResult();
+      await expectLater(
+        insertHoleShot(hrid, 0),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertHoleShot(hrid, 1, distanceYards: -1),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('a bad hole_result_id FK is rejected', () async {
+      await expectLater(
+        insertHoleShot(999, 1),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 }

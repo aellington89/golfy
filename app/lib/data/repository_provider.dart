@@ -90,6 +90,14 @@ final holeResultsStreamProvider =
   return ref.watch(repositoryProvider).watchHoleResults(roundId);
 });
 
+/// Reactive per-shot lists for a round's holes (#22), keyed by hole number.
+/// Family parameter is the round id; holes with no shots are absent from the
+/// map. Backs the Hole Entry shot-list seeding.
+final holeShotsStreamProvider =
+    StreamProvider.family<Map<int, List<HoleShot>>, int>((ref, roundId) {
+  return ref.watch(repositoryProvider).watchHoleShots(roundId);
+});
+
 /// Reactive aggregated lifetime stats for the dashboard.
 final dashboardStatsStreamProvider = StreamProvider<DashboardStats>((ref) {
   return ref.watch(repositoryProvider).watchDashboardStats();

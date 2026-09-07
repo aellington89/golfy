@@ -73,10 +73,9 @@ The historical [`golf_stats.xlsx`](https://github.com/aellington89/golfy/issues/
 data was imported once, on-device, via a one-time migration tool
 ([#33](https://github.com/aellington89/golfy/issues/33)); by design no import UI
 ships in the app. Per-hole **yardage** is captured via reusable course templates
-with multiple yardage sets ([#36](https://github.com/aellington89/golfy/issues/36)).
-Still **not** captured: the per-round shot fields — drive / approach distance and
-club used per shot ([#22](https://github.com/aellington89/golfy/issues/22)) —
-open for a future release.
+with multiple yardage sets ([#36](https://github.com/aellington89/golfy/issues/36)),
+and each hole carries an ordered **per-shot list** — club, distance, lie and
+result ([#22](https://github.com/aellington89/golfy/issues/22)).
 
 **What's next** lives in GitHub, not here — the per-release
 [milestones](https://github.com/aellington89/golfy/milestones) (Phases 5–7,
@@ -107,11 +106,10 @@ build modes share `%USERPROFILE%\Documents\golfy.sqlite`.
 courses ──┬── course_holes (18 per course)   → shared par + stroke index
           ├── course_sets (named yardage sets) ── course_set_yards (18 per set)
           ▼
-        rounds ──── hole_results (18 per round)
-          │         └─ par, score, fairwayHit, gir, putts,
-          │            upDownAttempt, upDownSuccess,
-          └─ course_set_id  penaltyStrokes, bunkerVisited, sandSave,
-             (played set)   yards, driveDistanceYards, …
+        rounds ──── hole_results (18 per round) ── hole_shots (per-shot list)
+          │         └─ par, score, yards, fairwayHit,    └─ club, distance,
+          └─ course_set_id  gir, putts, upDown…,            lie, result
+             (played set)   penalty, bunker, sandSave, …
 ```
 
 A course optionally saves a **template**: a shared per-hole par + stroke index
@@ -120,14 +118,17 @@ with its own 18-hole yardage card (`course_set_yards`) so the same course can be
 played at different yardages. A round records which set it used
 (`rounds.course_set_id`); starting a round pre-fills each hole's par from the
 course and yardage from the chosen set, and the round keeps its own editable
-copy in `hole_results` — so a template edit never rewrites past rounds.
+copy in `hole_results` — so a template edit never rewrites past rounds. Each hole
+optionally carries an ordered **shot list** (`hole_shots`) — club, distance, lie
+and result per shot — separate from the authoritative `score` / `putts`.
 Round totals and lifetime aggregates are **derived** from `hole_results` at
 query time. The schema is enforced at the SQL level (FK RESTRICT on course
-delete, FK CASCADE on round / set delete, UNIQUE on `(round_id, hole_number)`,
-`(course_id, hole_number)`, `(course_id, name)`, `(course_set_id, hole_number)`,
-CHECK constraints on par / score / putts / yards). App-level invariants that SQL
-can't express (e.g. you can't make an up-and-down without attempting one) are
-enforced by the DAO layer with loud `ArgumentError`s.
+delete, FK CASCADE on round / set / hole delete, UNIQUE on `(round_id,
+hole_number)`, `(course_id, hole_number)`, `(course_id, name)`,
+`(course_set_id, hole_number)`, `(hole_result_id, shot_number)`, CHECK
+constraints on par / score / putts / yards). App-level invariants that SQL can't
+express (e.g. you can't make an up-and-down without attempting one) are enforced
+by the DAO layer with loud `ArgumentError`s.
 
 ## Build & run
 

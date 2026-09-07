@@ -23,6 +23,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   (par + stroke index), `course_sets`, `course_set_yards`, and a nullable
   `rounds.course_set_id` (`SET NULL` on delete) at schema **v6** — a plain
   additive migration.
+- **Per-shot tracking** ([#22]): the Hole Entry form now captures an ordered
+  **Shots** list per hole — each shot records its **club, distance, lie, and
+  result** — replacing the old flat single-`teeClub` / drive / approach fields.
+  Shots are optional and independent of scoring (`score` / `putts` stay
+  authoritative). Adds a `hole_shots` table (cascading from `hole_results`) at
+  schema **v7**, which also drops the three superseded flat columns
+  (`tee_club`, `drive_distance_yards`, `approach_distance_yards`) via a
+  table-rebuild migration that preserves every existing hole's scoring data.
 - A dedicated **Events** tab ([#42]): create an event up front — including an
   empty one with no rounds yet — from a `+` action, rather than only as a side
   effect of starting a round. Open an event to see its rounds, add a round with

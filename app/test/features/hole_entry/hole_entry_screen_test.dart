@@ -24,9 +24,9 @@ void main() {
   });
 
   void resizeForForm(WidgetTester tester) {
-    // Default 800x600 is shorter than the form card. Resize so the Save
-    // button and all switches land on-screen.
-    tester.view.physicalSize = const Size(800, 1400);
+    // Default 800x600 is shorter than the form card. Resize tall enough that
+    // the Save button, every switch, and the Shots section land on-screen.
+    tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
   }
@@ -433,6 +433,44 @@ void main() {
       ),
     );
     expect(yards.controller!.text, '');
+  });
+
+  testWidgets('entering a shot persists it to hole_shots on save (#22)',
+      (tester) async {
+    final seed = await seedRound();
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('add_shot')));
+    await tester.pump();
+    // Club is a dropdown; open it and pick "Driver".
+    await tester.tap(find.byKey(const ValueKey('shot_club_0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Driver').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('shot_distance_0')), '268');
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final byHole = await tester
+        .runAsync(() => db.holeShotDao.watchForRound(seed.roundId).first);
+    expect(byHole![1], hasLength(1));
+    expect(byHole[1]!.single.club, 'Driver');
+    expect(byHole[1]!.single.distanceYards, 268);
+    expect(byHole[1]!.single.shotNumber, 1);
   });
 
   testWidgets(

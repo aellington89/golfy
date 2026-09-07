@@ -51,8 +51,8 @@ Future<_HarnessState> pumpCard(
   VoidCallback? onSave,
 }) async {
   // Default 800x600 test surface is shorter than the form. Resize so every
-  // row is on-screen and tappable without scrolling.
-  tester.view.physicalSize = const Size(800, 1400);
+  // row — including the Shots section — is on-screen and tappable.
+  tester.view.physicalSize = const Size(800, 2200);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -359,6 +359,66 @@ void main() {
       final btn =
           tester.widget<IconButton>(find.byKey(const ValueKey('hole_next')));
       expect(btn.onPressed, isNull);
+    });
+  });
+
+  group('HoleCard — shots (#22)', () {
+    testWidgets('Add shot appends a shot row', (tester) async {
+      final state = await pumpCard(tester, initial: HoleDraft.initial());
+      expect(find.byKey(const ValueKey('shot_row_0')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('add_shot')));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('shot_row_0')), findsOneWidget);
+      expect(state.draft.shots, hasLength(1));
+    });
+
+    testWidgets('choosing a club + typing distance updates the draft',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(shots: const [ShotDraft()]),
+      );
+      // Club is a dropdown; open it and pick "Driver".
+      await tester.tap(find.byKey(const ValueKey('shot_club_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Driver').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.byKey(const ValueKey('shot_distance_0')), '268');
+      await tester.pump();
+
+      expect(state.draft.shots.single.club, 'Driver');
+      expect(state.draft.shots.single.distanceYards, 268);
+    });
+
+    testWidgets('deleting a shot removes it', (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(shots: const [
+          ShotDraft(club: 'Driver'),
+          ShotDraft(club: '7 iron'),
+        ]),
+      );
+      await tester.tap(find.byKey(const ValueKey('shot_delete_0')));
+      await tester.pump();
+
+      expect(state.draft.shots, hasLength(1));
+      expect(state.draft.shots.single.club, '7 iron');
+    });
+
+    testWidgets('shows a saved shot\'s club in the dropdown', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial()
+            .copyWith(shots: const [ShotDraft(club: '5 Wood', distanceYards: 230)]),
+      );
+      final club = tester.widget<DropdownButtonFormField<String?>>(
+        find.byKey(const ValueKey('shot_club_0')),
+      );
+      expect(club.initialValue, '5 Wood');
     });
   });
 

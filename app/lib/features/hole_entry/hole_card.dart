@@ -251,6 +251,12 @@ class _HoleCardState extends State<HoleCard> {
                 min: d.putts + 1,
                 onChanged: (v) => widget.onChanged(d.copyWith(score: v)),
               ),
+              const _SectionHeader('Shots'),
+              _ShotsSection(
+                shots: d.shots,
+                onShotsChanged: (list) =>
+                    widget.onChanged(d.copyWith(shots: list)),
+              ),
               const SizedBox(height: 12),
               _NotesSection(
                 value: d.notes,
@@ -549,6 +555,264 @@ class _NotesSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The ordered per-hole shot list (#22): one [_ShotRow] per shot plus an
+/// "Add shot" button. Stateless w.r.t. the data — the parent owns the list and
+/// gets a whole new list on any add / edit / delete.
+class _ShotsSection extends StatelessWidget {
+  const _ShotsSection({required this.shots, required this.onShotsChanged});
+
+  final List<ShotDraft> shots;
+  final ValueChanged<List<ShotDraft>> onShotsChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < shots.length; i++)
+          _ShotRow(
+            key: ValueKey('shot_row_$i'),
+            index: i,
+            shot: shots[i],
+            onChanged: (s) {
+              final next = [...shots];
+              next[i] = s;
+              onShotsChanged(next);
+            },
+            onDelete: () => onShotsChanged([...shots]..removeAt(i)),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const ValueKey('add_shot'),
+            onPressed: () => onShotsChanged([...shots, const ShotDraft()]),
+            icon: const Icon(Icons.add),
+            label: const Text('Add shot'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One shot's editable row: club + distance (free entry) and lie + result
+/// (small preset dropdowns), with a delete action. The text fields are backed
+/// by controllers synced in [didUpdateWidget] so a value that changes from the
+/// outside (e.g. a deleted earlier shot shifting this row's data up) refreshes
+/// without clobbering active typing.
+class _ShotRow extends StatefulWidget {
+  const _ShotRow({
+    super.key,
+    required this.index,
+    required this.shot,
+    required this.onChanged,
+    required this.onDelete,
+  });
+
+  final int index;
+  final ShotDraft shot;
+  final ValueChanged<ShotDraft> onChanged;
+  final VoidCallback onDelete;
+
+  /// Standard bag, longest to shortest. Stored as text, so a value outside this
+  /// list still round-trips (the dropdown just shows it as unset).
+  static const List<String> clubs = [
+    'Driver',
+    '3 Wood',
+    '5 Wood',
+    '7 Wood',
+    '3 Hybrid',
+    '4 Hybrid',
+    '5 Hybrid',
+    '2 Iron',
+    '3 Iron',
+    '4 Iron',
+    '5 Iron',
+    '6 Iron',
+    '7 Iron',
+    '8 Iron',
+    '9 Iron',
+    'Pitching Wedge',
+    'Gap Wedge',
+    'Sand Wedge',
+    'Lob Wedge',
+    'Putter',
+  ];
+  static const List<String> lies = [
+    'Tee',
+    'Fairway',
+    'Light Rough',
+    'Deep Rough',
+    'Bunker',
+    'Green',
+    'Recovery',
+  ];
+  // A shot's normal end-spot is just the *next* shot's lie, so `result` only
+  // captures the terminal outcomes a next shot can't imply: the ball was holed,
+  // or a penalty was incurred (OB / water / lost). Leave it blank otherwise.
+  static const List<String> results = [
+    'Holed',
+    'Penalty',
+  ];
+
+  @override
+  State<_ShotRow> createState() => _ShotRowState();
+}
+
+class _ShotRowState extends State<_ShotRow> {
+  // Only distance is a free-entry field (club / lie / result are dropdowns).
+  late final TextEditingController _distance;
+
+  @override
+  void initState() {
+    super.initState();
+    _distance = TextEditingController(
+      text: widget.shot.distanceYards?.toString() ?? '',
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _ShotRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shot.distanceYards != int.tryParse(_distance.text)) {
+      _distance.text = widget.shot.distanceYards?.toString() ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _distance.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.shot;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 4, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Shot ${widget.index + 1}',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const Spacer(),
+                IconButton(
+                  key: ValueKey('shot_delete_${widget.index}'),
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Remove shot',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: widget.onDelete,
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: _ShotDropdown(
+                    fieldKey: ValueKey('shot_club_${widget.index}'),
+                    label: 'Club',
+                    value: s.club,
+                    options: _ShotRow.clubs,
+                    onChanged: (v) => widget.onChanged(s.copyWith(club: v)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 96,
+                  child: TextField(
+                    key: ValueKey('shot_distance_${widget.index}'),
+                    controller: _distance,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Dist',
+                      isDense: true,
+                      suffixText: 'yds',
+                    ),
+                    onChanged: (v) {
+                      final text = v.trim();
+                      final d = text.isEmpty
+                          ? null
+                          : (int.tryParse(text) ?? 0).clamp(0, 100000);
+                      widget.onChanged(s.copyWith(distanceYards: d));
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _ShotDropdown(
+                    fieldKey: ValueKey('shot_lie_${widget.index}'),
+                    label: 'Lie',
+                    value: s.lie,
+                    options: _ShotRow.lies,
+                    onChanged: (v) => widget.onChanged(s.copyWith(lie: v)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ShotDropdown(
+                    fieldKey: ValueKey('shot_result_${widget.index}'),
+                    label: 'Result',
+                    value: s.result,
+                    options: _ShotRow.results,
+                    onChanged: (v) => widget.onChanged(s.copyWith(result: v)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A small nullable preset dropdown for a shot's lie / result. The first item
+/// ("—") clears the value.
+class _ShotDropdown extends StatelessWidget {
+  const _ShotDropdown({
+    required this.fieldKey,
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final Key fieldKey;
+  final String label;
+  final String? value;
+  final List<String> options;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    // Guard against a stored value not in the option list (keeps the dropdown
+    // from asserting); such a value is treated as unset in the control.
+    final selected = options.contains(value) ? value : null;
+    return DropdownButtonFormField<String?>(
+      key: fieldKey,
+      initialValue: selected,
+      isDense: true,
+      decoration: InputDecoration(labelText: label, isDense: true),
+      items: [
+        const DropdownMenuItem<String?>(value: null, child: Text('—')),
+        for (final o in options)
+          DropdownMenuItem<String?>(value: o, child: Text(o)),
+      ],
+      onChanged: onChanged,
     );
   }
 }

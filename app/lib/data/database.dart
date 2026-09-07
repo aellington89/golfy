@@ -7,6 +7,7 @@ import 'daos/course_set_dao.dart';
 import 'daos/dashboard_dao.dart';
 import 'daos/event_dao.dart';
 import 'daos/hole_result_dao.dart';
+import 'daos/hole_shot_dao.dart';
 import 'daos/round_dao.dart';
 import 'schema_versions.dart';
 import 'tables/course_holes.dart';
@@ -15,6 +16,7 @@ import 'tables/course_sets.dart';
 import 'tables/courses.dart';
 import 'tables/events.dart';
 import 'tables/hole_results.dart';
+import 'tables/hole_shots.dart';
 import 'tables/rounds.dart';
 
 part 'database.g.dart';
@@ -28,6 +30,7 @@ part 'database.g.dart';
     CourseHoles,
     CourseSets,
     CourseSetYards,
+    HoleShots,
   ],
   daos: [
     CourseDao,
@@ -35,6 +38,7 @@ part 'database.g.dart';
     CourseSetDao,
     RoundDao,
     HoleResultDao,
+    HoleShotDao,
     DashboardDao,
     EventDao,
   ],
@@ -45,7 +49,7 @@ class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -112,6 +116,19 @@ class GolfyDatabase extends _$GolfyDatabase {
             await m.create(schema.idxCourseSetYardsSet);
             await m.addColumn(schema.rounds, schema.rounds.courseSetId);
             await m.create(schema.idxRoundsCourseSet);
+          },
+          // v6 -> v7: per-shot tracking (#22). Add the `hole_shots` list table
+          // and its index, then recreate `hole_results` WITHOUT the three flat
+          // shot columns (`tee_club`, `drive_distance_yards`,
+          // `approach_distance_yards`) they supersede — a `TableMigration`
+          // copies the surviving columns (and row ids, so the new hole_shots FK
+          // stays valid); its index is recreated after.
+          from6To7: (m, schema) async {
+            await m.createTable(schema.holeShots);
+            await m.create(schema.idxHoleShotsResult);
+            // Recreates hole_results without the flat shot columns; the
+            // TableMigration also re-creates the table's own idx_holes_round.
+            await m.alterTable(TableMigration(schema.holeResults));
           },
         ),
         beforeOpen: (details) async {

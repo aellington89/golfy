@@ -1,17 +1,73 @@
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart' show listEquals;
 
 import '../../data/database.dart';
+import '../../data/models/hole_shot_input.dart';
+
+/// One shot's editable fields in the Hole Entry form (#22). Value type; its
+/// `shotNumber` is assigned from position in [HoleDraft.shots] on save.
+class ShotDraft {
+  const ShotDraft({this.club, this.distanceYards, this.lie, this.result});
+
+  final String? club;
+  final int? distanceYards;
+  final String? lie;
+  final String? result;
+
+  factory ShotDraft.fromHoleShot(HoleShot s) => ShotDraft(
+        club: s.club,
+        distanceYards: s.distanceYards,
+        lie: s.lie,
+        result: s.result,
+      );
+
+  HoleShotInput toInput() => HoleShotInput(
+        club: club,
+        distanceYards: distanceYards,
+        lie: lie,
+        result: result,
+      );
+
+  ShotDraft copyWith({
+    Object? club = _sentinel,
+    Object? distanceYards = _sentinel,
+    Object? lie = _sentinel,
+    Object? result = _sentinel,
+  }) {
+    return ShotDraft(
+      club: identical(club, _sentinel) ? this.club : club as String?,
+      distanceYards: identical(distanceYards, _sentinel)
+          ? this.distanceYards
+          : distanceYards as int?,
+      lie: identical(lie, _sentinel) ? this.lie : lie as String?,
+      result: identical(result, _sentinel) ? this.result : result as String?,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ShotDraft &&
+          runtimeType == other.runtimeType &&
+          club == other.club &&
+          distanceYards == other.distanceYards &&
+          lie == other.lie &&
+          result == other.result;
+
+  @override
+  int get hashCode => Object.hash(club, distanceYards, lie, result);
+}
 
 /// Mutable in-memory state for a single hole's entry form. Lives in the
 /// parent [HoleEntryScreen]'s state map so the user can swipe between holes
 /// in the PageView without losing un-saved edits.
 ///
-/// Holds the fields surfaced in #10's spec, the `bunkerVisited` / `sandSave`
-/// pair, and `yards` — the hole's length, auto-filled from the course template
-/// when one exists and editable per round (#36). The three remaining
-/// `hole_results` columns (`driveDistanceYards`, `approachDistanceYards`,
-/// `teeClub`) are still written with placeholder defaults until the per-round
-/// shot-tracking inputs ship (tracked in issue #22).
+/// Holds the hole-level fields, `yards` (auto-filled from the round's yardage
+/// set, editable per round — #36), and an ordered [shots] list capturing the
+/// club / distance / lie / result of each shot (#22). `score` / `putts` stay
+/// the authoritative scoring fields; shots are optional and need not sum to the
+/// score. Shots persist to the separate `hole_shots` table via
+/// [GolfyRepository.saveHole].
 class HoleDraft {
   const HoleDraft({
     required this.par,
@@ -25,14 +81,14 @@ class HoleDraft {
     required this.bunkerVisited,
     required this.sandSave,
     required this.penaltyStrokes,
+    required this.shots,
     required this.notes,
   });
 
   /// Default values for a hole the user hasn't touched yet. Score mirrors
-  /// par so a hurried "save" still records an even-par score — visually
-  /// distinct on the dashboard if it wasn't intentional. Putts default to 1,
-  /// the common case for a routine one-putt / regulation hole, so the typical
-  /// entry needs fewer taps.
+  /// par so a hurried "save" still records an even-par score. Putts default to
+  /// 1, the common one-putt case, so the typical entry needs fewer taps. No
+  /// shots are pre-populated.
   factory HoleDraft.initial({int par = 4, int yards = 0}) {
     return HoleDraft(
       par: par,
@@ -46,14 +102,14 @@ class HoleDraft {
       bunkerVisited: false,
       sandSave: false,
       penaltyStrokes: 0,
+      shots: const [],
       notes: '',
     );
   }
 
-  /// Seed a draft from a previously-saved row. Reads the fields the form
-  /// exposes (now including `yards`); the three shot columns still deferred to
-  /// #22 are ignored on load and re-written with their placeholder defaults on
-  /// the next upsert.
+  /// Seed a draft from a previously-saved hole_results row. The [shots] are
+  /// stored separately (`hole_shots`) and attached by the caller via
+  /// `copyWith(shots: …)`, so they default to empty here.
   factory HoleDraft.fromHoleResult(HoleResult h) {
     return HoleDraft(
       par: h.par,
@@ -67,6 +123,7 @@ class HoleDraft {
       bunkerVisited: h.bunkerVisited,
       sandSave: h.sandSave,
       penaltyStrokes: h.penaltyStrokes,
+      shots: const [],
       notes: h.notes ?? '',
     );
   }
@@ -82,6 +139,10 @@ class HoleDraft {
   final bool bunkerVisited;
   final bool sandSave;
   final int penaltyStrokes;
+
+  /// The hole's ordered shot list (#22); may be empty.
+  final List<ShotDraft> shots;
+
   final String notes;
 
   HoleDraft copyWith({
@@ -96,6 +157,7 @@ class HoleDraft {
     bool? bunkerVisited,
     bool? sandSave,
     int? penaltyStrokes,
+    List<ShotDraft>? shots,
     String? notes,
   }) {
     return HoleDraft(
@@ -112,15 +174,14 @@ class HoleDraft {
       bunkerVisited: bunkerVisited ?? this.bunkerVisited,
       sandSave: sandSave ?? this.sandSave,
       penaltyStrokes: penaltyStrokes ?? this.penaltyStrokes,
+      shots: shots ?? this.shots,
       notes: notes ?? this.notes,
     );
   }
 
-  /// Builds the drift companion for an upsert. `yards` now carries the real
-  /// value (auto-filled from the course template, editable per round — #36).
-  /// The three shot columns (`driveDistanceYards`, `approachDistanceYards`,
-  /// `teeClub`) are still stamped with placeholder defaults until issue #22
-  /// adds their inputs.
+  /// Builds the drift companion for the hole_results upsert. Every column the
+  /// form captures carries its real value; the flat shot columns are gone (#22)
+  /// — shots persist separately via [shotInputs].
   HoleResultsCompanion toCompanion({
     required int roundId,
     required int holeNumber,
@@ -140,10 +201,21 @@ class HoleDraft {
       penaltyStrokes: penaltyStrokes,
       bunkerVisited: bunkerVisited,
       sandSave: sandSave,
-      driveDistanceYards: 0,
       notes: trimmedNotes.isEmpty ? const Value.absent() : Value(trimmedNotes),
     );
   }
+
+  /// The shot list as repository inputs (order preserved → shot numbers), for
+  /// [GolfyRepository.saveHole]. Empty shots (no club / distance / lie / result)
+  /// are dropped so an untouched trailing row isn't persisted.
+  List<HoleShotInput> shotInputs() => [
+        for (final s in shots)
+          if (s.club != null ||
+              s.distanceYards != null ||
+              s.lie != null ||
+              s.result != null)
+            s.toInput(),
+      ];
 
   @override
   bool operator ==(Object other) =>
@@ -161,6 +233,7 @@ class HoleDraft {
           bunkerVisited == other.bunkerVisited &&
           sandSave == other.sandSave &&
           penaltyStrokes == other.penaltyStrokes &&
+          listEquals(shots, other.shots) &&
           notes == other.notes;
 
   @override
@@ -176,6 +249,7 @@ class HoleDraft {
         bunkerVisited,
         sandSave,
         penaltyStrokes,
+        Object.hashAll(shots),
         notes,
       );
 }
