@@ -66,7 +66,13 @@ void main() {
         missedCut: missedCut,
       );
 
-  RoundWithCourse makeRound({required int id, required Event event}) {
+  RoundWithCourse makeRound({
+    required int id,
+    required Event event,
+    int holesEntered = 0,
+    int totalScore = 0,
+    int totalPar = 0,
+  }) {
     return RoundWithCourse(
       round: Round(
         id: id,
@@ -77,9 +83,9 @@ void main() {
       ),
       courseName: 'Pebble',
       event: event,
-      holesEntered: 0,
-      totalScore: 0,
-      totalPar: 0,
+      holesEntered: holesEntered,
+      totalScore: totalScore,
+      totalPar: totalPar,
     );
   }
 
@@ -121,6 +127,47 @@ void main() {
     await emit(tester, events: [makeEvent(id: 9, name: 'Empty Event')]);
 
     expect(find.text('No rounds yet'), findsOneWidget);
+  });
+
+  testWidgets('a scored event shows avg vs. par and best on its tile',
+      (tester) async {
+    final event = makeEvent(id: 7, name: 'Majors');
+    await tester.pumpWidget(wrap());
+    await emit(
+      tester,
+      events: [event],
+      rounds: [
+        // Two scored rounds: +3 and +1 → avg +2.0, best +1.
+        makeRound(
+            id: 1, event: event, holesEntered: 18, totalScore: 75, totalPar: 72),
+        makeRound(
+            id: 2, event: event, holesEntered: 18, totalScore: 73, totalPar: 72),
+      ],
+    );
+
+    expect(find.text('2 rounds'), findsOneWidget);
+    final avg =
+        tester.widget<Text>(find.byKey(const ValueKey('event_tile_avg_7')));
+    expect(avg.data, '+2.0');
+    final best =
+        tester.widget<Text>(find.byKey(const ValueKey('event_tile_best_7')));
+    expect(best.data, 'Best +1');
+  });
+
+  testWidgets('an event whose rounds are all empty shows the plain count only',
+      (tester) async {
+    final event = makeEvent(id: 8, name: 'Winter League');
+    await tester.pumpWidget(wrap());
+    await emit(
+      tester,
+      events: [event],
+      // Two attached rounds, neither with any holes entered (no score).
+      rounds: [makeRound(id: 1, event: event), makeRound(id: 2, event: event)],
+    );
+
+    expect(find.text('2 rounds'), findsOneWidget);
+    expect(find.byKey(const ValueKey('event_tile_avg_8')), findsNothing);
+    expect(find.byKey(const ValueKey('event_tile_best_8')), findsNothing);
   });
 
   testWidgets('FAB opens the Add Event dialog', (tester) async {

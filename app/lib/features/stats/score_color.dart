@@ -22,3 +22,22 @@ Color? scoreToParColor(int relativeToPar, ColorScheme scheme) {
   }
   return scheme.error;
 }
+
+/// Theme colour for an *average* score relative to par — the nullable decimal
+/// rendered by [formatSignedAverage] on the scoring summaries. Rounds to one
+/// decimal first so an average that displays as `"E"` stays neutral, then maps
+/// the sign onto [scoreToParColor]'s bands: any amount under par → green, any
+/// amount over → the theme's error red, even (or a `null` "no data" average) →
+/// `null` for the caller's default text colour.
+///
+/// Unlike [scoreToParColor], a small positive average (e.g. `+0.3`) is red
+/// rather than amber: an over-par *average* has no single-hole "one over"
+/// notion. Shared by the Dashboard, the Event detail card, and the Events list
+/// tiles so their averages agree.
+Color? avgScoreVsParColor(double? avg, ColorScheme scheme) {
+  if (avg == null) return null;
+  final rounded = (avg * 10).round() / 10;
+  if (rounded > 0) return scoreToParColor(2, scheme);
+  if (rounded < 0) return scoreToParColor(-1, scheme);
+  return null;
+}

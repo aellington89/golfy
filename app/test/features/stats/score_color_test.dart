@@ -54,4 +54,30 @@ void main() {
       expect(scoreToParColor(5, dark), dark.error);
     });
   });
+
+  group('avgScoreVsParColor', () {
+    test('a null average (no data) is null in either scheme', () {
+      expect(avgScoreVsParColor(null, light), isNull);
+      expect(avgScoreVsParColor(null, dark), isNull);
+    });
+
+    test('any positive average is the theme error colour (over par → red)', () {
+      // Unlike a single hole, a small over-par average is red, not amber.
+      expect(avgScoreVsParColor(0.3, light), light.error);
+      expect(avgScoreVsParColor(2.4, light), light.error);
+      expect(avgScoreVsParColor(2.4, dark), dark.error);
+    });
+
+    test('any negative average is green', () {
+      expect(avgScoreVsParColor(-0.3, light), Colors.green.shade700);
+      expect(avgScoreVsParColor(-1.5, light), Colors.green.shade700);
+      expect(avgScoreVsParColor(-1.5, dark), Colors.green.shade400);
+    });
+
+    test('an average that rounds to zero stays neutral (null)', () {
+      expect(avgScoreVsParColor(0.0, light), isNull);
+      expect(avgScoreVsParColor(0.04, light), isNull); // rounds to 0.0
+      expect(avgScoreVsParColor(-0.04, dark), isNull);
+    });
+  });
 }

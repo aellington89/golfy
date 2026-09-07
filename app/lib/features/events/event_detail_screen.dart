@@ -238,16 +238,9 @@ class _EventStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Colour the average to match its displayed value, mirroring the Dashboard:
-    // round to one decimal first so a value that renders "E" stays neutral.
-    final avg = stats.avgScoreVsPar;
-    final avgRounded = avg == null ? null : (avg * 10).round() / 10;
-    Color? avgColor;
-    if (avgRounded != null && avgRounded > 0) {
-      avgColor = scoreToParColor(2, theme.colorScheme);
-    } else if (avgRounded != null && avgRounded < 0) {
-      avgColor = scoreToParColor(-1, theme.colorScheme);
-    }
+    // Colour the average to match its displayed value via the shared helper, so
+    // this card agrees with the Dashboard and the Events list tiles.
+    final avgColor = avgScoreVsParColor(stats.avgScoreVsPar, theme.colorScheme);
     final best = stats.bestRound;
 
     return Card(
