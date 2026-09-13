@@ -11,12 +11,18 @@ class _Harness extends StatefulWidget {
     this.savedDraft,
     this.onSave,
     this.courseSetName,
+    this.strokeIndex,
+    this.onStrokeIndexChanged,
+    this.strokeIndexClashWith,
   });
 
   final HoleDraft initial;
   final HoleDraft? savedDraft;
   final VoidCallback? onSave;
   final String? courseSetName;
+  final int? strokeIndex;
+  final ValueChanged<int?>? onStrokeIndexChanged;
+  final int? strokeIndexClashWith;
 
   @override
   State<_Harness> createState() => _HarnessState();
@@ -42,6 +48,9 @@ class _HarnessState extends State<_Harness> {
           draft: _draft,
           savedDraft: widget.savedDraft,
           courseSetName: widget.courseSetName,
+          strokeIndex: widget.strokeIndex,
+          onStrokeIndexChanged: widget.onStrokeIndexChanged,
+          strokeIndexClashWith: widget.strokeIndexClashWith,
           onChanged: (d) => setState(() => _draft = d),
           onSave: widget.onSave ?? () {},
         ),
@@ -57,6 +66,9 @@ Future<_HarnessState> pumpCard(
   HoleDraft? savedDraft,
   VoidCallback? onSave,
   String? courseSetName,
+  int? strokeIndex,
+  ValueChanged<int?>? onStrokeIndexChanged,
+  int? strokeIndexClashWith,
 }) async {
   // Default 800x600 test surface is shorter than the form. Resize so every
   // row — including the Shots section — is on-screen and tappable.
@@ -69,6 +81,9 @@ Future<_HarnessState> pumpCard(
     savedDraft: savedDraft,
     onSave: onSave,
     courseSetName: courseSetName,
+    strokeIndex: strokeIndex,
+    onStrokeIndexChanged: onStrokeIndexChanged,
+    strokeIndexClashWith: strokeIndexClashWith,
   ));
   await tester.pumpAndSettle();
   return tester.state<_HarnessState>(find.byType(_Harness));
@@ -691,6 +706,117 @@ void main() {
         find.text('No yardage set on this round — yardages are not pre-filled'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('HoleCard — stroke index (#81)', () {
+    testWidgets('is absent unless the host wires it up', (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial());
+      expect(find.byKey(const ValueKey('stroke_index')), findsNothing);
+    });
+
+    testWidgets('shows the course value and says where it saves',
+        (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 7,
+        onStrokeIndexChanged: (_) {},
+      );
+
+      final field = tester.widget<TextField>(
+        find.byKey(const ValueKey('stroke_index')),
+      );
+      expect(field.controller!.text, '7');
+      // The one field here that edits the course rather than the round.
+      expect(find.text('Saved on the course, not this round'), findsOneWidget);
+    });
+
+    testWidgets('reports edits as a parsed value', (tester) async {
+      int? seen;
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: null,
+        onStrokeIndexChanged: (v) => seen = v,
+      );
+
+      await tester.enterText(
+          find.byKey(const ValueKey('stroke_index')), '12');
+      await tester.pumpAndSettle();
+      expect(seen, 12);
+
+      await tester.enterText(find.byKey(const ValueKey('stroke_index')), '');
+      await tester.pumpAndSettle();
+      expect(seen, isNull);
+    });
+
+    testWidgets('flags a value outside 1-18', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 19,
+        onStrokeIndexChanged: (_) {},
+      );
+      expect(find.text('Must be 1-18'), findsOneWidget);
+    });
+
+    testWidgets('flags a stroke index another hole already uses',
+        (tester) async {
+      // The card shows one hole at a time, so a clash in a set that must be a
+      // permutation of 1..18 would otherwise go unnoticed.
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 7,
+        strokeIndexClashWith: 12,
+        onStrokeIndexChanged: (_) {},
+      );
+      expect(find.text('Already used on hole 12'), findsOneWidget);
+    });
+
+    testWidgets('sits in the Tee section with par and yards', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 7,
+        onStrokeIndexChanged: (_) {},
+      );
+
+      double dy(Finder f) => tester.getTopLeft(f).dy;
+      expect(
+        dy(find.text('Tee')),
+        lessThan(dy(find.byKey(const ValueKey('stroke_index')))),
+      );
+      expect(
+        dy(find.byKey(const ValueKey('stroke_index'))),
+        lessThan(dy(find.text('Approach & Around the Green'))),
+      );
+    });
+
+    testWidgets('an unsaved stroke index shows the Unsaved chip',
+        (tester) async {
+      // Stroke index is not part of the draft, so without this the chip would
+      // read Saved while an edit was still pending.
+      final draft = HoleDraft.initial();
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: HoleCard(
+            holeNumber: 1,
+            draft: draft,
+            savedDraft: draft,
+            strokeIndex: 7,
+            strokeIndexDirty: true,
+            onStrokeIndexChanged: (_) {},
+            onChanged: (_) {},
+            onSave: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unsaved'), findsOneWidget);
+      expect(find.text('Saved'), findsNothing);
     });
   });
 }

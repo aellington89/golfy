@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -62,9 +63,14 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   int? _courseSetId;
   String? _courseSetName;
 
-  /// Stroke index per hole from the course card — not part of the round form,
-  /// but editable through the course-template sheet.
+  /// Stroke index per hole as the course has it stored.
   Map<int, int?> _strokeIndexByHole = const {};
+
+  /// Stroke-index edits made on the card but not yet saved. Kept apart from
+  /// `_drafts` because stroke index isn't a round field at all — it belongs to
+  /// the course, and [_saveHole] writes it there (#81). A hole is present here
+  /// only once its field has been touched.
+  final Map<int, int?> _pendingStrokeIndex = {};
 
   /// Whether the "update course as I play" default has been applied for this
   /// round yet. Reset with the drafts when the active round changes.
@@ -102,6 +108,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     _syncDefaultApplied = false;
     _drafts.clear();
     _dirty.clear();
+    _pendingStrokeIndex.clear();
     _currentPage = 0;
     if (_pageController.hasClients) {
       _pageController.jumpToPage(0);
@@ -140,6 +147,29 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     );
   }
 
+  /// The stroke index to show for a hole: the pending edit when the field has
+  /// been touched, otherwise what the course has stored.
+  int? _strokeIndexFor(int holeNumber) =>
+      _pendingStrokeIndex.containsKey(holeNumber)
+          ? _pendingStrokeIndex[holeNumber]
+          : _strokeIndexByHole[holeNumber];
+
+  bool _strokeIndexIsDirty(int holeNumber) =>
+      _pendingStrokeIndex.containsKey(holeNumber) &&
+      _pendingStrokeIndex[holeNumber] != _strokeIndexByHole[holeNumber];
+
+  /// Another hole already carrying [si], if any. Stroke index has to be a
+  /// permutation of 1..18, and a one-hole-at-a-time form can't show what's
+  /// taken — so the clash is surfaced on the field instead.
+  int? _strokeIndexClash(int holeNumber, int? si) {
+    if (si == null) return null;
+    for (var h = 1; h <= _holeCount; h++) {
+      if (h == holeNumber) continue;
+      if (_strokeIndexFor(h) == si) return h;
+    }
+    return null;
+  }
+
   Future<void> _saveHole(int roundId, int holeNumber) async {
     final draft = _drafts[holeNumber] ?? _initialForHole(holeNumber);
     final companion = draft.toCompanion(
@@ -151,17 +181,28 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     final syncCourse = ref.read(courseSyncEnabledProvider) && courseId != null;
     try {
       await repo.saveHole(companion, draft.shotInputs());
-      if (syncCourse) {
+      // Stroke index has no round-level column, so entering one on the card can
+      // only mean "record this on the course" — it saves whether or not par and
+      // yards are being synced. An out-of-range value is left unwritten rather
+      // than failing the hole save; the field shows the error.
+      final si = _strokeIndexFor(holeNumber);
+      final siValid = si == null || (si >= 1 && si <= 18);
+      final writeSi = _strokeIndexIsDirty(holeNumber) && siValid;
+
+      if (courseId != null && (syncCourse || writeSi)) {
         // A single-hole upsert, not a card replace: holes the player hasn't
-        // reached yet must keep whatever the course already has. Stroke index is
-        // left absent, so an existing one survives.
+        // reached yet must keep whatever the course already has. A column the
+        // companion doesn't carry is left untouched by the upsert.
         await repo.upsertCourseHole(CourseHolesCompanion.insert(
           courseId: courseId,
           holeNumber: holeNumber,
-          par: draft.par,
+          // With sync off this is the stored par, so an SI-only edit can't
+          // quietly rewrite the course's par from the round's.
+          par: syncCourse ? draft.par : (_parByHole[holeNumber] ?? draft.par),
+          strokeIndex: writeSi ? Value(si) : const Value.absent(),
         ));
         final setId = _courseSetId;
-        if (setId != null && draft.yards > 0) {
+        if (syncCourse && setId != null && draft.yards > 0) {
           await repo.upsertCourseSetYard(CourseSetYardsCompanion.insert(
             courseSetId: setId,
             holeNumber: holeNumber,
@@ -170,7 +211,12 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
         }
       }
       if (!mounted) return;
-      setState(() => _dirty.remove(holeNumber));
+      setState(() {
+        _dirty.remove(holeNumber);
+        // The stream now carries it; drop the pending copy so the field tracks
+        // the course again.
+        if (writeSi) _pendingStrokeIndex.remove(holeNumber);
+      });
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -389,6 +435,15 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
               });
             },
             courseSetName: _courseSetName,
+            strokeIndex: _strokeIndexFor(holeNumber),
+            strokeIndexDirty: _strokeIndexIsDirty(holeNumber),
+            strokeIndexClashWith: _strokeIndexClash(
+              holeNumber,
+              _strokeIndexFor(holeNumber),
+            ),
+            onStrokeIndexChanged: (v) => setState(
+              () => _pendingStrokeIndex[holeNumber] = v,
+            ),
             onSave: () => _saveHole(activeRoundId, holeNumber),
             onPrev: index == 0 ? null : () => _goToPage(index - 1),
             onNext:

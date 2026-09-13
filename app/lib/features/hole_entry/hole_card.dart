@@ -32,6 +32,10 @@ class HoleCard extends StatefulWidget {
     required this.onChanged,
     required this.onSave,
     this.courseSetName,
+    this.strokeIndex,
+    this.onStrokeIndexChanged,
+    this.strokeIndexClashWith,
+    this.strokeIndexDirty = false,
     this.onPrev,
     this.onNext,
   });
@@ -55,11 +59,27 @@ class HoleCard extends StatefulWidget {
   /// tee box the pre-filled number came from (#81).
   final String? courseSetName;
 
+  /// The hole's stroke index on the **course** (#81). Unlike every other field
+  /// on this card it has no round-level home — `hole_results` doesn't store it —
+  /// so editing it here edits the course template.
+  final int? strokeIndex;
+  final ValueChanged<int?>? onStrokeIndexChanged;
+
+  /// Another hole already carrying the entered stroke index, if any. Stroke
+  /// index has to be a permutation of 1..18 and this card shows one hole at a
+  /// time, so the clash is called out rather than left to be discovered later.
+  final int? strokeIndexClashWith;
+
+  /// Whether the stroke index differs from what the course has stored. Feeds
+  /// the Saved / Unsaved chip, which otherwise only tracks the round draft.
+  final bool strokeIndexDirty;
+
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
 
   bool get isSaved => savedDraft != null;
-  bool get isDirty => savedDraft == null || savedDraft != draft;
+  bool get isDirty =>
+      savedDraft == null || savedDraft != draft || strokeIndexDirty;
 
   @override
   State<HoleCard> createState() => _HoleCardState();
@@ -170,6 +190,14 @@ class _HoleCardState extends State<HoleCard> {
                   widget.onChanged(d.copyWith(yards: yards));
                 },
               ),
+              if (widget.onStrokeIndexChanged != null) ...[
+                const SizedBox(height: 12),
+                _StrokeIndexRow(
+                  value: widget.strokeIndex,
+                  clashWith: widget.strokeIndexClashWith,
+                  onChanged: widget.onStrokeIndexChanged!,
+                ),
+              ],
               const SizedBox(height: 12),
               _FairwayRow(
                 value: d.fairwayHit,
@@ -421,6 +449,82 @@ class _StepperRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The hole's stroke index, editable during play (#81).
+///
+/// Sits with par and yards because it is hole metadata you read off the same
+/// scorecard — but it is the one field here that belongs to the *course* rather
+/// than the round, so the helper text says so. That is also why it is worth
+/// having on this form at all: stroke index has no round-level column, so
+/// without it the only way to record one mid-round is a separate sheet.
+///
+/// Controller-backed and re-synced in [didUpdateWidget] so a value that changes
+/// from outside (a page swipe to another hole, or the course stream loading)
+/// refreshes without clobbering active typing.
+class _StrokeIndexRow extends StatefulWidget {
+  const _StrokeIndexRow({
+    required this.value,
+    required this.onChanged,
+    this.clashWith,
+  });
+
+  final int? value;
+  final int? clashWith;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  State<_StrokeIndexRow> createState() => _StrokeIndexRowState();
+}
+
+class _StrokeIndexRowState extends State<_StrokeIndexRow> {
+  late final TextEditingController _controller;
+
+  static String _text(int? v) => v?.toString() ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _text(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(covariant _StrokeIndexRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != int.tryParse(_controller.text)) {
+      _controller.text = _text(widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.value;
+    final outOfRange = v != null && (v < 1 || v > 18);
+    final clash = widget.clashWith;
+    return TextField(
+      key: const ValueKey('stroke_index'),
+      controller: _controller,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: 'Stroke index',
+        border: const OutlineInputBorder(),
+        hintText: 'e.g. 7',
+        errorText: outOfRange
+            ? "Must be 1-18"
+            : clash != null
+                ? "Already used on hole $clash"
+                : null,
+        helperText: "Saved on the course, not this round",
+      ),
+      onChanged: (raw) => widget.onChanged(int.tryParse(raw.trim())),
     );
   }
 }

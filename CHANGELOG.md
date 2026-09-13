@@ -46,6 +46,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   "the blues, minus 20" — instead of retyping them. The copy lands in the editor
   as unsaved changes for review, because real tee boxes differ hole by hole and
   an offset is only ever an approximation.
+- **Stroke index is enterable from the hole entry form** ([#81]): it sits in the
+  Tee section with par and yards, where you read it off the same scorecard.
+  Because it has no round-level column, it is the one field on that form that
+  edits the course rather than the round — the helper text says so — and it
+  saves whether or not "Update course as I play" is on, since gating it would
+  make typing in the field do nothing. Entering one that another hole already
+  uses is called out on the field: stroke index has to be a permutation of 1-18
+  and a form showing one hole at a time cannot otherwise reveal the clash.
 - **Add a yardage set while starting a round** ([#81]): the set picker in New
   Round now offers "Add new set…", matching the "Add new…" affordance the course
   and event pickers already have. A tee box you have not recorded yet no longer

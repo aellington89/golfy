@@ -662,6 +662,120 @@ void main() {
       expect(sets, isEmpty);
     });
 
+    testWidgets('a stroke index typed on the card saves to the course',
+        (tester) async {
+      final seed = await seedRound();
+      await open(tester, seed.roundId);
+
+      await tester.enterText(
+          find.byKey(const ValueKey('stroke_index')), '7');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card!.single.holeNumber, 1);
+      expect(card.single.strokeIndex, 7);
+    });
+
+    testWidgets('a stroke index saves even with course sync off',
+        (tester) async {
+      // It has no round-level column, so entering one can only mean "record
+      // this on the course" — gating it behind the sync toggle would make
+      // typing in the field do nothing.
+      final seed = await seedRound();
+      final container = await open(tester, seed.roundId);
+      await courseMenu(tester, 'Update course as I play');
+      expect(container.read(courseSyncEnabledProvider), isFalse);
+
+      await tester.enterText(
+          find.byKey(const ValueKey('stroke_index')), '5');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card!.single.strokeIndex, 5);
+    });
+
+    testWidgets('an SI-only edit does not rewrite the course par',
+        (tester) async {
+      // With sync off the round's par must not leak into the course just
+      // because a stroke index was entered.
+      final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      await fx.insertCourseHoles(cid, par: 5);
+      final rid = await fx.insertRound(cid, date: '2026-05-25');
+      final container = await open(tester, rid);
+      expect(container.read(courseSyncEnabledProvider), isFalse,
+          reason: 'the course already has a card');
+
+      await tester.tap(find.descendant(
+        of: find.byKey(const ValueKey('hole_card_1')),
+        matching: find.text('3'),
+      ));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const ValueKey('stroke_index')), '4');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final hole1 = (await tester
+              .runAsync(() => db.courseHoleDao.getForCourse(cid)))!
+          .firstWhere((h) => h.holeNumber == 1);
+      expect(hole1.strokeIndex, 4);
+      expect(hole1.par, 5, reason: 'the course keeps its own par');
+    });
+
+    testWidgets('an out-of-range stroke index is not written, and the hole '
+        'still saves', (tester) async {
+      final seed = await seedRound();
+      await open(tester, seed.roundId);
+
+      await tester.enterText(
+          find.byKey(const ValueKey('stroke_index')), '25');
+      await tester.pumpAndSettle();
+      expect(find.text('Must be 1-18'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final holes = await tester
+          .runAsync(() => db.holeResultDao.watchForRound(seed.roundId).first);
+      expect(holes, hasLength(1), reason: 'the round data still saved');
+      // Course sync is armed (this course has no card), so par is still
+      // written — but the invalid stroke index must not be.
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card!.single.strokeIndex, isNull,
+          reason: 'the bad stroke index was not written');
+    });
+
+    testWidgets('warns when another hole already uses that stroke index',
+        (tester) async {
+      final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      await fx.insertCourseHoles(cid, par: 4, strokeIndex: 7);
+      final rid = await fx.insertRound(cid, date: '2026-05-25');
+      await open(tester, rid);
+
+      // Every hole on this course already carries 7, so hole 1 clashes with 2.
+      expect(find.textContaining('Already used on hole'), findsOneWidget);
+    });
+
     testWidgets('the sheet saves a stroke index the round form cannot capture',
         (tester) async {
       final seed = await seedRound();
