@@ -252,8 +252,14 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
         itemBuilder: (context, index) {
           final holeNumber = index + 1;
           final draft = _drafts[holeNumber] ?? _initialForHole(holeNumber);
+          // Attach the saved shots here too. `fromHoleResult` leaves `shots`
+          // empty (they live in a separate table), while the live draft was
+          // seeded *with* them in `_seedFromSaved` — and HoleDraft equality
+          // compares the shot lists, so without this every saved hole that has
+          // a shot would read "Unsaved" forever.
           final savedDraft = savedByHole.containsKey(holeNumber)
               ? HoleDraft.fromHoleResult(savedByHole[holeNumber]!)
+                  .copyWith(shots: _shotsByHole[holeNumber] ?? const [])
               : null;
           return HoleCard(
             key: ValueKey('hole_card_$holeNumber'),

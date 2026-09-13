@@ -473,6 +473,42 @@ void main() {
     expect(byHole[1]!.single.shotNumber, 1);
   });
 
+  testWidgets('a saved hole that has shots reads "Saved", not "Unsaved" (#81)',
+      (tester) async {
+    // The live draft is seeded with its shots while the saved-state snapshot is
+    // built from hole_results alone, which carries none. HoleDraft equality
+    // compares the shot lists, so if the two disagree every saved hole with a
+    // shot is permanently dirty.
+    final seed = await seedRound();
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('add_shot')));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const ValueKey('hole_card_1'));
+    expect(
+      find.descendant(of: card, matching: find.text('Saved')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.text('Unsaved')),
+      findsNothing,
+    );
+  });
+
   testWidgets(
       'completing the final hole during entry shows a "Finish Round" FAB',
       (tester) async {

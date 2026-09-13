@@ -18,6 +18,11 @@ class HoleShots extends Table {
   IntColumn get shotNumber =>
       integer().customConstraint('NOT NULL CHECK (shot_number >= 1)')();
   TextColumn get club => text().nullable()();
+  /// Distance **remaining to the pin** when the shot was played — not how far
+  /// the shot travelled. So a tee shot's distance is the hole's yardage, and the
+  /// figure shrinks as the hole is played out. Putts leave it null; a putt is
+  /// measured in feet on the green, and `putts` on [HoleResults] already counts
+  /// them.
   IntColumn get distanceYards => integer()
       .nullable()
       .customConstraint('CHECK (distance_yards >= 0)')();

@@ -79,6 +79,17 @@ Future<void> tapSegment(
   await tester.pumpAndSettle();
 }
 
+/// The club the shot row at [index] is currently *displaying* — as opposed to
+/// what the draft holds. Distinguishing the two is the point of the
+/// stale-dropdown regression test.
+String? clubShown(WidgetTester tester, int index) {
+  return tester
+      .widget<DropdownButton<String?>>(
+        find.byKey(ValueKey('shot_club_$index')),
+      )
+      .value;
+}
+
 void main() {
   group('HoleCard — par/fairway conditional', () {
     testWidgets('par=3 disables the fairway control and shows the N/A label',
@@ -415,10 +426,146 @@ void main() {
         initial: HoleDraft.initial()
             .copyWith(shots: const [ShotDraft(club: '5 Wood', distanceYards: 230)]),
       );
-      final club = tester.widget<DropdownButtonFormField<String?>>(
-        find.byKey(const ValueKey('shot_club_0')),
+      expect(clubShown(tester, 0), '5 Wood');
+    });
+
+    testWidgets('deleting a shot refreshes the rows that shift up (#81)',
+        (tester) async {
+      // Rows are keyed by index, so deleting shot 1 moves shot 2's data into
+      // row 0's widget state. A DropdownButtonFormField would keep displaying
+      // the deleted club; the controlled DropdownButton must not.
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(shots: const [
+          ShotDraft(club: 'Driver'),
+          ShotDraft(club: '7 Iron'),
+        ]),
       );
-      expect(club.initialValue, '5 Wood');
+      await tester.tap(find.byKey(const ValueKey('shot_delete_0')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots.single.club, '7 Iron');
+      expect(clubShown(tester, 0), '7 Iron');
+    });
+  });
+
+  group('HoleCard — smarter shots (#81)', () {
+    testWidgets('Add shot pre-fills the tee shot instead of a blank row',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('add_shot')));
+      await tester.pumpAndSettle();
+
+      final shot = state.draft.shots.single;
+      expect(shot.lie, 'Tee');
+      expect(shot.distanceYards, 420);
+      expect(shot.club, 'Driver');
+    });
+
+    testWidgets('an overridden suggestion sticks across rebuilds',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420),
+      );
+      await tester.tap(find.byKey(const ValueKey('add_shot')));
+      await tester.pumpAndSettle();
+      expect(state.draft.shots.single.club, 'Driver');
+
+      // Override the suggested club, then force a rebuild by touching an
+      // unrelated field. The choice must survive.
+      await tester.tap(find.byKey(const ValueKey('shot_club_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('3 Wood').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('Score_inc')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots.single.club, '3 Wood');
+      expect(clubShown(tester, 0), '3 Wood');
+    });
+
+    testWidgets('typing a distance fills an empty club but never replaces one',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(shots: const [ShotDraft()]),
+      );
+
+      await tester.enterText(
+          find.byKey(const ValueKey('shot_distance_0')), '150');
+      await tester.pumpAndSettle();
+      expect(state.draft.shots.single.club, '7 Iron');
+
+      // A club the user picked is never overwritten by a later distance edit.
+      await tester.tap(find.byKey(const ValueKey('shot_club_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('9 Iron').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const ValueKey('shot_distance_0')), '120');
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots.single.club, '9 Iron');
+    });
+
+    testWidgets('Build from score scaffolds the whole hole, then hides itself',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420)
+            .copyWith(score: 4, putts: 2, fairwayHit: true),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('build_shots_from_score')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots, hasLength(4));
+      expect(state.draft.shots.first.lie, 'Tee');
+      expect(state.draft.shots.last.result, 'Holed');
+      expect(find.byKey(const ValueKey('build_shots_from_score')), findsNothing,
+          reason: 'rebuilding an edited list would destroy work');
+    });
+
+    testWidgets(
+        'warns on a contradiction and clears when the user reconciles it',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420).copyWith(shots: const [
+          ShotDraft(club: 'Driver', lie: 'Tee'),
+          ShotDraft(club: 'Sand Wedge', lie: 'Bunker'),
+        ]),
+      );
+      expect(find.byKey(const ValueKey('shot_warnings')), findsOneWidget);
+
+      // Turning "Bunker visited" on resolves it — without anything being saved.
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Bunker visited'));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.bunkerVisited, isTrue);
+      expect(find.byKey(const ValueKey('shot_warnings')), findsNothing);
+    });
+
+    testWidgets('a hole with no shots still saves', (tester) async {
+      var saved = false;
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        onSave: () => saved = true,
+      );
+
+      expect(find.byKey(const ValueKey('shot_warnings')), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.pumpAndSettle();
+
+      expect(saved, isTrue);
+      expect(state.draft.shotInputs(), isEmpty);
     });
   });
 

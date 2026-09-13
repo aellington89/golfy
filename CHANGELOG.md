@@ -8,6 +8,43 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+
+- **Shots that fill themselves in from the hole you just described** ([#81]):
+  adding a shot no longer hands you four blank fields. The first shot is played
+  from the `Tee` with the hole's full yardage still in front of it; after that
+  each row chains from what the card already knows — a hit fairway puts the next
+  shot on the fairway, a missed one in the light rough, and once the full swings
+  implied by `score - putts` are used up the remaining rows become putts on the
+  green. A **Build from score** button scaffolds the whole hole in one tap. The
+  distance field is the distance *remaining to the pin*, so it steps down by the
+  previous club's typical carry and suggests the club to play from what is left;
+  typing a distance yourself fills an empty club but never replaces one you
+  chose. Every suggestion is a starting point — shots stay optional, a shot-less
+  hole still saves, and nothing is ever rewritten behind you.
+- **Reconciliation notes when shots and the hole disagree** ([#81]): recording a
+  bunker lie with "Bunker visited" off, a putts count the putter shots
+  contradict, a fairway flag shot 2 disagrees with, a shot marked holed that
+  isn't last, or more shots than the score allows now surfaces a quiet note under
+  the Shots section. It warns rather than corrects — silently rewriting your
+  entry could push the hole into a state the database rejects — and it never
+  blocks a save. A partly-entered list is left alone: shots need not sum to the
+  score, so stopping after the interesting ones stays a legitimate way to use the
+  feature.
+
+### Fixed
+
+- **A saved hole with shots no longer reads "Unsaved" forever** ([#81]): the
+  saved-state snapshot was rebuilt from `hole_results` alone, which carries no
+  shots, while the live draft was seeded with them — and hole equality compares
+  the shot lists, so any hole with at least one shot looked permanently dirty the
+  instant it was saved.
+- **Shot dropdowns no longer show a deleted shot's values** ([#81]): shot rows are
+  keyed by position, so removing one shifts every later shot's data up into a
+  reused row. The club / lie / result controls seeded themselves once and never
+  refreshed, leaving the removed shot's club on screen while the stored data was
+  correct. They are now driven directly by the draft.
+
 ## [0.2.0] - 2026-09-07
 
 Golfy's largest release yet. It completes the **Courses & yardage** milestone and
@@ -337,3 +374,4 @@ Phase 1 — data layer and navigation shell.
 [#47]: https://github.com/aellington89/golfy/issues/47
 [#56]: https://github.com/aellington89/golfy/issues/56
 [#63]: https://github.com/aellington89/golfy/issues/63
+[#81]: https://github.com/aellington89/golfy/issues/81

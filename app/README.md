@@ -49,14 +49,20 @@ app/lib/
 │   ├── database_provider.dart     # Riverpod provider for the DB
 │   ├── repository.dart            # GolfyRepository (single facade)
 │   ├── repository_provider.dart   # Riverpod providers for repo + streams
-│   ├── tables/                    # Courses, Rounds, HoleResults, Events (drift)
-│   ├── daos/                      # CourseDao, RoundDao, HoleResultDao, DashboardDao, EventDao
-│   └── models/                    # RoundWithCourse (+ its event), DashboardStats value classes
+│   ├── schema_versions.dart       # generated stepByStep migration helpers
+│   ├── tables/                    # Courses, CourseHoles, CourseSets, CourseSetYards,
+│   │                              #   Rounds, HoleResults, HoleShots, Events (drift)
+│   ├── daos/                      # CourseDao, CourseHoleDao, CourseSetDao, RoundDao,
+│   │                              #   HoleResultDao, HoleShotDao, DashboardDao, EventDao
+│   └── models/                    # RoundWithCourse (+ its event), HoleShotInput,
+│                                  #   DashboardStats / EventStats value classes
 ├── features/
-│   ├── courses/                   # CoursePicker bottom sheet + AddCourseDialog
+│   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
+│   │                              #   per-course par & stroke-index card, yardage sets (#36)
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
-│   ├── hole_entry/                # 18-card per-hole entry form + in-memory HoleDraft
+│   ├── hole_entry/                # 18-card per-hole entry form, in-memory HoleDraft,
+│   │                              #   per-shot list + shot_inference suggestions (#22, #81)
 │   ├── events/                    # EventPicker + AddEventDialog, event-result formatter + edit-result dialog (#35, #51)
 │   ├── dashboard/                 # lifetime-stats screen
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
@@ -67,19 +73,27 @@ app/lib/
 
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
+├── migration_test.dart            # drift SchemaVerifier: every vN -> vN+1 step
 ├── widget_test.dart               # AppShell smoke test
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
 ├── dao/
 │   ├── _fixtures.dart             # shared in-memory DB fixtures
 │   ├── course_dao_test.dart
+│   ├── course_hole_dao_test.dart
+│   ├── course_set_dao_test.dart
 │   ├── round_dao_test.dart
 │   ├── event_dao_test.dart
+│   ├── event_stats_dao_test.dart
 │   ├── hole_result_dao_test.dart
+│   ├── hole_shot_dao_test.dart
 │   └── dashboard_dao_test.dart    # aggregation correctness against a seeded fixture
+├── generated_migrations/          # drift-generated per-version schemas (committed)
 ├── features/                      # widget tests + pure-formatter unit tests (mirrors lib/features/)
-│   ├── courses/                   # course_picker, add_course_dialog
+│   ├── courses/                   # courses_screen, course_picker, add/edit dialogs,
+│   │                              #   course_holes_screen, course_set_yards_screen
 │   ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
-│   ├── hole_entry/                # hole_entry_screen, hole_card
+│   ├── hole_entry/                # hole_entry_screen, hole_card, hole_draft,
+│   │                              #   shot_inference (pure suggestion/warning rules)
 │   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
@@ -139,7 +153,7 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (390 tests)
+flutter test                           # everything (439 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
