@@ -3448,14 +3448,21 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
   final int holeResultId;
   final int shotNumber;
   final String? club;
+
+  /// Distance **remaining to the pin** when the shot was played — not how far
+  /// the shot travelled. So a tee shot's distance is the hole's yardage, and the
+  /// figure shrinks as the hole is played out. Putts leave it null; a putt is
+  /// measured in feet on the green, and `putts` on [HoleResults] already counts
+  /// them.
   final int? distanceYards;
 
-  /// Where the shot was played from — e.g. Tee / Fairway / Rough / Bunker /
-  /// Green / Recovery. Free-ish text (a small preset list in the UI).
+  /// Where the shot was played from — Tee / Fairway / Light Rough / Deep Rough
+  /// / Bunker / Green / Recovery. Free-ish text (a small preset list in the UI).
   final String? lie;
 
-  /// Where the shot finished / its outcome — e.g. Fairway / Green / Rough /
-  /// Bunker / Sand / Holed / Penalty. Free-ish text (a small preset list).
+  /// Terminal outcome only — `Holed` or `Penalty`. A shot's normal end-spot is
+  /// the *next* shot's [lie], so `result` is left null except for those two
+  /// cases a next shot can't imply. Free-ish text (a small preset list).
   final String? result;
   const HoleShot({
     required this.id,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/par_selector.dart';
+
 import 'hole_draft.dart';
+import 'shot_inference.dart';
 
 /// Form for a single hole's entry. Stateless w.r.t. the draft data — the
 /// parent owns the [HoleDraft] map and pushes a fresh card each rebuild.
@@ -28,6 +31,11 @@ class HoleCard extends StatefulWidget {
     required this.savedDraft,
     required this.onChanged,
     required this.onSave,
+    this.courseSetName,
+    this.strokeIndex,
+    this.onStrokeIndexChanged,
+    this.strokeIndexClashWith,
+    this.strokeIndexDirty = false,
     this.onPrev,
     this.onNext,
   });
@@ -46,11 +54,32 @@ class HoleCard extends StatefulWidget {
   /// Navigates to the previous / next hole in the parent's PageView.
   /// `null` means "no neighbour in that direction" (hole 1 / hole 18) and
   /// the corresponding chevron renders disabled.
+  /// Name of the yardage set this round is played from, or null when it has
+  /// none. Labels the yards field so it's obvious at the point of entry which
+  /// tee box the pre-filled number came from (#81).
+  final String? courseSetName;
+
+  /// The hole's stroke index on the **course** (#81). Unlike every other field
+  /// on this card it has no round-level home — `hole_results` doesn't store it —
+  /// so editing it here edits the course template.
+  final int? strokeIndex;
+  final ValueChanged<int?>? onStrokeIndexChanged;
+
+  /// Another hole already carrying the entered stroke index, if any. Stroke
+  /// index has to be a permutation of 1..18 and this card shows one hole at a
+  /// time, so the clash is called out rather than left to be discovered later.
+  final int? strokeIndexClashWith;
+
+  /// Whether the stroke index differs from what the course has stored. Feeds
+  /// the Saved / Unsaved chip, which otherwise only tracks the round draft.
+  final bool strokeIndexDirty;
+
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
 
   bool get isSaved => savedDraft != null;
-  bool get isDirty => savedDraft == null || savedDraft != draft;
+  bool get isDirty =>
+      savedDraft == null || savedDraft != draft || strokeIndexDirty;
 
   @override
   State<HoleCard> createState() => _HoleCardState();
@@ -138,8 +167,8 @@ class _HoleCardState extends State<HoleCard> {
                 ],
               ),
               const _SectionHeader('Tee'),
-              _ParRow(
-                par: d.par,
+              ParSelector(
+                value: d.par,
                 onChanged: (newPar) {
                   // Switching to par 3 wipes fairwayHit — par 3s have no
                   // fairway and the DAO will throw otherwise.
@@ -153,6 +182,7 @@ class _HoleCardState extends State<HoleCard> {
               const SizedBox(height: 12),
               _YardsRow(
                 controller: _yardsController,
+                courseSetName: widget.courseSetName,
                 onChanged: (v) {
                   // Numeric keyboard + a >= 0 floor mirror the `yards >= 0`
                   // CHECK; an empty field means "unknown" and stores 0.
@@ -160,6 +190,14 @@ class _HoleCardState extends State<HoleCard> {
                   widget.onChanged(d.copyWith(yards: yards));
                 },
               ),
+              if (widget.onStrokeIndexChanged != null) ...[
+                const SizedBox(height: 12),
+                _StrokeIndexRow(
+                  value: widget.strokeIndex,
+                  clashWith: widget.strokeIndexClashWith,
+                  onChanged: widget.onStrokeIndexChanged!,
+                ),
+              ],
               const SizedBox(height: 12),
               _FairwayRow(
                 value: d.fairwayHit,
@@ -253,7 +291,7 @@ class _HoleCardState extends State<HoleCard> {
               ),
               const _SectionHeader('Shots'),
               _ShotsSection(
-                shots: d.shots,
+                draft: d,
                 onShotsChanged: (list) =>
                     widget.onChanged(d.copyWith(shots: list)),
               ),
@@ -324,44 +362,21 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _ParRow extends StatelessWidget {
-  const _ParRow({required this.par, required this.onChanged});
-
-  final int par;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Par',
-        border: OutlineInputBorder(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 3, label: Text('3')),
-            ButtonSegment(value: 4, label: Text('4')),
-            ButtonSegment(value: 5, label: Text('5')),
-          ],
-          selected: {par},
-          onSelectionChanged: (sel) => onChanged(sel.first),
-        ),
-      ),
-    );
-  }
-}
-
-/// Free-entry field for the hole's length. A plain [TextField] (driven by a
-/// parent-owned controller) rather than a stepper — yardages span a wide range,
-/// so tapping +/- hundreds of times would be absurd. Auto-filled from the
-/// course template when one exists (#36) and freely editable per round.
+/// The hole's yardage, labelled with the yardage set it came from.
+///
+/// Naming the set here rather than only in the app bar puts it exactly where
+/// the number it explains appears — and when the round has no set, says so,
+/// because that is why the field arrived blank (#81).
 class _YardsRow extends StatelessWidget {
-  const _YardsRow({required this.controller, required this.onChanged});
+  const _YardsRow({
+    required this.controller,
+    required this.onChanged,
+    this.courseSetName,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final String? courseSetName;
 
   @override
   Widget build(BuildContext context) {
@@ -369,11 +384,14 @@ class _YardsRow extends StatelessWidget {
       key: const ValueKey('yards'),
       controller: controller,
       keyboardType: TextInputType.number,
-      decoration: const InputDecoration(
-        labelText: 'Yards',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: courseSetName == null ? 'Yards' : 'Yards · $courseSetName',
+        border: const OutlineInputBorder(),
         hintText: 'e.g. 420',
         suffixText: 'yds',
+        helperText: courseSetName == null
+            ? "No yardage set on this round — yardages are not pre-filled"
+            : null,
       ),
       onChanged: onChanged,
     );
@@ -431,6 +449,82 @@ class _StepperRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The hole's stroke index, editable during play (#81).
+///
+/// Sits with par and yards because it is hole metadata you read off the same
+/// scorecard — but it is the one field here that belongs to the *course* rather
+/// than the round, so the helper text says so. That is also why it is worth
+/// having on this form at all: stroke index has no round-level column, so
+/// without it the only way to record one mid-round is a separate sheet.
+///
+/// Controller-backed and re-synced in [didUpdateWidget] so a value that changes
+/// from outside (a page swipe to another hole, or the course stream loading)
+/// refreshes without clobbering active typing.
+class _StrokeIndexRow extends StatefulWidget {
+  const _StrokeIndexRow({
+    required this.value,
+    required this.onChanged,
+    this.clashWith,
+  });
+
+  final int? value;
+  final int? clashWith;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  State<_StrokeIndexRow> createState() => _StrokeIndexRowState();
+}
+
+class _StrokeIndexRowState extends State<_StrokeIndexRow> {
+  late final TextEditingController _controller;
+
+  static String _text(int? v) => v?.toString() ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _text(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(covariant _StrokeIndexRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != int.tryParse(_controller.text)) {
+      _controller.text = _text(widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.value;
+    final outOfRange = v != null && (v < 1 || v > 18);
+    final clash = widget.clashWith;
+    return TextField(
+      key: const ValueKey('stroke_index'),
+      controller: _controller,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: 'Stroke index',
+        border: const OutlineInputBorder(),
+        hintText: 'e.g. 7',
+        errorText: outOfRange
+            ? "Must be 1-18"
+            : clash != null
+                ? "Already used on hole $clash"
+                : null,
+        helperText: "Saved on the course, not this round",
+      ),
+      onChanged: (raw) => widget.onChanged(int.tryParse(raw.trim())),
     );
   }
 }
@@ -559,20 +653,28 @@ class _NotesSection extends StatelessWidget {
   }
 }
 
-/// The ordered per-hole shot list (#22): one [_ShotRow] per shot plus an
-/// "Add shot" button. Stateless w.r.t. the data — the parent owns the list and
-/// gets a whole new list on any add / edit / delete.
+/// The ordered per-hole shot list (#22): one [_ShotRow] per shot, a
+/// reconciliation banner, and the controls that add rows. Stateless w.r.t. the
+/// data — the parent owns the list and gets a whole new list on any add / edit
+/// / delete.
+///
+/// Takes the whole [draft], not just the shots, because both the suggestions
+/// (#81) and the warnings are derived from the hole-level fields the same card
+/// captures — par, yards, score, putts, fairwayHit, gir, bunkerVisited.
 class _ShotsSection extends StatelessWidget {
-  const _ShotsSection({required this.shots, required this.onShotsChanged});
+  const _ShotsSection({required this.draft, required this.onShotsChanged});
 
-  final List<ShotDraft> shots;
+  final HoleDraft draft;
   final ValueChanged<List<ShotDraft>> onShotsChanged;
 
   @override
   Widget build(BuildContext context) {
+    final shots = draft.shots;
+    final warnings = shotWarnings(draft);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (warnings.isNotEmpty) _ShotWarnings(warnings: warnings),
         for (var i = 0; i < shots.length; i++)
           _ShotRow(
             key: ValueKey('shot_row_$i'),
@@ -587,14 +689,81 @@ class _ShotsSection extends StatelessWidget {
           ),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            key: const ValueKey('add_shot'),
-            onPressed: () => onShotsChanged([...shots, const ShotDraft()]),
-            icon: const Icon(Icons.add),
-            label: const Text('Add shot'),
+          child: Wrap(
+            spacing: 8,
+            children: [
+              TextButton.icon(
+                key: const ValueKey('add_shot'),
+                // Pre-filled from the hole's own data rather than blank (#81);
+                // every field stays overrideable.
+                onPressed: () =>
+                    onShotsChanged([...shots, suggestNextShot(draft)]),
+                icon: const Icon(Icons.add),
+                label: const Text('Add shot'),
+              ),
+              // Only offered while the list is empty: rebuilding a list the user
+              // has already edited would destroy work, and nothing in this app
+              // has an undo.
+              if (shots.isEmpty)
+                TextButton.icon(
+                  key: const ValueKey('build_shots_from_score'),
+                  onPressed: () =>
+                      onShotsChanged(scaffoldShotsFromScore(draft)),
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: const Text('Build from score'),
+                ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Non-blocking notes about shots that disagree with the hole-level fields.
+/// Informational on purpose — the entry is never corrected automatically and
+/// saving is never blocked (see [shotWarnings]).
+class _ShotWarnings extends StatelessWidget {
+  const _ShotWarnings({required this.warnings});
+
+  final List<String> warnings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      key: const ValueKey('shot_warnings'),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 18,
+            color: theme.colorScheme.onTertiaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final w in warnings)
+                  Text(
+                    w,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onTertiaryContainer,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -617,47 +786,6 @@ class _ShotRow extends StatefulWidget {
   final ShotDraft shot;
   final ValueChanged<ShotDraft> onChanged;
   final VoidCallback onDelete;
-
-  /// Standard bag, longest to shortest. Stored as text, so a value outside this
-  /// list still round-trips (the dropdown just shows it as unset).
-  static const List<String> clubs = [
-    'Driver',
-    '3 Wood',
-    '5 Wood',
-    '7 Wood',
-    '3 Hybrid',
-    '4 Hybrid',
-    '5 Hybrid',
-    '2 Iron',
-    '3 Iron',
-    '4 Iron',
-    '5 Iron',
-    '6 Iron',
-    '7 Iron',
-    '8 Iron',
-    '9 Iron',
-    'Pitching Wedge',
-    'Gap Wedge',
-    'Sand Wedge',
-    'Lob Wedge',
-    'Putter',
-  ];
-  static const List<String> lies = [
-    'Tee',
-    'Fairway',
-    'Light Rough',
-    'Deep Rough',
-    'Bunker',
-    'Green',
-    'Recovery',
-  ];
-  // A shot's normal end-spot is just the *next* shot's lie, so `result` only
-  // captures the terminal outcomes a next shot can't imply: the ball was holed,
-  // or a penalty was incurred (OB / water / lost). Leave it blank otherwise.
-  static const List<String> results = [
-    'Holed',
-    'Penalty',
-  ];
 
   @override
   State<_ShotRow> createState() => _ShotRowState();
@@ -722,7 +850,7 @@ class _ShotRowState extends State<_ShotRow> {
                     fieldKey: ValueKey('shot_club_${widget.index}'),
                     label: 'Club',
                     value: s.club,
-                    options: _ShotRow.clubs,
+                    options: shotClubs,
                     onChanged: (v) => widget.onChanged(s.copyWith(club: v)),
                   ),
                 ),
@@ -743,7 +871,12 @@ class _ShotRowState extends State<_ShotRow> {
                       final d = text.isEmpty
                           ? null
                           : (int.tryParse(text) ?? 0).clamp(0, 100000);
-                      widget.onChanged(s.copyWith(distanceYards: d));
+                      // Distance is what's left to the pin, so it implies a
+                      // club — but only fill one the user hasn't chosen yet.
+                      final club = s.club ?? (d == null ? null : suggestClub(d));
+                      widget.onChanged(
+                        s.copyWith(distanceYards: d, club: club),
+                      );
                     },
                   ),
                 ),
@@ -757,7 +890,7 @@ class _ShotRowState extends State<_ShotRow> {
                     fieldKey: ValueKey('shot_lie_${widget.index}'),
                     label: 'Lie',
                     value: s.lie,
-                    options: _ShotRow.lies,
+                    options: shotLies,
                     onChanged: (v) => widget.onChanged(s.copyWith(lie: v)),
                   ),
                 ),
@@ -767,7 +900,7 @@ class _ShotRowState extends State<_ShotRow> {
                     fieldKey: ValueKey('shot_result_${widget.index}'),
                     label: 'Result',
                     value: s.result,
-                    options: _ShotRow.results,
+                    options: shotResults,
                     onChanged: (v) => widget.onChanged(s.copyWith(result: v)),
                   ),
                 ),
@@ -780,8 +913,17 @@ class _ShotRowState extends State<_ShotRow> {
   }
 }
 
-/// A small nullable preset dropdown for a shot's lie / result. The first item
-/// ("—") clears the value.
+/// A small nullable preset dropdown for a shot's club / lie / result. The first
+/// item ("—") clears the value.
+///
+/// Deliberately an [InputDecorator] wrapping a plain [DropdownButton] rather
+/// than a [DropdownButtonFormField]: the form-field variant seeds itself from
+/// `initialValue` and never re-applies it once the user has interacted
+/// (`FormFieldState.didUpdateWidget` only refreshes `forceErrorText`). Rows are
+/// keyed by index, so deleting shot 1 of 3 shifts every later shot's data up
+/// into a reused state object — and the form field would keep displaying the
+/// deleted shot's club. [DropdownButton] is controlled by `value`, so it always
+/// shows what the draft actually holds.
 class _ShotDropdown extends StatelessWidget {
   const _ShotDropdown({
     required this.fieldKey,
@@ -802,17 +944,21 @@ class _ShotDropdown extends StatelessWidget {
     // Guard against a stored value not in the option list (keeps the dropdown
     // from asserting); such a value is treated as unset in the control.
     final selected = options.contains(value) ? value : null;
-    return DropdownButtonFormField<String?>(
-      key: fieldKey,
-      initialValue: selected,
-      isDense: true,
+    return InputDecorator(
       decoration: InputDecoration(labelText: label, isDense: true),
-      items: [
-        const DropdownMenuItem<String?>(value: null, child: Text('—')),
-        for (final o in options)
-          DropdownMenuItem<String?>(value: o, child: Text(o)),
-      ],
-      onChanged: onChanged,
+      child: DropdownButton<String?>(
+        key: fieldKey,
+        value: selected,
+        isDense: true,
+        isExpanded: true,
+        underline: const SizedBox.shrink(),
+        items: [
+          const DropdownMenuItem<String?>(value: null, child: Text('—')),
+          for (final o in options)
+            DropdownMenuItem<String?>(value: o, child: Text(o)),
+        ],
+        onChanged: onChanged,
+      ),
     );
   }
 }

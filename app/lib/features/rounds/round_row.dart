@@ -47,7 +47,10 @@ class RoundRow extends ConsumerWidget {
         title: Text(
           '${round.courseName} — Round ${round.round.roundNumber}',
         ),
-        subtitle: Text(formattedDate),
+        subtitle: _RoundSubtitle(
+          date: formattedDate,
+          courseSetName: round.courseSetName,
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -99,5 +102,42 @@ class RoundRow extends ConsumerWidget {
     } catch (_) {
       return iso;
     }
+  }
+}
+
+/// Date, plus the yardage set the round was played from when it has one (#81).
+///
+/// The set decides which yardages pre-fill the round's holes, so which one is
+/// attached is worth seeing without opening the round. No set means none was
+/// chosen — the absent ruler icon is the signal, rather than a "No yardage set"
+/// caption on every casual round.
+class _RoundSubtitle extends StatelessWidget {
+  const _RoundSubtitle({required this.date, required this.courseSetName});
+
+  final String date;
+  final String? courseSetName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final setName = courseSetName;
+    if (setName == null) return Text(date);
+    return Row(
+      children: [
+        Flexible(child: Text(date, overflow: TextOverflow.ellipsis)),
+        const SizedBox(width: 6),
+        Icon(Icons.straighten, size: 14, color: theme.colorScheme.outline),
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            setName,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

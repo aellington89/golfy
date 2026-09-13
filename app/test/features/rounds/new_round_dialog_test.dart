@@ -316,6 +316,103 @@ void main() {
     expect(rounds!.single.round.courseSetId, 1);
   });
 
+  testWidgets('"Add new set…" creates a yardage set and links it (#81)',
+      (tester) async {
+    // A tee box you have not recorded yet should not send you out of the dialog
+    // to the course editor and back.
+    await db.courseDao.insert(
+      CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+    );
+
+    await openDialog(tester);
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
+    );
+    await selectCourse(tester, 'Augusta');
+
+    await tester.tap(find.byKey(const ValueKey('set_picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add new set…').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byKey(const ValueKey('yardage_set_name')), 'Blue tees');
+    await tester.tap(find.byKey(const ValueKey('yardage_set_add')));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final sets = await tester
+        .runAsync(() => db.courseSetDao.watchSetsForCourse(1).first);
+    expect(sets, hasLength(1));
+    expect(sets!.single.name, 'Blue tees');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds!.single.round.courseSetId, sets.single.id);
+    expect(rounds.single.courseSetName, 'Blue tees');
+  });
+
+  testWidgets('a new set can be copied from an existing one with an offset '
+      '(#81)', (tester) async {
+    await db.courseDao.insert(
+      CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+    );
+    await db.courseSetDao.insertSet(
+      CourseSetsCompanion.insert(courseId: 1, name: 'Blue tees'),
+    );
+    await db.courseSetDao.replaceYardsForSet(1, [
+      for (var h = 1; h <= 18; h++)
+        CourseSetYardsCompanion.insert(
+            courseSetId: 1, holeNumber: h, yards: 400),
+    ]);
+
+    await openDialog(
+      tester,
+      sets: const [CourseSet(id: 1, courseId: 1, name: 'Blue tees')],
+    );
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
+    );
+    await selectCourse(tester, 'Augusta');
+
+    await tester.tap(find.byKey(const ValueKey('set_picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add new set…').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byKey(const ValueKey('yardage_set_name')), 'White tees');
+    await tester.tap(find.byKey(const ValueKey('yardage_set_copy_from')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Blue tees').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('yardage_set_offset')), '-20');
+    await tester.tap(find.byKey(const ValueKey('yardage_set_add')));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    // Written straight away here: there is no editor open to stage it in, and
+    // the alternative is a set with no yardages at all.
+    final yards =
+        await tester.runAsync(() => db.courseSetDao.getYardsForSet(2));
+    expect(yards, hasLength(18));
+    expect(yards!.every((y) => y.yards == 380), isTrue);
+  });
+
   testWidgets('adding a new event via "Add new event…" creates and links it',
       (tester) async {
     await db.courseDao.insert(

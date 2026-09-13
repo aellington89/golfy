@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../database.dart';
 import '../models/round_with_course.dart';
+import '../tables/course_sets.dart';
 import '../tables/courses.dart';
 import '../tables/events.dart';
 import '../tables/hole_results.dart';
@@ -11,7 +12,7 @@ part 'round_dao.g.dart';
 
 /// DAO for the `rounds` table plus the rounds-with-course-name join used by
 /// the rounds list screen.
-@DriftAccessor(tables: [Rounds, Courses, HoleResults, Events])
+@DriftAccessor(tables: [Rounds, Courses, HoleResults, Events, CourseSets])
 class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
   RoundDao(super.db);
 
@@ -81,6 +82,9 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
     final query = select(rounds).join([
       innerJoin(courses, courses.id.equalsExp(rounds.courseId)),
       leftOuterJoin(events, events.id.equalsExp(rounds.eventId)),
+      // Joined on the set's primary key, so it can't multiply rows the way the
+      // hole_results join does.
+      leftOuterJoin(courseSets, courseSets.id.equalsExp(rounds.courseSetId)),
       leftOuterJoin(
         holeResults,
         holeResults.roundId.equalsExp(rounds.id),
@@ -102,6 +106,7 @@ class RoundDao extends DatabaseAccessor<GolfyDatabase> with _$RoundDaoMixin {
                 round: row.readTable(rounds),
                 courseName: row.readTable(courses).name,
                 event: row.readTableOrNull(events),
+                courseSetName: row.readTableOrNull(courseSets)?.name,
                 holesEntered: row.read(holeCount) ?? 0,
                 totalScore: row.read(scoreSum) ?? 0,
                 totalPar: row.read(parSum) ?? 0,

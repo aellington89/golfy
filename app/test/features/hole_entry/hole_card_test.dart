@@ -6,11 +6,23 @@ import 'package:golfy_app/features/hole_entry/hole_draft.dart';
 /// Stateful test harness that holds a [HoleDraft] and rebuilds when
 /// [HoleCard.onChanged] fires — mirrors the real screen's ownership model.
 class _Harness extends StatefulWidget {
-  const _Harness({required this.initial, this.savedDraft, this.onSave});
+  const _Harness({
+    required this.initial,
+    this.savedDraft,
+    this.onSave,
+    this.courseSetName,
+    this.strokeIndex,
+    this.onStrokeIndexChanged,
+    this.strokeIndexClashWith,
+  });
 
   final HoleDraft initial;
   final HoleDraft? savedDraft;
   final VoidCallback? onSave;
+  final String? courseSetName;
+  final int? strokeIndex;
+  final ValueChanged<int?>? onStrokeIndexChanged;
+  final int? strokeIndexClashWith;
 
   @override
   State<_Harness> createState() => _HarnessState();
@@ -35,6 +47,10 @@ class _HarnessState extends State<_Harness> {
           holeNumber: 1,
           draft: _draft,
           savedDraft: widget.savedDraft,
+          courseSetName: widget.courseSetName,
+          strokeIndex: widget.strokeIndex,
+          onStrokeIndexChanged: widget.onStrokeIndexChanged,
+          strokeIndexClashWith: widget.strokeIndexClashWith,
           onChanged: (d) => setState(() => _draft = d),
           onSave: widget.onSave ?? () {},
         ),
@@ -49,6 +65,10 @@ Future<_HarnessState> pumpCard(
   required HoleDraft initial,
   HoleDraft? savedDraft,
   VoidCallback? onSave,
+  String? courseSetName,
+  int? strokeIndex,
+  ValueChanged<int?>? onStrokeIndexChanged,
+  int? strokeIndexClashWith,
 }) async {
   // Default 800x600 test surface is shorter than the form. Resize so every
   // row — including the Shots section — is on-screen and tappable.
@@ -60,6 +80,10 @@ Future<_HarnessState> pumpCard(
     initial: initial,
     savedDraft: savedDraft,
     onSave: onSave,
+    courseSetName: courseSetName,
+    strokeIndex: strokeIndex,
+    onStrokeIndexChanged: onStrokeIndexChanged,
+    strokeIndexClashWith: strokeIndexClashWith,
   ));
   await tester.pumpAndSettle();
   return tester.state<_HarnessState>(find.byType(_Harness));
@@ -77,6 +101,17 @@ Future<void> tapSegment(
   final segmented = find.byType(SegmentedButton<int>).at(segmentedIndex);
   await tester.tap(find.descendant(of: segmented, matching: find.text(label)));
   await tester.pumpAndSettle();
+}
+
+/// The club the shot row at [index] is currently *displaying* — as opposed to
+/// what the draft holds. Distinguishing the two is the point of the
+/// stale-dropdown regression test.
+String? clubShown(WidgetTester tester, int index) {
+  return tester
+      .widget<DropdownButton<String?>>(
+        find.byKey(ValueKey('shot_club_$index')),
+      )
+      .value;
 }
 
 void main() {
@@ -415,10 +450,146 @@ void main() {
         initial: HoleDraft.initial()
             .copyWith(shots: const [ShotDraft(club: '5 Wood', distanceYards: 230)]),
       );
-      final club = tester.widget<DropdownButtonFormField<String?>>(
-        find.byKey(const ValueKey('shot_club_0')),
+      expect(clubShown(tester, 0), '5 Wood');
+    });
+
+    testWidgets('deleting a shot refreshes the rows that shift up (#81)',
+        (tester) async {
+      // Rows are keyed by index, so deleting shot 1 moves shot 2's data into
+      // row 0's widget state. A DropdownButtonFormField would keep displaying
+      // the deleted club; the controlled DropdownButton must not.
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(shots: const [
+          ShotDraft(club: 'Driver'),
+          ShotDraft(club: '7 Iron'),
+        ]),
       );
-      expect(club.initialValue, '5 Wood');
+      await tester.tap(find.byKey(const ValueKey('shot_delete_0')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots.single.club, '7 Iron');
+      expect(clubShown(tester, 0), '7 Iron');
+    });
+  });
+
+  group('HoleCard — smarter shots (#81)', () {
+    testWidgets('Add shot pre-fills the tee shot instead of a blank row',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('add_shot')));
+      await tester.pumpAndSettle();
+
+      final shot = state.draft.shots.single;
+      expect(shot.lie, 'Tee');
+      expect(shot.distanceYards, 420);
+      expect(shot.club, 'Driver');
+    });
+
+    testWidgets('an overridden suggestion sticks across rebuilds',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420),
+      );
+      await tester.tap(find.byKey(const ValueKey('add_shot')));
+      await tester.pumpAndSettle();
+      expect(state.draft.shots.single.club, 'Driver');
+
+      // Override the suggested club, then force a rebuild by touching an
+      // unrelated field. The choice must survive.
+      await tester.tap(find.byKey(const ValueKey('shot_club_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('3 Wood').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('Score_inc')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots.single.club, '3 Wood');
+      expect(clubShown(tester, 0), '3 Wood');
+    });
+
+    testWidgets('typing a distance fills an empty club but never replaces one',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial().copyWith(shots: const [ShotDraft()]),
+      );
+
+      await tester.enterText(
+          find.byKey(const ValueKey('shot_distance_0')), '150');
+      await tester.pumpAndSettle();
+      expect(state.draft.shots.single.club, '7 Iron');
+
+      // A club the user picked is never overwritten by a later distance edit.
+      await tester.tap(find.byKey(const ValueKey('shot_club_0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('9 Iron').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const ValueKey('shot_distance_0')), '120');
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots.single.club, '9 Iron');
+    });
+
+    testWidgets('Build from score scaffolds the whole hole, then hides itself',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420)
+            .copyWith(score: 4, putts: 2, fairwayHit: true),
+      );
+
+      await tester.tap(find.byKey(const ValueKey('build_shots_from_score')));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.shots, hasLength(4));
+      expect(state.draft.shots.first.lie, 'Tee');
+      expect(state.draft.shots.last.result, 'Holed');
+      expect(find.byKey(const ValueKey('build_shots_from_score')), findsNothing,
+          reason: 'rebuilding an edited list would destroy work');
+    });
+
+    testWidgets(
+        'warns on a contradiction and clears when the user reconciles it',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 420).copyWith(shots: const [
+          ShotDraft(club: 'Driver', lie: 'Tee'),
+          ShotDraft(club: 'Sand Wedge', lie: 'Bunker'),
+        ]),
+      );
+      expect(find.byKey(const ValueKey('shot_warnings')), findsOneWidget);
+
+      // Turning "Bunker visited" on resolves it — without anything being saved.
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Bunker visited'));
+      await tester.pumpAndSettle();
+
+      expect(state.draft.bunkerVisited, isTrue);
+      expect(find.byKey(const ValueKey('shot_warnings')), findsNothing);
+    });
+
+    testWidgets('a hole with no shots still saves', (tester) async {
+      var saved = false;
+      final state = await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        onSave: () => saved = true,
+      );
+
+      expect(find.byKey(const ValueKey('shot_warnings')), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.pumpAndSettle();
+
+      expect(saved, isTrue);
+      expect(state.draft.shotInputs(), isEmpty);
     });
   });
 
@@ -511,6 +682,141 @@ void main() {
       expect(scoreHeader, lessThan(upDownSuccess));
       expect(upDownSuccess, lessThan(sandSave));
       expect(sandSave, lessThan(penalty));
+    });
+  });
+
+  group('HoleCard — which yardage set the round uses (#81)', () {
+    testWidgets('labels the yards field with the set name', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 431),
+        courseSetName: 'Blue tees',
+      );
+
+      // Naming it here puts it where the number it explains appears.
+      expect(find.text('Yards · Blue tees'), findsOneWidget);
+    });
+
+    testWidgets('explains a blank yardage when the round has no set',
+        (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial());
+
+      expect(find.text('Yards'), findsOneWidget);
+      expect(
+        find.text('No yardage set on this round — yardages are not pre-filled'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('HoleCard — stroke index (#81)', () {
+    testWidgets('is absent unless the host wires it up', (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial());
+      expect(find.byKey(const ValueKey('stroke_index')), findsNothing);
+    });
+
+    testWidgets('shows the course value and says where it saves',
+        (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 7,
+        onStrokeIndexChanged: (_) {},
+      );
+
+      final field = tester.widget<TextField>(
+        find.byKey(const ValueKey('stroke_index')),
+      );
+      expect(field.controller!.text, '7');
+      // The one field here that edits the course rather than the round.
+      expect(find.text('Saved on the course, not this round'), findsOneWidget);
+    });
+
+    testWidgets('reports edits as a parsed value', (tester) async {
+      int? seen;
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: null,
+        onStrokeIndexChanged: (v) => seen = v,
+      );
+
+      await tester.enterText(
+          find.byKey(const ValueKey('stroke_index')), '12');
+      await tester.pumpAndSettle();
+      expect(seen, 12);
+
+      await tester.enterText(find.byKey(const ValueKey('stroke_index')), '');
+      await tester.pumpAndSettle();
+      expect(seen, isNull);
+    });
+
+    testWidgets('flags a value outside 1-18', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 19,
+        onStrokeIndexChanged: (_) {},
+      );
+      expect(find.text('Must be 1-18'), findsOneWidget);
+    });
+
+    testWidgets('flags a stroke index another hole already uses',
+        (tester) async {
+      // The card shows one hole at a time, so a clash in a set that must be a
+      // permutation of 1..18 would otherwise go unnoticed.
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 7,
+        strokeIndexClashWith: 12,
+        onStrokeIndexChanged: (_) {},
+      );
+      expect(find.text('Already used on hole 12'), findsOneWidget);
+    });
+
+    testWidgets('sits in the Tee section with par and yards', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(),
+        strokeIndex: 7,
+        onStrokeIndexChanged: (_) {},
+      );
+
+      double dy(Finder f) => tester.getTopLeft(f).dy;
+      expect(
+        dy(find.text('Tee')),
+        lessThan(dy(find.byKey(const ValueKey('stroke_index')))),
+      );
+      expect(
+        dy(find.byKey(const ValueKey('stroke_index'))),
+        lessThan(dy(find.text('Approach & Around the Green'))),
+      );
+    });
+
+    testWidgets('an unsaved stroke index shows the Unsaved chip',
+        (tester) async {
+      // Stroke index is not part of the draft, so without this the chip would
+      // read Saved while an edit was still pending.
+      final draft = HoleDraft.initial();
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: HoleCard(
+            holeNumber: 1,
+            draft: draft,
+            savedDraft: draft,
+            strokeIndex: 7,
+            strokeIndexDirty: true,
+            onStrokeIndexChanged: (_) {},
+            onChanged: (_) {},
+            onSave: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unsaved'), findsOneWidget);
+      expect(find.text('Saved'), findsNothing);
     });
   });
 }

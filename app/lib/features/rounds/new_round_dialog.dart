@@ -7,6 +7,8 @@ import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
+import '../courses/add_yardage_set_dialog.dart';
+import '../courses/course_template.dart';
 import '../courses/course_picker.dart';
 import '../events/event_picker.dart';
 import 'active_round_provider.dart';
@@ -319,6 +321,9 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
 /// selected [CourseSet]. Always offers a "No set" choice (leaves the round's
 /// yardages blank); when the course has no sets, that's the only option, with a
 /// hint to add one on the course. Sourced live from [courseSetsStreamProvider].
+/// Sentinel for the picker's "Add new set…" row; no real set id is negative.
+const int _addNewSetSentinel = -1;
+
 class _SetPicker extends ConsumerWidget {
   const _SetPicker({
     required this.courseId,
@@ -329,6 +334,54 @@ class _SetPicker extends ConsumerWidget {
   final int courseId;
   final CourseSet? value;
   final ValueChanged<CourseSet?> onChanged;
+
+  /// Creates a set and selects it.
+  ///
+  /// Unlike the course editor — which stages a copied card as unsaved changes
+  /// for review — a copy made here is written immediately: there is no editor
+  /// open to hold it, and the alternative is starting the round against a set
+  /// with no yardages at all. A set created blank is still useful: "Update
+  /// course as I play" fills it in hole by hole as the round is entered.
+  Future<void> _createSet(
+    BuildContext context,
+    WidgetRef ref,
+    List<CourseSet> existing,
+  ) async {
+    final spec = await showDialog<NewYardageSet>(
+      context: context,
+      builder: (_) => AddYardageSetDialog(existingSets: existing),
+    );
+    if (spec == null) return;
+    final repo = ref.read(repositoryProvider);
+    try {
+      final id = await repo.insertCourseSet(
+        CourseSetsCompanion.insert(courseId: courseId, name: spec.name),
+      );
+      final source = spec.copyFromSetId;
+      if (source != null) {
+        final rows = await repo.getCourseSetYards(source);
+        final byHole = {for (final y in rows) y.holeNumber: y.yards};
+        final yards = applyYardOffset(
+          [for (var h = 1; h <= 18; h++) byHole[h] ?? 0],
+          spec.offsetYards,
+        );
+        await repo.replaceCourseSetYards(id, [
+          for (var h = 1; h <= 18; h++)
+            CourseSetYardsCompanion.insert(
+              courseSetId: id,
+              holeNumber: h,
+              yards: yards[h - 1],
+            ),
+        ]);
+      }
+      onChanged(CourseSet(id: id, courseId: courseId, name: spec.name));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('A set named "${spec.name}" already exists')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -359,7 +412,7 @@ class _SetPicker extends ConsumerWidget {
             labelText: 'Yardage set',
             border: const OutlineInputBorder(),
             helperText: sets.isEmpty
-                ? 'No sets yet — add one on the course to pre-fill yardages'
+                ? 'No sets yet — add one to pre-fill this round’s yardages'
                 : null,
           ),
           items: [
@@ -369,10 +422,21 @@ class _SetPicker extends ConsumerWidget {
             ),
             for (final s in sets)
               DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
+            // Mirrors the "Add new…" affordance on the course and event
+            // pickers: a tee box you have not recorded yet shouldn't send you
+            // out of the dialog to the course editor and back.
+            const DropdownMenuItem<int?>(
+              value: _addNewSetSentinel,
+              child: Text('Add new set…'),
+            ),
           ],
-          onChanged: (id) => onChanged(
-            id == null ? null : sets.firstWhere((s) => s.id == id),
-          ),
+          onChanged: (id) {
+            if (id == _addNewSetSentinel) {
+              _createSet(context, ref, sets);
+              return;
+            }
+            onChanged(id == null ? null : sets.firstWhere((s) => s.id == id));
+          },
         );
       },
     );

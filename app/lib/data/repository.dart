@@ -90,6 +90,41 @@ class GolfyRepository {
   ) =>
       _db.courseSetDao.replaceYardsForSet(setId, yards);
 
+  /// Saves a course's whole card — the shared par / stroke-index rows plus the
+  /// yardages of each set in [yardsBySetId] — in **one** transaction (#81).
+  ///
+  /// The course editor writes par/SI and yardages together, and they are two
+  /// separate replaces. Run individually, a failure on the second would leave
+  /// the course half-saved while the editor's "everything is saved now" state
+  /// said otherwise — precisely the lie its per-hole Saved/Unsaved chips exist
+  /// to prevent. One transaction makes the save all-or-nothing.
+  ///
+  /// Only pass sets whose yardages have actually been loaded: each entry is a
+  /// wholesale replace, so handing it a blank card would wipe that tee box.
+  Future<void> replaceCourseCard(
+    int courseId,
+    List<CourseHolesCompanion> holes,
+    Map<int, List<CourseSetYardsCompanion>> yardsBySetId,
+  ) {
+    return _db.transaction(() async {
+      await _db.courseHoleDao.replaceForCourse(courseId, holes);
+      for (final entry in yardsBySetId.entries) {
+        await _db.courseSetDao.replaceYardsForSet(entry.key, entry.value);
+      }
+    });
+  }
+
+  /// Upserts one hole's par / stroke index without touching the other 17 — for
+  /// correcting the course template mid-round (#81). See
+  /// [CourseHoleDao.upsertHole].
+  Future<int> upsertCourseHole(CourseHolesCompanion hole) =>
+      _db.courseHoleDao.upsertHole(hole);
+
+  /// Upserts one hole's yardage within a set, without touching the other 17.
+  /// See [CourseSetDao.upsertYard].
+  Future<int> upsertCourseSetYard(CourseSetYardsCompanion yard) =>
+      _db.courseSetDao.upsertYard(yard);
+
   // ── Rounds ─────────────────────────────────────────────────────────────
 
   Future<int> insertRound(RoundsCompanion round) =>

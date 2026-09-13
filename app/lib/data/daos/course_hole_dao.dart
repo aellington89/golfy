@@ -29,6 +29,26 @@ class CourseHoleDao extends DatabaseAccessor<GolfyDatabase>
         .get();
   }
 
+  /// Upserts a single hole's par / stroke index, keyed on
+  /// `(course_id, hole_number)`.
+  ///
+  /// Exists alongside [replaceForCourse] for the case where only one hole is
+  /// known: correcting the course template from the Hole Entry screen while a
+  /// round is being played (#81). Rewriting all 18 rows as a side effect of
+  /// saving one hole of a round would clobber holes the player hasn't reached.
+  ///
+  /// `DoUpdate` rather than `INSERT OR REPLACE`, so the row keeps its id and
+  /// nothing referencing it is disturbed.
+  Future<int> upsertHole(CourseHolesCompanion hole) {
+    return into(courseHoles).insert(
+      hole,
+      onConflict: DoUpdate(
+        (_) => hole,
+        target: [courseHoles.courseId, courseHoles.holeNumber],
+      ),
+    );
+  }
+
   /// Replaces a course's entire hole template in one transaction: clears the
   /// existing rows for the course, then inserts [holes]. Saving the editor
   /// rewrites the whole card, so a wholesale replace keeps the stored template

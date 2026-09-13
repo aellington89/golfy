@@ -8,6 +8,109 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+
+- **Course setup now works the way hole-by-hole entry does** ([#81]): setting a
+  course up and playing it were the same task with different controls — a
+  dropdown here and a segmented button there for the identical 3/4/5 par choice,
+  a progress strip on one screen and none on the other, par and stroke index on
+  one screen with each tee box's eighteen yardages on another. There is now a
+  single course editor: par (the same segmented control Hole Entry uses), stroke
+  index, and the selected set's yardage together on one card per hole, with the
+  chip strip and "Holes set: X / 18" counter carried over from the round form.
+  It stays a scrolling list rather than a swipeable page per hole, because
+  stroke index has to be a permutation of 1–18 and you cannot tell whether 7 is
+  taken from a screen showing one hole.
+- **The course card tells you what is unsaved** ([#81]): every hole carries a
+  Saved / Unsaved chip, the nav chips mark the holes you have touched, and the
+  save button reads "Save card · 3 unsaved" rather than an opaque "Save card".
+  One save commits par, stroke index and every edited tee box in a single
+  transaction, so a failure part-way through can no longer leave the course
+  half-written while the screen claims otherwise. Backing out with unsaved edits
+  now asks first.
+- **Par and stroke index are visibly course-wide** ([#81]): they are shared by
+  every yardage set — only yardages differ between tee boxes — so the editor and
+  the mid-round sheet now say so rather than leaving a per-hole card that shows
+  all three together to imply otherwise. Both remain editable while playing: par
+  follows each hole you save, and stroke index through the course sheet.
+- **A new course starts from a real layout** ([#81]): opening the editor on a
+  course with no card pre-fills the standard par-72 arrangement — four par 3s,
+  four par 5s, 36 out and 36 in — instead of eighteen par 4s. It arrives marked
+  unsaved on every hole, so it is a starting point you accept rather than one
+  you inherit, and nothing is written until you save.
+
+### Added
+
+- **Build a tee box from one you already have** ([#81]): adding a yardage set can
+  copy an existing set's eighteen yardages and shift them by a flat amount —
+  "the blues, minus 20" — instead of retyping them. The copy lands in the editor
+  as unsaved changes for review, because real tee boxes differ hole by hole and
+  an offset is only ever an approximation.
+- **Stroke index is enterable from the hole entry form** ([#81]): it sits in the
+  Tee section with par and yards, where you read it off the same scorecard.
+  Because it has no round-level column, it is the one field on that form that
+  edits the course rather than the round — the helper text says so — and it
+  saves whether or not "Update course as I play" is on, since gating it would
+  make typing in the field do nothing. Entering one that another hole already
+  uses is called out on the field: stroke index has to be a permutation of 1-18
+  and a form showing one hole at a time cannot otherwise reveal the clash.
+- **Add a yardage set while starting a round** ([#81]): the set picker in New
+  Round now offers "Add new set…", matching the "Add new…" affordance the course
+  and event pickers already have. A tee box you have not recorded yet no longer
+  sends you out to the course editor and back. The new set can copy an existing
+  set's yardages with an offset, and a set created blank is still useful —
+  "Update course as I play" fills it in hole by hole as you enter the round.
+- **It is obvious which yardage set a round used** ([#81]): the rounds list
+  names it beside the date, and the hole entry form labels the yards field with
+  it — "Yards · Blue tees" — so the number and its source appear together. A
+  round with no set says so on the yards field, since that is why it arrived
+  blank.
+- **Fix the course while you are playing it** ([#81]): you learn a course's real
+  par and yardages during the first round, and acting on that used to mean
+  leaving the round, opening the course editor from the drawer, and coming back.
+  The Hole Entry screen now has a course menu with **Update course as I play** —
+  which keeps the template in step with each hole you save, and arms itself
+  automatically when the course has no card yet — and **Edit this hole on the
+  course**, a sheet showing the same per-hole card the editor uses. It is also
+  the only place stroke index can be entered mid-round. Both write a single
+  hole, so holes you have not reached keep whatever the course already has.
+### Added
+
+- **Shots that fill themselves in from the hole you just described** ([#81]):
+  adding a shot no longer hands you four blank fields. The first shot is played
+  from the `Tee` with the hole's full yardage still in front of it; after that
+  each row chains from what the card already knows — a hit fairway puts the next
+  shot on the fairway, a missed one in the light rough, and once the full swings
+  implied by `score - putts` are used up the remaining rows become putts on the
+  green. A **Build from score** button scaffolds the whole hole in one tap. The
+  distance field is the distance *remaining to the pin*, so it steps down by the
+  previous club's typical carry and suggests the club to play from what is left;
+  typing a distance yourself fills an empty club but never replaces one you
+  chose. Every suggestion is a starting point — shots stay optional, a shot-less
+  hole still saves, and nothing is ever rewritten behind you.
+- **Reconciliation notes when shots and the hole disagree** ([#81]): recording a
+  bunker lie with "Bunker visited" off, a putts count the putter shots
+  contradict, a fairway flag shot 2 disagrees with, a shot marked holed that
+  isn't last, or more shots than the score allows now surfaces a quiet note under
+  the Shots section. It warns rather than corrects — silently rewriting your
+  entry could push the hole into a state the database rejects — and it never
+  blocks a save. A partly-entered list is left alone: shots need not sum to the
+  score, so stopping after the interesting ones stays a legitimate way to use the
+  feature.
+
+### Fixed
+
+- **A saved hole with shots no longer reads "Unsaved" forever** ([#81]): the
+  saved-state snapshot was rebuilt from `hole_results` alone, which carries no
+  shots, while the live draft was seeded with them — and hole equality compares
+  the shot lists, so any hole with at least one shot looked permanently dirty the
+  instant it was saved.
+- **Shot dropdowns no longer show a deleted shot's values** ([#81]): shot rows are
+  keyed by position, so removing one shifts every later shot's data up into a
+  reused row. The club / lie / result controls seeded themselves once and never
+  refreshed, leaving the removed shot's club on screen while the stored data was
+  correct. They are now driven directly by the draft.
+
 ## [0.2.0] - 2026-09-07
 
 Golfy's largest release yet. It completes the **Courses & yardage** milestone and
@@ -337,3 +440,4 @@ Phase 1 — data layer and navigation shell.
 [#47]: https://github.com/aellington89/golfy/issues/47
 [#56]: https://github.com/aellington89/golfy/issues/56
 [#63]: https://github.com/aellington89/golfy/issues/63
+[#81]: https://github.com/aellington89/golfy/issues/81

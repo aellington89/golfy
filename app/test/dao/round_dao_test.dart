@@ -110,6 +110,57 @@ void main() {
       expect(rows.single.round.courseId, cid);
     });
 
+    test('joins the yardage set name onto a round that has one (#81)',
+        () async {
+      final cid = await fx.insertCourse();
+      final setId = await fx.insertCourseSet(cid, name: 'Blue tees');
+      await fx.insertRound(cid, courseSetId: setId);
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.courseSetName, 'Blue tees');
+    });
+
+    test('leaves the set name null for a round with no set (#81)', () async {
+      final cid = await fx.insertCourse();
+      await fx.insertRound(cid);
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.courseSetName, isNull);
+    });
+
+    test('the set join does not duplicate rounds (#81)', () async {
+      // The hole_results join is grouped; this one must stay 1:1 or every round
+      // on a set would appear twice.
+      final cid = await fx.insertCourse();
+      final setId = await fx.insertCourseSet(cid, name: 'Blue tees');
+      await fx.insertCourseSetYards(setId, yards: 400);
+      final rid = await fx.insertRound(cid, courseSetId: setId);
+      await fx.upsertHole(rid, 1);
+      await fx.upsertHole(rid, 2);
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows, hasLength(1));
+      expect(rows.single.holesEntered, 2);
+    });
+
+    test('a renamed set re-emits through the rounds stream (#81)', () async {
+      final cid = await fx.insertCourse();
+      final setId = await fx.insertCourseSet(cid, name: 'Blue tees');
+      await fx.insertRound(cid, courseSetId: setId);
+
+      final names = <String?>[];
+      final sub = db.roundDao
+          .watchAllWithCourse()
+          .listen((rows) => names.add(rows.single.courseSetName));
+      await pumpEventQueue();
+
+      await db.courseSetDao.renameSet(setId, 'Championship tees');
+      await pumpEventQueue();
+      await sub.cancel();
+
+      expect(names, ['Blue tees', 'Championship tees']);
+    });
+
     test('orders by (date DESC, id DESC)', () async {
       final cid = await fx.insertCourse();
       final r1 = await fx.insertRound(cid, date: '2026-04-01');
