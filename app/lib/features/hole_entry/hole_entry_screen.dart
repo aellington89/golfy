@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
+import '../../widgets/hole_nav_bar.dart';
+import 'course_sync_provider.dart';
+import 'course_template_sheet.dart';
 import '../../shell/app_drawer.dart';
 import '../../shell/tab_index_provider.dart';
 import '../../widgets/empty_state.dart';
@@ -24,6 +27,8 @@ class HoleEntryScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<HoleEntryScreen> createState() => _HoleEntryScreenState();
 }
+
+enum _CourseAction { toggleSync, editHole }
 
 class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   static const int _holeCount = 18;
@@ -50,6 +55,20 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   /// empty when absent — the graceful "no data" fallback (par 4 / blank yards).
   Map<int, int> _parByHole = const {};
   Map<int, int> _yardsByHole = const {};
+
+  /// The round's course and chosen yardage set, refreshed each build. Needed to
+  /// write corrections back to the course template (#81).
+  int? _courseId;
+  int? _courseSetId;
+  String? _courseSetName;
+
+  /// Stroke index per hole from the course card — not part of the round form,
+  /// but editable through the course-template sheet.
+  Map<int, int?> _strokeIndexByHole = const {};
+
+  /// Whether the "update course as I play" default has been applied for this
+  /// round yet. Reset with the drafts when the active round changes.
+  bool _syncDefaultApplied = false;
 
   /// Saved shots for the round, keyed by hole number (#22). Refreshed each build
   /// from [holeShotsStreamProvider] and attached to a saved hole's draft in
@@ -80,6 +99,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   }
 
   void _resetForRound(int? roundId) {
+    _syncDefaultApplied = false;
     _drafts.clear();
     _dirty.clear();
     _currentPage = 0;
@@ -127,14 +147,38 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
       holeNumber: holeNumber,
     );
     final repo = ref.read(repositoryProvider);
+    final courseId = _courseId;
+    final syncCourse = ref.read(courseSyncEnabledProvider) && courseId != null;
     try {
       await repo.saveHole(companion, draft.shotInputs());
+      if (syncCourse) {
+        // A single-hole upsert, not a card replace: holes the player hasn't
+        // reached yet must keep whatever the course already has. Stroke index is
+        // left absent, so an existing one survives.
+        await repo.upsertCourseHole(CourseHolesCompanion.insert(
+          courseId: courseId,
+          holeNumber: holeNumber,
+          par: draft.par,
+        ));
+        final setId = _courseSetId;
+        if (setId != null && draft.yards > 0) {
+          await repo.upsertCourseSetYard(CourseSetYardsCompanion.insert(
+            courseSetId: setId,
+            holeNumber: holeNumber,
+            yards: draft.yards,
+          ));
+        }
+      }
       if (!mounted) return;
       setState(() => _dirty.remove(holeNumber));
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Hole $holeNumber saved'),
+          content: Text(
+            syncCourse
+                ? 'Hole $holeNumber saved · course updated'
+                : 'Hole $holeNumber saved',
+          ),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -143,6 +187,29 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save hole: $e')),
       );
+    }
+  }
+
+  Future<void> _onCourseAction(_CourseAction action) async {
+    switch (action) {
+      case _CourseAction.toggleSync:
+        ref.read(courseSyncEnabledProvider.notifier).toggle();
+      case _CourseAction.editHole:
+        final courseId = _courseId;
+        if (courseId == null) return;
+        final hole = _currentPage + 1;
+        final draft = _drafts[hole] ?? _initialForHole(hole);
+        await showCourseTemplateSheet(
+          context,
+          ref,
+          courseId: courseId,
+          holeNumber: hole,
+          par: draft.par,
+          strokeIndex: _strokeIndexByHole[hole],
+          yards: _yardsByHole[hole] ?? draft.yards,
+          courseSetId: _courseSetId,
+          setName: _courseSetName,
+        );
     }
   }
 
@@ -178,10 +245,25 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     final courseId = round?.courseId;
     final courseSetId = round?.courseSetId;
     final parByHole = <int, int>{};
+    final strokeIndexByHole = <int, int?>{};
+    var courseHasCard = false;
     if (courseId != null) {
       ref.watch(courseHolesStreamProvider(courseId)).whenData((holes) {
+        courseHasCard = holes.isNotEmpty;
         for (final h in holes) {
           parByHole[h.holeNumber] = h.par;
+          strokeIndexByHole[h.holeNumber] = h.strokeIndex;
+        }
+        // Arm "update course as I play" for a course with no template yet —
+        // the first-play case this exists for. Done once per round, after the
+        // frame so the notifier isn't written during a build.
+        if (!_syncDefaultApplied && _draftsRoundId == activeRoundId) {
+          _syncDefaultApplied = true;
+          final arm = !courseHasCard;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ref.read(courseSyncEnabledProvider.notifier).set(arm);
+          });
         }
       });
     }
@@ -195,6 +277,17 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     }
     _parByHole = parByHole;
     _yardsByHole = yardsByHole;
+    _strokeIndexByHole = strokeIndexByHole;
+    _courseId = courseId;
+    _courseSetId = courseSetId;
+    _courseSetName = courseSetId == null
+        ? null
+        : ref
+            .watch(courseSetsStreamProvider(round!.courseId))
+            .value
+            ?.where((s) => s.id == courseSetId)
+            .map((s) => s.name)
+            .firstOrNull;
 
     // Saved shots per hole (#22), attached to a saved hole's draft below. Built
     // before `_seedFromSaved` runs so seeding sees them.
@@ -230,10 +323,33 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: _AppBarTitle(roundAsync: roundAsync),
-        bottom: _HoleNavBar(
+        actions: [
+          PopupMenuButton<_CourseAction>(
+            key: const ValueKey('course_menu'),
+            tooltip: 'Course template',
+            icon: const Icon(Icons.golf_course),
+            onSelected: _onCourseAction,
+            itemBuilder: (_) => [
+              CheckedPopupMenuItem(
+                value: _CourseAction.toggleSync,
+                checked: ref.watch(courseSyncEnabledProvider),
+                child: const Text('Update course as I play'),
+              ),
+              const PopupMenuItem(
+                value: _CourseAction.editHole,
+                child: Text('Edit this hole on the course…'),
+              ),
+            ],
+          ),
+        ],
+        bottom: HoleNavBar(
           holeCount: _holeCount,
-          currentPage: _currentPage,
-          savedByHole: savedByHole,
+          currentIndex: _currentPage,
+          complete: savedByHole.keys.toSet(),
+          // Holes edited since their last save, so the strip shows what still
+          // needs attention rather than only what has been touched at all.
+          dirty: _dirty,
+          label: 'Holes saved',
           onTapHole: _goToPage,
         ),
       ),
@@ -323,118 +439,6 @@ class _AppBarTitle extends StatelessWidget {
 }
 
 /// Horizontal strip of 18 hole chips that sits under the AppBar title.
-/// Each chip jumps the [PageView] to that hole on tap, shows a check
-/// when the hole is saved, and highlights when it's the active page.
-/// Replaces the old jump-to-hole popup menu — discoverability for both
-/// "go to hole N" and "which holes are done" comes from a single visible
-/// control. Above the strip, a small "Holes saved: X / 18" counter gives
-/// the at-a-glance progress signal the chips alone don't.
-class _HoleNavBar extends StatefulWidget implements PreferredSizeWidget {
-  const _HoleNavBar({
-    required this.holeCount,
-    required this.currentPage,
-    required this.savedByHole,
-    required this.onTapHole,
-  });
-
-  final int holeCount;
-  final int currentPage;
-  final Map<int, HoleResult> savedByHole;
-  final ValueChanged<int> onTapHole;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(80);
-
-  @override
-  State<_HoleNavBar> createState() => _HoleNavBarState();
-}
-
-class _HoleNavBarState extends State<_HoleNavBar> {
-  final ScrollController _scrollController = ScrollController();
-  static const double _chipExtent = 52;
-
-  @override
-  void didUpdateWidget(covariant _HoleNavBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentPage != widget.currentPage) {
-      _scrollToCurrent();
-    }
-  }
-
-  void _scrollToCurrent() {
-    if (!_scrollController.hasClients) return;
-    final viewport = _scrollController.position.viewportDimension;
-    final target =
-        widget.currentPage * _chipExtent - viewport / 2 + _chipExtent / 2;
-    final clamped =
-        target.clamp(0.0, _scrollController.position.maxScrollExtent);
-    _scrollController.animateTo(
-      clamped,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final savedCount = widget.savedByHole.length;
-    return SizedBox(
-      height: 80,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
-            child: Text(
-              'Holes saved: $savedCount / ${widget.holeCount}',
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              itemCount: widget.holeCount,
-              itemBuilder: (context, i) {
-                final hole = i + 1;
-                final saved = widget.savedByHole.containsKey(hole);
-                final active = widget.currentPage == i;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: ChoiceChip(
-                    key: ValueKey('hole_chip_$hole'),
-                    label: Text('$hole'),
-                    avatar: saved
-                        ? Icon(
-                            Icons.check,
-                            size: 16,
-                            color: active
-                                ? theme.colorScheme.onSecondaryContainer
-                                : theme.colorScheme.primary,
-                          )
-                        : null,
-                    selected: active,
-                    onSelected: (_) => widget.onTapHole(i),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _NoActiveRound extends ConsumerWidget {
   const _NoActiveRound();
 

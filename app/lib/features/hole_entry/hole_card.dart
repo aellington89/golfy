@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/par_selector.dart';
+
 import 'hole_draft.dart';
 import 'shot_inference.dart';
 
@@ -139,8 +141,8 @@ class _HoleCardState extends State<HoleCard> {
                 ],
               ),
               const _SectionHeader('Tee'),
-              _ParRow(
-                par: d.par,
+              ParSelector(
+                value: d.par,
                 onChanged: (newPar) {
                   // Switching to par 3 wipes fairwayHit — par 3s have no
                   // fairway and the DAO will throw otherwise.
@@ -325,39 +327,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _ParRow extends StatelessWidget {
-  const _ParRow({required this.par, required this.onChanged});
-
-  final int par;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Par',
-        border: OutlineInputBorder(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 3, label: Text('3')),
-            ButtonSegment(value: 4, label: Text('4')),
-            ButtonSegment(value: 5, label: Text('5')),
-          ],
-          selected: {par},
-          onSelectionChanged: (sel) => onChanged(sel.first),
-        ),
-      ),
-    );
-  }
-}
-
-/// Free-entry field for the hole's length. A plain [TextField] (driven by a
-/// parent-owned controller) rather than a stepper — yardages span a wide range,
-/// so tapping +/- hundreds of times would be absurd. Auto-filled from the
-/// course template when one exists (#36) and freely editable per round.
 class _YardsRow extends StatelessWidget {
   const _YardsRow({required this.controller, required this.onChanged});
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
+import 'package:golfy_app/features/hole_entry/course_sync_provider.dart';
 import 'package:golfy_app/features/hole_entry/hole_entry_screen.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
 import 'package:golfy_app/shell/tab_index_provider.dart';
@@ -544,5 +545,144 @@ void main() {
     expect(find.byKey(const ValueKey('finish_round')), findsOneWidget);
     expect(find.text('Finish Round'), findsOneWidget);
     expect(find.text('Done'), findsNothing);
+  });
+
+  group('HoleEntryScreen — course template from inside a round (#81)', () {
+    /// Opens the course menu and taps one of its entries.
+    Future<void> courseMenu(WidgetTester tester, String label) async {
+      await tester.tap(find.byKey(const ValueKey('course_menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    Future<ProviderContainer> open(
+      WidgetTester tester,
+      int roundId,
+    ) async {
+      final container = makeContainer(activeRoundId: roundId);
+      addTearDown(container.dispose);
+      resizeForForm(tester);
+      await tester.pumpWidget(wrap(container));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    testWidgets('arms itself on a course that has no template yet',
+        (tester) async {
+      final seed = await seedRound();
+      final container = await open(tester, seed.roundId);
+
+      // Playing a course the app knows nothing about is exactly when you want
+      // the template built as you go.
+      expect(container.read(courseSyncEnabledProvider), isTrue);
+    });
+
+    testWidgets('stays off for a course that already has a template',
+        (tester) async {
+      final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      await fx.insertCourseHoles(cid, par: 4, strokeIndex: 1);
+      final rid = await fx.insertRound(cid, date: '2026-05-25');
+      final container = await open(tester, rid);
+
+      expect(container.read(courseSyncEnabledProvider), isFalse);
+    });
+
+    testWidgets('saving a hole writes its par back to the course',
+        (tester) async {
+      final seed = await seedRound();
+      await open(tester, seed.roundId);
+
+      await tester.tap(find.descendant(
+        of: find.byKey(const ValueKey('hole_card_1')),
+        matching: find.text('3'),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card, hasLength(1), reason: 'only the played hole is written');
+      expect(card!.single.holeNumber, 1);
+      expect(card.single.par, 3);
+      expect(find.text('Hole 1 saved · course updated'), findsOneWidget);
+    });
+
+    testWidgets('leaves the course alone when the toggle is off',
+        (tester) async {
+      final seed = await seedRound();
+      final container = await open(tester, seed.roundId);
+
+      await courseMenu(tester, 'Update course as I play');
+      expect(container.read(courseSyncEnabledProvider), isFalse);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card, isEmpty);
+      expect(find.text('Hole 1 saved'), findsOneWidget);
+    });
+
+    testWidgets('a round with no yardage set still syncs par', (tester) async {
+      final seed = await seedRound();
+      await open(tester, seed.roundId);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const ValueKey('hole_card_1')),
+          matching: find.byKey(const ValueKey('yards')),
+        ),
+        '410',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card, hasLength(1), reason: 'par is still recorded');
+      // The yardage has nowhere to go without a set, and that is not an error.
+      final sets = await tester
+          .runAsync(() => db.courseSetDao.watchSetsForCourse(seed.courseId).first);
+      expect(sets, isEmpty);
+    });
+
+    testWidgets('the sheet saves a stroke index the round form cannot capture',
+        (tester) async {
+      final seed = await seedRound();
+      await open(tester, seed.roundId);
+
+      await courseMenu(tester, 'Edit this hole on the course…');
+      expect(find.text('Course template'), findsOneWidget);
+
+      await tester.enterText(
+          find.byKey(const ValueKey('course_hole_si_1')), '7');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save_course_template_hole')));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      final card = await tester
+          .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
+      expect(card!.single.holeNumber, 1);
+      expect(card.single.strokeIndex, 7);
+    });
   });
 }

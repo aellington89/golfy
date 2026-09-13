@@ -8,6 +8,48 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+
+- **Course setup now works the way hole-by-hole entry does** ([#81]): setting a
+  course up and playing it were the same task with different controls — a
+  dropdown here and a segmented button there for the identical 3/4/5 par choice,
+  a progress strip on one screen and none on the other, par and stroke index on
+  one screen with each tee box's eighteen yardages on another. There is now a
+  single course editor: par (the same segmented control Hole Entry uses), stroke
+  index, and the selected set's yardage together on one card per hole, with the
+  chip strip and "Holes set: X / 18" counter carried over from the round form.
+  It stays a scrolling list rather than a swipeable page per hole, because
+  stroke index has to be a permutation of 1–18 and you cannot tell whether 7 is
+  taken from a screen showing one hole.
+- **The course card tells you what is unsaved** ([#81]): every hole carries a
+  Saved / Unsaved chip, the nav chips mark the holes you have touched, and the
+  save button reads "Save card · 3 unsaved" rather than an opaque "Save card".
+  One save commits par, stroke index and every edited tee box in a single
+  transaction, so a failure part-way through can no longer leave the course
+  half-written while the screen claims otherwise. Backing out with unsaved edits
+  now asks first.
+- **A new course starts from a real layout** ([#81]): opening the editor on a
+  course with no card pre-fills the standard par-72 arrangement — four par 3s,
+  four par 5s, 36 out and 36 in — instead of eighteen par 4s. It arrives marked
+  unsaved on every hole, so it is a starting point you accept rather than one
+  you inherit, and nothing is written until you save.
+
+### Added
+
+- **Build a tee box from one you already have** ([#81]): adding a yardage set can
+  copy an existing set's eighteen yardages and shift them by a flat amount —
+  "the blues, minus 20" — instead of retyping them. The copy lands in the editor
+  as unsaved changes for review, because real tee boxes differ hole by hole and
+  an offset is only ever an approximation.
+- **Fix the course while you are playing it** ([#81]): you learn a course's real
+  par and yardages during the first round, and acting on that used to mean
+  leaving the round, opening the course editor from the drawer, and coming back.
+  The Hole Entry screen now has a course menu with **Update course as I play** —
+  which keeps the template in step with each hole you save, and arms itself
+  automatically when the course has no card yet — and **Edit this hole on the
+  course**, a sheet showing the same per-hole card the editor uses. It is also
+  the only place stroke index can be entered mid-round. Both write a single
+  hole, so holes you have not reached keep whatever the course already has.
 ### Added
 
 - **Shots that fill themselves in from the hole you just described** ([#81]):

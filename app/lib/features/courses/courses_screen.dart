@@ -6,10 +6,10 @@ import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../widgets/empty_state.dart';
 import 'add_course_dialog.dart';
-import 'course_holes_screen.dart';
+import 'course_setup_screen.dart';
 
 /// Course-management screen (#36): every saved course with its game title and
-/// round count, a FAB to add a new one, and tap-through to the [CourseHolesScreen]
+/// round count, a FAB to add a new one, and tap-through to the [CourseSetupScreen]
 /// to edit that course's per-hole template (par / yards / stroke index) or
 /// rename / delete it. Pushed from the Rounds tab's "Manage courses" action and
 /// the course picker — not a bottom-nav destination. Mirrors the Events tab.
@@ -102,7 +102,7 @@ class _CourseTile extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => CourseHolesScreen(courseId: course.id),
+          builder: (_) => CourseSetupScreen(courseId: course.id),
         ),
       ),
     );
