@@ -25,10 +25,23 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.2.0
+## Status — v0.3.0
 
-**v0.2.0** is the latest release — Golfy's largest yet. It completes the
-**Courses & yardage** milestone and gives **Events** a home of their own:
+**v0.3.0** is the latest release. Per-hole data entry stops being two different
+apps: setting a course up now uses the round form's own controls and progress
+signals, lives on one screen instead of three, and can be corrected from inside
+a round — while shots arrive pre-filled from what the hole card already knows:
+
+| Feature | Issue | What it delivered |
+|---|---|---|
+| One course editor | [#81](https://github.com/aellington89/golfy/issues/81) | Par, stroke index and the selected yardage set's yardage on one card per hole, using the round form's segmented par control, chip strip and "Holes set: X / 18" counter — replacing a par/stroke-index screen plus a separate screen per tee box. Per-hole Saved / Unsaved feedback, one transactional save, and a standard par-72 starting layout you accept rather than inherit |
+| Course edits while you play | [#81](https://github.com/aellington89/golfy/issues/81) | "Update course as I play" keeps the template in step with each hole saved and arms itself on a course with no card; a sheet edits one hole's course data mid-round; stroke index is enterable straight from the hole entry form. Yardage sets can be created while starting a round, copied from an existing set with an offset, and which set a round used is visible on the rounds list and the yards field |
+| Smarter shot entry | [#81](https://github.com/aellington89/golfy/issues/81) | Shots pre-fill from the hole's own data — tee lie, chained lies from the fairway flag, putts once the implied full swings run out, remaining distance stepped down per club — with a one-tap "Build from score" and non-blocking notes when shots disagree with the scoring fields. Every suggestion is overrideable and shots stay optional |
+
+It needs **no schema change** — the data model carried it unaltered at v7.
+
+It builds on **v0.2.0**, Golfy's largest release to that point, which completed
+the **Courses & yardage** milestone and gave **Events** a home of their own:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
@@ -38,10 +51,10 @@ sideload and upgrade in place.
 | Events per season | [#47](https://github.com/aellington89/golfy/issues/47) | The same event name recurs each season as its own occurrence — its own result, rounds and edits — with the season a typed, editable field |
 | Event tile scoring | [#63](https://github.com/aellington89/golfy/issues/63) | The Events list tiles carry a compact scoring line — average score vs. par and best round to-par — beside the round count |
 
-It ships schema versions **v5–v7**, each a migration-tested, data-preserving
-upgrade.
+v0.2.0 shipped schema versions **v5–v7**, each a migration-tested,
+data-preserving upgrade.
 
-It builds on **v0.1.4**, which re-themed the app to a green / yellow / blue golf
+Before that, **v0.1.4** re-themed the app to a green / yellow / blue golf
 palette and smoothed a couple of hole-entry rough edges
 ([#51](https://github.com/aellington89/golfy/issues/51),
 [#52](https://github.com/aellington89/golfy/issues/52),
