@@ -68,6 +68,26 @@ void main() {
       expect(updated.strokeIndex, 12);
     });
 
+    test('a par-only upsert keeps an existing stroke index', () async {
+      // What "Update course as I play" relies on: the round form has no stroke
+      // index field, so it upserts par alone. Drift must leave columns the
+      // companion doesn't carry untouched, or playing a hole would silently
+      // erase a stroke index somebody entered on the course.
+      final courseId = await fx.insertCourse();
+      await fx.insertCourseHoles(courseId, par: 4, strokeIndex: 9);
+
+      await repo.upsertCourseHole(CourseHolesCompanion.insert(
+        courseId: courseId,
+        holeNumber: 7,
+        par: 5,
+      ));
+
+      final updated = (await db.courseHoleDao.getForCourse(courseId))
+          .firstWhere((h) => h.holeNumber == 7);
+      expect(updated.par, 5);
+      expect(updated.strokeIndex, 9, reason: 'stroke index must survive');
+    });
+
     test('leaves the other 17 holes alone', () async {
       final courseId = await fx.insertCourse();
       await fx.insertCourseHoles(courseId, par: 4, strokeIndex: 1);

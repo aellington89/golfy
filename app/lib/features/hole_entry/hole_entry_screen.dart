@@ -388,6 +388,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
                 _dirty.add(holeNumber);
               });
             },
+            courseSetName: _courseSetName,
             onSave: () => _saveHole(activeRoundId, holeNumber),
             onPrev: index == 0 ? null : () => _goToPage(index - 1),
             onNext:

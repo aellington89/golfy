@@ -118,6 +118,7 @@ class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
   @override
   Widget build(BuildContext context) {
     final hasSet = widget.courseSetId != null;
+    final setLabel = widget.setName ?? 'this set';
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -137,9 +138,10 @@ class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
           Text(
             hasSet
                 ? 'Saved on the course, not this round — future rounds start '
-                    'from these values.'
+                    'from these values. Par and stroke index apply to every '
+                    'yardage set; only the yardage belongs to $setLabel.'
                 : 'This round has no yardage set, so only par and stroke index '
-                    'can be saved to the course.',
+                    'can be saved — and those apply to every set.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),

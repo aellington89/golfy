@@ -11,6 +11,7 @@ class RoundWithCourse {
     required this.totalScore,
     required this.totalPar,
     this.event,
+    this.courseSetName,
   });
 
   final Round round;
@@ -19,6 +20,11 @@ class RoundWithCourse {
   /// The event this round belongs to, or `null` for a casual round with no
   /// event. Sourced from the left-outer join in [RoundDao.watchAllWithCourse].
   final Event? event;
+
+  /// Name of the yardage set this round was played from, or null when the
+  /// round has none (its yardages were never pre-filled). Sourced from the
+  /// left-outer join in [RoundDao.watchAllWithCourse].
+  final String? courseSetName;
 
   final int holesEntered;
 
@@ -40,17 +46,19 @@ class RoundWithCourse {
           round == other.round &&
           courseName == other.courseName &&
           event == other.event &&
+          courseSetName == other.courseSetName &&
           holesEntered == other.holesEntered &&
           totalScore == other.totalScore &&
           totalPar == other.totalPar;
 
   @override
-  int get hashCode => Object.hash(
-      round, courseName, event, holesEntered, totalScore, totalPar);
+  int get hashCode => Object.hash(round, courseName, event, courseSetName,
+      holesEntered, totalScore, totalPar);
 
   @override
   String toString() =>
       'RoundWithCourse(round: $round, courseName: $courseName, '
-      'event: $event, holesEntered: $holesEntered, totalScore: $totalScore, '
+      'event: $event, courseSetName: $courseSetName, '
+      'holesEntered: $holesEntered, totalScore: $totalScore, '
       'totalPar: $totalPar)';
 }

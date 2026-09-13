@@ -594,10 +594,25 @@ class _YardageSetStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (sets.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                'Par and stroke index are shared by every set — switching '
+                'sets only changes yardages.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ),
+          Row(
+            children: [
           Expanded(
             child: sets.isEmpty
                 ? const Text(
@@ -632,11 +647,13 @@ class _YardageSetStrip extends StatelessWidget {
                     ),
                   ),
           ),
-          TextButton.icon(
-            key: const ValueKey('add_yardage_set'),
-            onPressed: onAdd,
-            icon: const Icon(Icons.add),
-            label: const Text('Add set'),
+              TextButton.icon(
+                key: const ValueKey('add_yardage_set'),
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: const Text('Add set'),
+              ),
+            ],
           ),
         ],
       ),

@@ -102,6 +102,7 @@ void main() {
     int totalScore = 0,
     int totalPar = 0,
     Event? event,
+    String? courseSetName,
   }) {
     return RoundWithCourse(
       round: Round(
@@ -113,6 +114,7 @@ void main() {
       ),
       courseName: courseName,
       event: event,
+      courseSetName: courseSetName,
       holesEntered: holesEntered,
       totalScore: totalScore,
       totalPar: totalPar,
@@ -413,5 +415,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(EditEventResultDialog), findsOneWidget);
+  });
+
+  group('RoundRow — which yardage set the round used (#81)', () {
+    testWidgets('names the set alongside the date', (tester) async {
+      await tester.pumpWidget(wrap());
+      await emitRounds(tester, [makeRound(courseSetName: 'Blue tees')]);
+
+      expect(find.text('Blue tees'), findsOneWidget);
+      expect(find.byIcon(Icons.straighten), findsOneWidget);
+    });
+
+    testWidgets('shows nothing extra for a round with no set', (tester) async {
+      await tester.pumpWidget(wrap());
+      await emitRounds(tester, [makeRound()]);
+
+      expect(find.byIcon(Icons.straighten), findsNothing);
+    });
   });
 }

@@ -31,6 +31,7 @@ class HoleCard extends StatefulWidget {
     required this.savedDraft,
     required this.onChanged,
     required this.onSave,
+    this.courseSetName,
     this.onPrev,
     this.onNext,
   });
@@ -49,6 +50,11 @@ class HoleCard extends StatefulWidget {
   /// Navigates to the previous / next hole in the parent's PageView.
   /// `null` means "no neighbour in that direction" (hole 1 / hole 18) and
   /// the corresponding chevron renders disabled.
+  /// Name of the yardage set this round is played from, or null when it has
+  /// none. Labels the yards field so it's obvious at the point of entry which
+  /// tee box the pre-filled number came from (#81).
+  final String? courseSetName;
+
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
 
@@ -156,6 +162,7 @@ class _HoleCardState extends State<HoleCard> {
               const SizedBox(height: 12),
               _YardsRow(
                 controller: _yardsController,
+                courseSetName: widget.courseSetName,
                 onChanged: (v) {
                   // Numeric keyboard + a >= 0 floor mirror the `yards >= 0`
                   // CHECK; an empty field means "unknown" and stores 0.
@@ -327,11 +334,21 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// The hole's yardage, labelled with the yardage set it came from.
+///
+/// Naming the set here rather than only in the app bar puts it exactly where
+/// the number it explains appears — and when the round has no set, says so,
+/// because that is why the field arrived blank (#81).
 class _YardsRow extends StatelessWidget {
-  const _YardsRow({required this.controller, required this.onChanged});
+  const _YardsRow({
+    required this.controller,
+    required this.onChanged,
+    this.courseSetName,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final String? courseSetName;
 
   @override
   Widget build(BuildContext context) {
@@ -339,11 +356,14 @@ class _YardsRow extends StatelessWidget {
       key: const ValueKey('yards'),
       controller: controller,
       keyboardType: TextInputType.number,
-      decoration: const InputDecoration(
-        labelText: 'Yards',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: courseSetName == null ? 'Yards' : 'Yards · $courseSetName',
+        border: const OutlineInputBorder(),
         hintText: 'e.g. 420',
         suffixText: 'yds',
+        helperText: courseSetName == null
+            ? "No yardage set on this round — yardages are not pre-filled"
+            : null,
       ),
       onChanged: onChanged,
     );

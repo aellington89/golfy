@@ -6,11 +6,17 @@ import 'package:golfy_app/features/hole_entry/hole_draft.dart';
 /// Stateful test harness that holds a [HoleDraft] and rebuilds when
 /// [HoleCard.onChanged] fires — mirrors the real screen's ownership model.
 class _Harness extends StatefulWidget {
-  const _Harness({required this.initial, this.savedDraft, this.onSave});
+  const _Harness({
+    required this.initial,
+    this.savedDraft,
+    this.onSave,
+    this.courseSetName,
+  });
 
   final HoleDraft initial;
   final HoleDraft? savedDraft;
   final VoidCallback? onSave;
+  final String? courseSetName;
 
   @override
   State<_Harness> createState() => _HarnessState();
@@ -35,6 +41,7 @@ class _HarnessState extends State<_Harness> {
           holeNumber: 1,
           draft: _draft,
           savedDraft: widget.savedDraft,
+          courseSetName: widget.courseSetName,
           onChanged: (d) => setState(() => _draft = d),
           onSave: widget.onSave ?? () {},
         ),
@@ -49,6 +56,7 @@ Future<_HarnessState> pumpCard(
   required HoleDraft initial,
   HoleDraft? savedDraft,
   VoidCallback? onSave,
+  String? courseSetName,
 }) async {
   // Default 800x600 test surface is shorter than the form. Resize so every
   // row — including the Shots section — is on-screen and tappable.
@@ -60,6 +68,7 @@ Future<_HarnessState> pumpCard(
     initial: initial,
     savedDraft: savedDraft,
     onSave: onSave,
+    courseSetName: courseSetName,
   ));
   await tester.pumpAndSettle();
   return tester.state<_HarnessState>(find.byType(_Harness));
@@ -658,6 +667,30 @@ void main() {
       expect(scoreHeader, lessThan(upDownSuccess));
       expect(upDownSuccess, lessThan(sandSave));
       expect(sandSave, lessThan(penalty));
+    });
+  });
+
+  group('HoleCard — which yardage set the round uses (#81)', () {
+    testWidgets('labels the yards field with the set name', (tester) async {
+      await pumpCard(
+        tester,
+        initial: HoleDraft.initial(par: 4, yards: 431),
+        courseSetName: 'Blue tees',
+      );
+
+      // Naming it here puts it where the number it explains appears.
+      expect(find.text('Yards · Blue tees'), findsOneWidget);
+    });
+
+    testWidgets('explains a blank yardage when the round has no set',
+        (tester) async {
+      await pumpCard(tester, initial: HoleDraft.initial());
+
+      expect(find.text('Yards'), findsOneWidget);
+      expect(
+        find.text('No yardage set on this round — yardages are not pre-filled'),
+        findsOneWidget,
+      );
     });
   });
 }

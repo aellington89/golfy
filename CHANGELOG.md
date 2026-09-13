@@ -28,6 +28,11 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   transaction, so a failure part-way through can no longer leave the course
   half-written while the screen claims otherwise. Backing out with unsaved edits
   now asks first.
+- **Par and stroke index are visibly course-wide** ([#81]): they are shared by
+  every yardage set — only yardages differ between tee boxes — so the editor and
+  the mid-round sheet now say so rather than leaving a per-hole card that shows
+  all three together to imply otherwise. Both remain editable while playing: par
+  follows each hole you save, and stroke index through the course sheet.
 - **A new course starts from a real layout** ([#81]): opening the editor on a
   course with no card pre-fills the standard par-72 arrangement — four par 3s,
   four par 5s, 36 out and 36 in — instead of eighteen par 4s. It arrives marked
@@ -41,6 +46,17 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   "the blues, minus 20" — instead of retyping them. The copy lands in the editor
   as unsaved changes for review, because real tee boxes differ hole by hole and
   an offset is only ever an approximation.
+- **Add a yardage set while starting a round** ([#81]): the set picker in New
+  Round now offers "Add new set…", matching the "Add new…" affordance the course
+  and event pickers already have. A tee box you have not recorded yet no longer
+  sends you out to the course editor and back. The new set can copy an existing
+  set's yardages with an offset, and a set created blank is still useful —
+  "Update course as I play" fills it in hole by hole as you enter the round.
+- **It is obvious which yardage set a round used** ([#81]): the rounds list
+  names it beside the date, and the hole entry form labels the yards field with
+  it — "Yards · Blue tees" — so the number and its source appear together. A
+  round with no set says so on the yards field, since that is why it arrived
+  blank.
 - **Fix the course while you are playing it** ([#81]): you learn a course's real
   par and yardages during the first round, and acting on that used to mean
   leaving the round, opening the course editor from the drawer, and coming back.
