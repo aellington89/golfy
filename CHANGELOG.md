@@ -8,6 +8,20 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-14
+
+A bug-fix release for per-shot entry. Saving a hole a second time — the normal
+way a hole is entered, a shot at a time as you play it — wrote its shot list
+against the wrong row, so the edit you had just made was discarded and, when the
+id it landed on belonged to another hole, that hole's own shots were overwritten
+with it. The blank shot row the form leaves for you to fill in was also deleted
+on save, taking the hole's shot numbering with it. Between them they made a par
+3 whose tee shot misses the green almost impossible to record: the row for the
+recovery shot disappeared, and the lie typed into it did too.
+
+No schema change — the data model is untouched at v7, and upgrading is in place
+as usual.
+
 ### Fixed
 
 - **Editing a hole you already saved no longer discards the edit**: the second
@@ -434,7 +448,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/aellington89/golfy/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/aellington89/golfy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aellington89/golfy/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/aellington89/golfy/compare/v0.1.3...v0.1.4

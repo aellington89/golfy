@@ -25,10 +25,18 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.3.0
+## Status — v0.3.1
 
-**v0.3.0** is the latest release. Per-hole data entry stops being two different
-apps: setting a course up now uses the round form's own controls and progress
+**v0.3.1** is the latest release: a bug-fix release that makes per-shot entry
+survive a second save. Saving a hole again — the normal way a hole is entered,
+a shot at a time as you play it — attached its shot list to the wrong row, so
+the edit was discarded and could overwrite another hole's shots; the blank shot
+row the form leaves you to fill in was deleted on save as well. A par 3 whose
+tee shot misses the green hit both at once. It needs no schema change and no
+re-entry of existing rounds.
+
+It builds on **v0.3.0**, where per-hole data entry stopped being two different
+apps: setting a course up uses the round form's own controls and progress
 signals, lives on one screen instead of three, and can be corrected from inside
 a round — while shots arrive pre-filled from what the hole card already knows:
 
@@ -38,10 +46,11 @@ a round — while shots arrive pre-filled from what the hole card already knows:
 | Course edits while you play | [#81](https://github.com/aellington89/golfy/issues/81) | "Update course as I play" keeps the template in step with each hole saved and arms itself on a course with no card; a sheet edits one hole's course data mid-round; stroke index is enterable straight from the hole entry form. Yardage sets can be created while starting a round, copied from an existing set with an offset, and which set a round used is visible on the rounds list and the yards field |
 | Smarter shot entry | [#81](https://github.com/aellington89/golfy/issues/81) | Shots pre-fill from the hole's own data — tee lie, chained lies from the fairway flag, putts once the implied full swings run out, remaining distance stepped down per club — with a one-tap "Build from score" and non-blocking notes when shots disagree with the scoring fields. Every suggestion is overrideable and shots stay optional |
 
-It needs **no schema change** — the data model carried it unaltered at v7.
+v0.3.0 needed **no schema change** either — the data model carried it unaltered
+at v7.
 
-It builds on **v0.2.0**, Golfy's largest release to that point, which completed
-the **Courses & yardage** milestone and gave **Events** a home of their own:
+Before that, **v0.2.0** was Golfy's largest release to that point, completing
+the **Courses & yardage** milestone and giving **Events** a home of their own:
 
 | Feature | Issue | What it delivered |
 |---|---|---|
@@ -154,7 +163,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 390 passing tests
+flutter test                           # 520 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
