@@ -60,15 +60,17 @@ class CourseSetDao extends DatabaseAccessor<GolfyDatabase>
 
   /// Upserts a single hole's yardage within a set, keyed on
   /// `(course_set_id, hole_number)`. The per-hole counterpart to
-  /// [replaceYardsForSet] — see `CourseHoleDao.upsertHole` for why it exists.
-  Future<int> upsertYard(CourseSetYardsCompanion yard) {
-    return into(courseSetYards).insert(
+  /// [replaceYardsForSet] — see `CourseHoleDao.upsertHole` for why it exists,
+  /// and `HoleResultDao.upsert` for why the id is read back with `RETURNING`.
+  Future<int> upsertYard(CourseSetYardsCompanion yard) async {
+    final row = await into(courseSetYards).insertReturning(
       yard,
       onConflict: DoUpdate(
         (_) => yard,
         target: [courseSetYards.courseSetId, courseSetYards.holeNumber],
       ),
     );
+    return row.id;
   }
 
   /// Replaces a set's entire yardage card in one transaction (mirrors

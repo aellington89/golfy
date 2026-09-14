@@ -55,10 +55,9 @@ void main() {
       expect(HoleDraft.initial().shots, isEmpty);
     });
 
-    test('shotInputs maps shots in order and drops fully-empty ones', () {
+    test('shotInputs maps shots in order', () {
       final draft = HoleDraft.initial().copyWith(shots: const [
         ShotDraft(club: 'Driver', distanceYards: 268, lie: 'Tee'),
-        ShotDraft(), // fully empty — dropped
         ShotDraft(club: '7 Iron', distanceYards: 150, result: 'Holed'),
       ]);
       final inputs = draft.shotInputs();
@@ -67,6 +66,38 @@ void main() {
       expect(inputs.first.distanceYards, 268);
       expect(inputs[1].club, '7 Iron');
       expect(inputs[1].result, 'Holed');
+    });
+
+    test('shotInputs drops blank rows left at the end of the list', () {
+      final draft = HoleDraft.initial().copyWith(shots: const [
+        ShotDraft(club: 'Driver', distanceYards: 268, lie: 'Tee'),
+        ShotDraft(),
+        ShotDraft(),
+      ]);
+      expect(draft.shotInputs(), hasLength(1));
+    });
+
+    test('shotInputs keeps a blank row between two entered shots', () {
+      // Shot numbers are the hole's chronology: dropping the middle row would
+      // renumber the putt to shot 2 and delete a row still being filled in —
+      // which is exactly the row a par-3 tee shot that misses the green leaves
+      // behind, since no hole-level field says where it finished.
+      final draft = HoleDraft.initial(par: 3).copyWith(shots: const [
+        ShotDraft(club: '5 Iron', distanceYards: 165, lie: 'Tee'),
+        ShotDraft(),
+        ShotDraft(club: 'Putter', lie: 'Green', result: 'Holed'),
+      ]);
+      final inputs = draft.shotInputs();
+      expect(inputs, hasLength(3));
+      expect(inputs[1].club, isNull);
+      expect(inputs[1].lie, isNull);
+      expect(inputs[2].club, 'Putter');
+    });
+
+    test('ShotDraft.isBlank is true only when every field is unset', () {
+      expect(const ShotDraft().isBlank, isTrue);
+      expect(const ShotDraft(lie: 'Fairway').isBlank, isFalse);
+      expect(const ShotDraft(distanceYards: 0).isBlank, isFalse);
     });
 
     test('equality and hashCode track the shot list deeply', () {

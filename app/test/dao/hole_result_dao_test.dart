@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -37,6 +38,31 @@ void main() {
       final firstId = await fx.upsertHole(rid, 1, score: 4);
       final secondId = await fx.upsertHole(rid, 1, score: 5);
       expect(secondId, firstId);
+    });
+
+    test('upserting an existing hole returns its id, not a stale rowid',
+        () async {
+      // `last_insert_rowid()` only moves on a real INSERT, so on the DO UPDATE
+      // path it still names whatever was inserted last — here a hole_shots row
+      // written between the two upserts. Reading the id back from that counter
+      // hands the caller another table's rowid, and `saveHole` then attaches
+      // the hole's shots to the wrong hole_results row (or to none at all).
+      final rid = await seedRound();
+      final firstId = await fx.upsertHole(rid, 1, score: 4);
+      await db.holeShotDao.replaceForHole(firstId, [
+        HoleShotsCompanion.insert(
+          holeResultId: firstId,
+          shotNumber: 1,
+          club: const Value('Driver'),
+        ),
+        HoleShotsCompanion.insert(
+          holeResultId: firstId,
+          shotNumber: 2,
+          club: const Value('7 Iron'),
+        ),
+      ]);
+
+      expect(await fx.upsertHole(rid, 1, score: 5), firstId);
     });
 
     test('upsert updates non-key fields in place', () async {

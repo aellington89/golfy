@@ -49,6 +49,20 @@ void main() {
     return container;
   }
 
+  /// Pumps the real (async) drift work through, then settles the frame — the
+  /// stream-backed screen needs both before its next assertion.
+  Future<void> settle(WidgetTester tester) async {
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+  }
+
+  /// The lie the shot row at [index] is currently displaying.
+  String? lieShown(WidgetTester tester, int index) => tester
+      .widget<DropdownButton<String?>>(find.byKey(ValueKey('shot_lie_$index')))
+      .value;
+
   Future<({int courseId, int roundId})> seedRound() async {
     final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
     final rid = await fx.insertRound(cid, date: '2026-05-25');
@@ -545,6 +559,60 @@ void main() {
     expect(find.byKey(const ValueKey('finish_round')), findsOneWidget);
     expect(find.text('Finish Round'), findsOneWidget);
     expect(find.text('Done'), findsNothing);
+  });
+
+  testWidgets(
+      'a par-3 shot 2 keeps the lie typed into it after the hole is re-saved',
+      (tester) async {
+    // The workflow this protects: a par-3 tee shot misses the green, so the
+    // player records where it actually finished on shot 2. Nothing about the
+    // hole implies that lie — `fairwayHit` is N/A on a par 3 and GIR is off —
+    // so the scaffolded row arrives blank and is filled in by hand, on a hole
+    // that has already been saved once.
+    final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+    await fx.insertCourseHoles(cid, par: 3);
+    final setId = await fx.insertCourseSet(cid);
+    await fx.insertCourseSetYards(setId, yards: 165);
+    final rid = await fx.insertRound(cid, courseSetId: setId);
+
+    final container = makeContainer(activeRoundId: rid);
+    addTearDown(container.dispose);
+
+    // Taller than `resizeForForm`: three shot rows push the Save button down.
+    tester.view.physicalSize = const Size(800, 3200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(wrap(container));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const ValueKey('build_shots_from_score')));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await settle(tester);
+
+    // The blank middle row survives the save: dropping it would renumber the
+    // putt to shot 2 and take the row being filled in with it.
+    expect(lieShown(tester, 1), isNull);
+    expect(lieShown(tester, 2), 'Green');
+
+    await tester.tap(find.byKey(const ValueKey('shot_lie_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fairway').last);
+    await tester.pumpAndSettle();
+    expect(lieShown(tester, 1), 'Fairway');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await settle(tester);
+
+    final byHole =
+        await tester.runAsync(() => db.holeShotDao.watchForRound(rid).first);
+    expect(byHole![1], hasLength(3));
+    expect(byHole[1]![1].shotNumber, 2);
+    expect(byHole[1]![1].lie, 'Fairway');
+    expect(byHole[1]![2].club, 'Putter');
+    // And it is still on screen — the save must not read back a stale list.
+    expect(lieShown(tester, 1), 'Fairway');
   });
 
   group('HoleEntryScreen — course template from inside a round (#81)', () {

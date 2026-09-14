@@ -8,6 +8,28 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Editing a hole you already saved no longer discards the edit**: the second
+  save of a hole ran as an `ON CONFLICT ... DO UPDATE`, and the row id it handed
+  back came from `last_insert_rowid()` — a counter SQLite only advances on a real
+  *insert*. Once the hole had shots, that counter still named one of the
+  `hole_shots` rows the previous save wrote, so the shot list was attached to
+  whatever row happened to carry that id: another hole (which silently lost its
+  own shots and gained these) or none at all (a foreign-key error that rolled the
+  whole save back). Either way the change vanished on save. The id is now read
+  back with `RETURNING`, which names the row that was actually written. The same
+  fix is applied to the per-hole course template and yardage upserts, which had
+  the same stale-id trap.
+- **A shot you haven't filled in yet survives the save**: an all-blank shot row
+  was dropped wherever it sat in the list, so saving mid-entry deleted the row
+  and renumbered every shot after it — the putt entered as shot 3 came back as
+  shot 2. A par 3 hits this the moment the tee shot misses the green: nothing
+  about the hole says where the ball finished (there is no fairway flag on a par
+  3, and GIR is off), so the suggested row is deliberately blank and is exactly
+  the row that disappeared. Blank rows are now dropped only from the end of the
+  list, which is still the "tapped Add shot and left it" case.
+
 ## [0.3.0] - 2026-09-13
 
 Per-hole data entry stops being two different apps. Setting a course up and
