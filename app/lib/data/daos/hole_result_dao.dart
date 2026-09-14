@@ -12,22 +12,31 @@ class HoleResultDao extends DatabaseAccessor<GolfyDatabase>
   HoleResultDao(super.db);
 
   /// Inserts a hole result, or updates the existing row when the
-  /// `(round_id, hole_number)` pair already exists. Uses a real
-  /// `INSERT ... ON CONFLICT(round_id, hole_number) DO UPDATE` so the row's
-  /// `id` is preserved across edits (avoiding the foot-guns of
-  /// `INSERT OR REPLACE`, which would delete + reinsert).
+  /// `(round_id, hole_number)` pair already exists, and returns that row's
+  /// `id`. Uses a real `INSERT ... ON CONFLICT(round_id, hole_number) DO
+  /// UPDATE` so the row's `id` is preserved across edits (avoiding the
+  /// foot-guns of `INSERT OR REPLACE`, which would delete + reinsert).
+  ///
+  /// The id comes back through `RETURNING`, not from `last_insert_rowid()`:
+  /// SQLite only updates that counter when a row is really *inserted*, so on
+  /// the DO UPDATE path it still holds whatever was inserted last — including
+  /// a row of another table entirely. Callers key child rows off this id
+  /// (`GolfyRepository.saveHole` attaches the hole's `hole_shots` to it), and
+  /// a stale rowid there either hangs the shots off a different hole or trips
+  /// the foreign key and rolls the whole save back.
   ///
   /// Throws [ArgumentError] when a companion violates one of the
   /// app-layer invariants: see [_assertInvariants].
-  Future<int> upsert(HoleResultsCompanion hole) {
+  Future<int> upsert(HoleResultsCompanion hole) async {
     _assertInvariants(hole);
-    return into(holeResults).insert(
+    final row = await into(holeResults).insertReturning(
       hole,
       onConflict: DoUpdate(
         (_) => hole,
         target: [holeResults.roundId, holeResults.holeNumber],
       ),
     );
+    return row.id;
   }
 
   /// Reactive list of every hole_result for a round, ordered by hole number.

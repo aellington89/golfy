@@ -108,5 +108,47 @@ void main() {
       expect(await db.courseSetDao.getYardsForSet(a), hasLength(1));
       expect(await db.courseSetDao.getYardsForSet(b), hasLength(18));
     });
+
+    test('upsertYard updates one hole in place', () async {
+      final cid = await fx.insertCourse();
+      final sid = await fx.insertCourseSet(cid);
+      await fx.insertCourseSetYards(sid, yards: 400);
+
+      await db.courseSetDao.upsertYard(CourseSetYardsCompanion.insert(
+        courseSetId: sid,
+        holeNumber: 4,
+        yards: 165,
+      ));
+
+      final rows = await db.courseSetDao.getYardsForSet(sid);
+      expect(rows, hasLength(18));
+      expect(rows[3].yards, 165);
+      expect(rows[2].yards, 400);
+    });
+
+    test('upsertYard returns the row id, not a stale rowid', () async {
+      // See `HoleResultDao.upsert`: `last_insert_rowid()` is only advanced by a
+      // real insert, so on the DO UPDATE path it names whatever was inserted
+      // last anywhere in the database.
+      final cid = await fx.insertCourse();
+      final sid = await fx.insertCourseSet(cid);
+      final firstId = await db.courseSetDao.upsertYard(
+        CourseSetYardsCompanion.insert(
+          courseSetId: sid,
+          holeNumber: 1,
+          yards: 420,
+        ),
+      );
+      await fx.insertCourseSet(cid, name: 'Another set');
+
+      final secondId = await db.courseSetDao.upsertYard(
+        CourseSetYardsCompanion.insert(
+          courseSetId: sid,
+          holeNumber: 1,
+          yards: 430,
+        ),
+      );
+      expect(secondId, firstId);
+    });
   });
 }

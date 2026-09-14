@@ -28,6 +28,12 @@ class ShotDraft {
         result: result,
       );
 
+  /// Nothing about this shot has been entered yet. Such a row is a placeholder
+  /// the form laid out — an "Add shot" tap, or a suggestion the hole's own
+  /// fields couldn't fill in — rather than a shot the player recorded.
+  bool get isBlank =>
+      club == null && distanceYards == null && lie == null && result == null;
+
   ShotDraft copyWith({
     Object? club = _sentinel,
     Object? distanceYards = _sentinel,
@@ -206,16 +212,23 @@ class HoleDraft {
   }
 
   /// The shot list as repository inputs (order preserved → shot numbers), for
-  /// [GolfyRepository.saveHole]. Empty shots (no club / distance / lie / result)
-  /// are dropped so an untouched trailing row isn't persisted.
-  List<HoleShotInput> shotInputs() => [
-        for (final s in shots)
-          if (s.club != null ||
-              s.distanceYards != null ||
-              s.lie != null ||
-              s.result != null)
-            s.toInput(),
-      ];
+  /// [GolfyRepository.saveHole].
+  ///
+  /// Blank rows are dropped from the *end* of the list only, so an untouched
+  /// row left over from an "Add shot" tap isn't persisted. An interior blank is
+  /// kept: a shot's number is its place in the hole's chronology, so dropping
+  /// one from the middle renumbers every shot after it — the putt entered as
+  /// shot 3 comes back as shot 2 — and deletes a row the player is part-way
+  /// through filling in. That is exactly the row a par-3 tee shot that misses
+  /// the green leaves behind, since no hole-level field says where it finished
+  /// and the suggestion stays blank until the lie is picked.
+  List<HoleShotInput> shotInputs() {
+    var end = shots.length;
+    while (end > 0 && shots[end - 1].isBlank) {
+      end--;
+    }
+    return [for (var i = 0; i < end; i++) shots[i].toInput()];
+  }
 
   @override
   bool operator ==(Object other) =>

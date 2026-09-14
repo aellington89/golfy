@@ -38,15 +38,18 @@ class CourseHoleDao extends DatabaseAccessor<GolfyDatabase>
   /// saving one hole of a round would clobber holes the player hasn't reached.
   ///
   /// `DoUpdate` rather than `INSERT OR REPLACE`, so the row keeps its id and
-  /// nothing referencing it is disturbed.
-  Future<int> upsertHole(CourseHolesCompanion hole) {
-    return into(courseHoles).insert(
+  /// nothing referencing it is disturbed. Returns that id, read back through
+  /// `RETURNING` — `last_insert_rowid()` is only advanced by a real insert, so
+  /// on the DO UPDATE path it holds a stale rowid (see `HoleResultDao.upsert`).
+  Future<int> upsertHole(CourseHolesCompanion hole) async {
+    final row = await into(courseHoles).insertReturning(
       hole,
       onConflict: DoUpdate(
         (_) => hole,
         target: [courseHoles.courseId, courseHoles.holeNumber],
       ),
     );
+    return row.id;
   }
 
   /// Replaces a course's entire hole template in one transaction: clears the

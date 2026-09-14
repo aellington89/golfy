@@ -74,6 +74,33 @@ void main() {
     });
   });
 
+  group('CourseHoleDao.upsertHole', () {
+    test('updates one hole in place and leaves the rest of the card alone',
+        () async {
+      final cid = await fx.insertCourse();
+      await fx.insertCourseHoles(cid, par: 4);
+
+      await db.courseHoleDao.upsertHole(hole(cid, 7, par: 3, strokeIndex: 11));
+
+      final rows = await db.courseHoleDao.getForCourse(cid);
+      expect(rows, hasLength(18));
+      expect(rows[6].par, 3);
+      expect(rows[6].strokeIndex, 11);
+      expect(rows[5].par, 4);
+    });
+
+    test('returns the row id, not a stale rowid', () async {
+      // See `HoleResultDao.upsert`: `last_insert_rowid()` is only advanced by a
+      // real insert, so on the DO UPDATE path it names whatever was inserted
+      // last anywhere in the database.
+      final cid = await fx.insertCourse();
+      final firstId = await db.courseHoleDao.upsertHole(hole(cid, 1));
+      await fx.insertCourse(name: 'Somewhere else');
+
+      expect(await db.courseHoleDao.upsertHole(hole(cid, 1, par: 5)), firstId);
+    });
+  });
+
   group('CourseHoleDao.watchForCourse', () {
     test('emits empty for a course with no template', () async {
       final cid = await fx.insertCourse();
