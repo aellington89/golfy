@@ -74,6 +74,10 @@ app/lib/
 ├── app.dart                       # MaterialApp + light/dark theme (ThemeMode.system)
 └── main.dart                      # runApp + ProviderScope
 
+app/tool/                          # release tooling — not part of the app
+├── release_rules.dart             # pure version rules (imports nothing)
+└── next_version.dart              # CLI: next version, and the CI tag guard
+
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
 ├── migration_test.dart            # drift SchemaVerifier: every vN -> vN+1 step
@@ -101,6 +105,7 @@ app/test/
 │   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
+├── tool/                          # release_rules (version derivation + tag guards)
 └── widgets/                       # shared-widget tests (empty_state, par_selector,
                                    #   hole_nav_bar)
 ```
@@ -162,6 +167,7 @@ flutter test                           # everything (520 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
+flutter test test/tool                 # release version rules (no database)
 ```
 
 The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
@@ -303,13 +309,25 @@ branch described below — runs
 
 Releases are handled by a separate workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml): pushing a
-`v*.*.*` tag runs the test suite, builds a **signed** release APK from the
+`v*.*.*` tag first checks the tag against the repo — `dart run
+tool/next_version.dart --verify-release` compares it with
+[`pubspec.yaml`](pubspec.yaml) at that commit, the `CHANGELOG.md` heading and
+link references, the previous release's build number and the drift schema
+snapshots, and fails before anything is built if they disagree. It then runs
+the test suite, builds a **signed** release APK from the
 `ANDROID_*` secrets (see [Release signing](#release-signing)), asserts it is
 release-signed and within an 80 MB sanity ceiling for the fat universal APK,
 and attaches it to a **draft** GitHub Release to publish after on-device
 validation. A manual `workflow_dispatch` run does the
 same build but uploads the APK as an artifact instead of creating a Release — use
-it to dry-run the signing pipeline before tagging.
+it to dry-run the signing pipeline before tagging; it also prints what the
+next version would be.
+
+**Which version to tag is not a judgement call.** It is derived from the
+`## [Unreleased]` section of the changelog and the drift `schemaVersion` —
+`dart run tool/next_version.dart` prints it with its reasoning. The whole
+procedure, including what belongs in each changelog section, is in
+[`RELEASING.md`](../RELEASING.md).
 
 The Flutter SDK is **pinned** (`flutter-version: 3.44.0`) for reproducible runs —
 bump it in the workflow in lockstep with local Flutter upgrades, keeping it at or

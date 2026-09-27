@@ -21,6 +21,12 @@ jobs:
         working-directory: app    # all run: steps execute in app/
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The version guard reads the previous release out of git
+          # (`git show v0.3.0:app/pubspec.yaml`), and the default shallow
+          # checkout has neither the tags nor the blobs. fetch-tags alone is
+          # not enough — the objects behind them are needed too.
+          fetch-depth: 0
 
       - name: Set up JDK 17 (Android/Gradle toolchain)
         uses: actions/setup-java@v4
@@ -40,6 +46,19 @@ jobs:
 
       - name: Resolve dependencies
         run: flutter pub get
+
+      # #86: refuse a tag that disagrees with the repo before spending ten
+      # minutes building it. Checks the tag against app/pubspec.yaml at that
+      # commit, the CHANGELOG heading and link references, a build number that
+      # must increase (Android rejects a versionCode that does not), and the
+      # drift snapshots against schemaVersion. See RELEASING.md.
+      - name: Verify release metadata (tag push only)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: dart run tool/next_version.dart --verify-release "$GITHUB_REF_NAME"
+
+      - name: Preview the next version (dry-run only)
+        if: github.event_name == 'workflow_dispatch'
+        run: dart run tool/next_version.dart
 
       - name: Test gate
         run: flutter test

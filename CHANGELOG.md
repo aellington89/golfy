@@ -8,7 +8,7 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
-### Added
+### Internal
 
 - **Dependabot keeps dependencies current without touching `master`**
   ([`.github/dependabot.yml`](.github/dependabot.yml)): weekly checks of the
@@ -26,8 +26,6 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   routing and continue to open against `master` directly, since a CVE fix
   should not wait in an integration branch for a release.
 
-### Changed
-
 - **CI now covers the integration branch**
   ([`flutter-build.yml`](.github/workflows/flutter-build.yml)): `deps/patch` is
   a trigger branch for both `push` and `pull_request`, so Dependabot's pull
@@ -35,6 +33,35 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   rebuilt as each bump merges into it. The workflow's previous
   `branches: [master]` filter matched on the *base* branch, so without this
   every one of those pull requests would have arrived carrying no checks at all.
+
+- **The next version is derived from what merged, not chosen up front**
+  ([`RELEASING.md`](RELEASING.md),
+  [`app/tool/next_version.dart`](app/tool/next_version.dart)):
+  `dart run tool/next_version.dart` reads this `## [Unreleased]` section and
+  the drift `schemaVersion`, then prints the bump they imply along with its
+  reasons — `### Fixed` or `### Security` alone is a patch, `### Added` or
+  `### Changed` is a minor, a schema bump floors it at minor because a
+  migration then runs on every device, and `### Removed` or a `**BREAKING:**`
+  entry is a major once the project is past 1.0. Pre-1.0 that major is clamped
+  to a minor, since `0.y.z` → `1.0.0` is a deliberate call ([#79]) rather than
+  something a rule should make on its own — but the suppressed reason is still
+  printed, so nothing about the decision is hidden. A `v*` tag push now fails
+  before it builds anything when the tag disagrees with
+  [`app/pubspec.yaml`](app/pubspec.yaml), when `CHANGELOG.md` carries no
+  heading or link reference for it, when the build number does not increase,
+  or when a schema bump arrived as a patch. That first check is not
+  hypothetical: `v0.0.3` was tagged on a commit whose pubspec still read
+  `0.0.2+4`, and nothing noticed for eight releases ([#86]).
+
+- **`### Internal` is where work no app user can see now goes.** The two
+  entries above are the motivating case — a Dependabot config and a CI branch
+  filter, filed under `### Added` and `### Changed`, which would have counted
+  as user-facing features and bumped the minor version for a release that
+  changes nothing about the app. The test is simply whether someone running
+  the installed APK would notice: CI, tooling, tests, docs and
+  behaviour-neutral refactors would not, so they contribute no bump. A
+  performance fix that is actually felt still belongs under `### Fixed`
+  ([#86]).
 
 ## [0.3.1] - 2026-09-14
 
@@ -524,3 +551,5 @@ Phase 1 — data layer and navigation shell.
 [#56]: https://github.com/aellington89/golfy/issues/56
 [#63]: https://github.com/aellington89/golfy/issues/63
 [#81]: https://github.com/aellington89/golfy/issues/81
+[#79]: https://github.com/aellington89/golfy/issues/79
+[#86]: https://github.com/aellington89/golfy/issues/86
