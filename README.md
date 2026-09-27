@@ -189,6 +189,9 @@ golfy/
 │   │   ├── app.dart     # MaterialApp root
 │   │   └── main.dart    # entry point
 │   └── test/            # widget + DAO + schema-constraint tests
+├── .github/
+│   ├── workflows/       # CI build+test, and the tag-driven signed release
+│   └── dependabot.yml   # dependency PRs, based on the deps/patch branch
 ├── .gitattributes       # LF-pin generated Windows plugin glue
 ├── .gitignore
 └── README.md            # you are here

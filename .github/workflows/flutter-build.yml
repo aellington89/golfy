@@ -3,9 +3,14 @@ name: Flutter Build
 
 on:
   push:
-    branches: [master]
+    # deps/patch is the standing integration branch Dependabot targets, so it
+    # is built on its own too: merging a bump into it must stay green before
+    # the batch is merged up to master.
+    branches: [master, deps/patch]
   pull_request:
-    branches: [master]
+    # Without deps/patch here, Dependabot's PRs (based on it per
+    # .github/dependabot.yml) would carry no checks whatsoever.
+    branches: [master, deps/patch]
   workflow_dispatch:
 
 concurrency:
