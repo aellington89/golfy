@@ -25,9 +25,17 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.3.1
+## Status — v0.3.2
 
-**v0.3.1** is the latest release: a bug-fix release that makes per-shot entry
+**v0.3.2** is the latest release, and it changes nothing about the app: the
+same screens, the same data, the same schema at v7. It exists to put the
+release machinery itself on a tag — dependency updates that collect on their
+own branch under CI, and a procedure that derives the next version number from
+what actually merged instead of leaving it to be typed into four files. See
+[`RELEASING.md`](RELEASING.md). If you are already on v0.3.1 there is no reason
+to update.
+
+**v0.3.1** is the release worth having: a bug fix that makes per-shot entry
 survive a second save. Saving a hole again — the normal way a hole is entered,
 a shot at a time as you play it — attached its shot list to the wrong row, so
 the edit was discarded and could overwrite another hole's shots; the blank shot
@@ -35,7 +43,7 @@ row the form leaves you to fill in was deleted on save as well. A par 3 whose
 tee shot misses the green hit both at once. It needs no schema change and no
 re-entry of existing rounds.
 
-It builds on **v0.3.0**, where per-hole data entry stopped being two different
+Both build on **v0.3.0**, where per-hole data entry stopped being two different
 apps: setting a course up uses the round form's own controls and progress
 signals, lives on one screen instead of three, and can be corrected from inside
 a round — while shots arrive pre-filled from what the hole card already knows:
@@ -163,7 +171,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 520 passing tests
+flutter test                           # 585 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

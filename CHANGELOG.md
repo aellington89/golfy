@@ -8,6 +8,27 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-09-27
+
+A release with nothing in it for the app. Golfy behaves exactly as v0.3.1 did —
+the same screens, the same data, the same schema at v7 — and upgrading is in
+place as usual. What it carries is the machinery around releases: dependency
+updates that collect on their own branch under CI, and a procedure that works
+out the next version number from what actually merged rather than leaving it to
+be typed into four files and hoped for.
+
+It is cut deliberately rather than left to ride the next feature. Rules that
+decide a version only start protecting anything once they are on a tag CI has
+checked, and the same goes for the guard that now rejects a tag disagreeing
+with [`app/pubspec.yaml`](app/pubspec.yaml) — the mismatch that let `v0.0.3`
+ship a pubspec still reading `0.0.2+4` and go unnoticed for eight releases.
+
+Under those same rules this release is a **patch**, and only just: everything
+below is `### Internal`, which contributes no bump at all, so the calculator
+reports that no release is needed and offers the patch for exactly this case.
+
+No schema change — the data model is untouched at v7.
+
 ### Internal
 
 - **Dependabot keeps dependencies current without touching `master`**
@@ -503,7 +524,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/aellington89/golfy/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/aellington89/golfy/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/aellington89/golfy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aellington89/golfy/compare/v0.1.4...v0.2.0
