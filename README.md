@@ -175,7 +175,10 @@ flutter run -d <android-device-id>     # Android
 > uninstall that wipes user data, so the keystore must be backed up and reused
 > for every release. Releases are cut by pushing a `v*` tag: CI builds the signed
 > APK and drafts a GitHub Release — see
-> [Continuous integration](app/README.md#continuous-integration).
+> [Continuous integration](app/README.md#continuous-integration). The version
+> on that tag is **derived from what merged**, not picked by hand, and CI
+> rejects a tag that disagrees with the repo — see
+> [`RELEASING.md`](RELEASING.md).
 
 ## Repository layout
 
@@ -188,12 +191,15 @@ golfy/
 │   │   ├── shell/       # AppShell + bottom-nav state
 │   │   ├── app.dart     # MaterialApp root
 │   │   └── main.dart    # entry point
+│   ├── tool/            # release version calculator (no app code)
 │   └── test/            # widget + DAO + schema-constraint tests
 ├── .github/
 │   ├── workflows/       # CI build+test, and the tag-driven signed release
 │   └── dependabot.yml   # dependency PRs, based on the deps/patch branch
 ├── .gitattributes       # LF-pin generated Windows plugin glue
 ├── .gitignore
+├── CHANGELOG.md         # Keep a Changelog; the input to the next version
+├── RELEASING.md         # how a release is cut and its version derived
 └── README.md            # you are here
 ```
 
