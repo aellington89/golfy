@@ -113,7 +113,7 @@ jobs:
 
       - name: Create draft GitHub Release (tag push only)
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true                 # publish after on-device validation
           prerelease: false           # v0.1.0 is the first stable release
