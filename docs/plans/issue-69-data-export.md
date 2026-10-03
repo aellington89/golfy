@@ -6,6 +6,13 @@
 > Pairs with [#70](https://github.com/aellington89/golfy/issues/70) (import /
 > restore) and [#72](https://github.com/aellington89/golfy/issues/72)
 > (Settings / About).
+>
+> **The file is designed as a two-way contract, not an export artifact.** It
+> exists to be read back in. So #69 ships the format *and* both halves of the
+> code that handles it — writing a file, reading one, and checking that a file
+> is safe to act on — proven by tests against committed sample files. #70 then
+> implements putting a decoded file back into the database, and the user
+> interface around it. §4.1 states exactly what #70 inherits.
 
 ---
 
@@ -17,7 +24,7 @@ whatever format ships has to stay readable forever.
 
 | # | Decision | Recommendation | Why it matters |
 |---|---|---|---|
-| 1 | **What the backup file looks like** — a readable text file, or a straight copy of the app's database file | **Readable text file (JSON)** | A text file can be opened, inspected and checked by eye, survives changes to how the app stores things, and leaves the door open to a future "merge my old rounds in" option. A database copy is less work today but is an opaque blob: if it is subtly broken nobody finds out until a restore fails. |
+| 1 | **What the backup file looks like** — a readable text file, or a straight copy of the app's database file | **Readable text file (JSON)** | A text file can be opened, inspected and checked by eye, survives changes to how the app stores things, and leaves the door open to a future "merge my old rounds in" option. A database copy is less work today but is an opaque blob: if it is subtly broken nobody finds out until a restore fails. **It also makes restoring far safer:** the app can read and check the whole file *before* it touches your data, then put it back in a single all-or-nothing step, with the screens refreshing by themselves. Swapping in a copied database file instead means closing the live database, overwriting it, and reopening — a step that can fail halfway and, on Windows, can be blocked outright by file locking. |
 | 2 | **Where the file goes** | **The user chooses, every time** — Android hands it to the normal share sheet (Drive, Files, email to yourself), Windows opens a Save-as dialog | Nothing leaves the device unless the user sends it somewhere. No storage permission is needed, which also keeps the Play Store privacy declarations ([#77](https://github.com/aellington89/golfy/issues/77)) simple and honest. |
 | 3 | **Where the Export button lives** | **A new Settings screen**, reached from the existing side menu, containing only a "Data" section for now | [#72](https://github.com/aellington89/golfy/issues/72) already plans Settings as the home for Export, version, licences and support. Building the shell here means no throwaway UI, and #72 just adds its rows later. |
 | 4 | **Ship Export on its own, or wait for Import** | **Build and merge Export now; cut the release when Import ([#70](https://github.com/aellington89/golfy/issues/70)) lands** | A backup file is insurance the moment it exists, so there is no reason to delay the work. But "you can save a file you cannot yet put back" is an awkward thing to put in release notes, and the two issues were always one milestone. If Import slips badly, Export can still ship alone with wording that is clear about it. |
@@ -25,6 +32,7 @@ whatever format ships has to stay readable forever.
 | 6 | **Restoring an older backup** | **Make it impossible to have one.** Export does not exist before today's data format, so no older file can ever exist. Import only has to handle "same as me" and refuse "newer than me" | This removes the single most expensive requirement in the pair of issues (upgrading an old backup during restore) without losing anything. The groundwork for a future upgrade path still ships, and a test fails the build the day the data format next changes, so it cannot be forgotten. |
 | 7 | **How much goes in the file** | **Everything, including two retired columns nobody uses** | A backup that silently drops a field is worse than no backup. Exporting straight from the database's own definition of itself — rather than a hand-written list of fields — means a future new field is included automatically, and a test fails if one is ever missed. |
 | 8 | **Three new third-party components** (share sheet, Windows save dialog, app-version reader) | **Accept them** | All three are standard, widely used Flutter packages from the Flutter team or its community, they satisfy the project's current Android build requirements, and the first two are the only sane way to let a user pick where a file goes. |
+| 9 | **Who proves the file can be read back in** | **This issue does.** #69 ships the reading and checking code with the writing code; #70 adds only "put these rows in the database" and the screens around it | A format is only a promise until something reads it. Shipping the reader alongside the writer means the day Export merges, there is proof — in the test suite, against committed sample files — that a backup can be understood and validated. The alternative is discovering the format is unusable weeks later, after real users already hold files in it. It also leaves #70 the part that genuinely needs care (replacing live data safely) rather than that *plus* reverse-engineering last month's decisions. |
 
 Two things deliberately **not** decided here: whether restore replaces or merges
 data (that is #70's call, and this format supports either), and whether backups
@@ -94,6 +102,17 @@ One file. UTF-8 JSON, pretty-printed with two-space indent, named
 manifest carries UTC). Plain `.json` rather than a custom extension, so share
 targets, mail clients and text editors all handle it without special-casing.
 
+> A distinctive extension (`.golfybak`, or `.golfy.json`) was considered, on
+> the theory that it would let Android offer "Open with Golfy" on a backup file.
+> Rejected: an Android intent filter matches reliably on MIME type, not on a
+> file-name pattern, and a file arriving from Drive or Files comes through as an
+> opaque `content://` URI whose name the system may not expose at all — so the
+> association would be unreliable whatever the extension, while claiming
+> `application/json` outright would claim *every* JSON file on the device.
+> Restoring happens through Golfy's own file picker instead, which does not care
+> about the extension. The `golfy-backup-` prefix is what makes the file
+> recognisable, and `.json` is what keeps it openable everywhere.
+
 ```json
 {
   "golfyBackup": {
@@ -139,7 +158,10 @@ Rules, all of them testable:
 4. **Tables in dependency order**, parents first:
    `courses → course_holes → course_sets → course_set_yards → events → rounds
    → hole_results → hole_shots`. Rows within a table ordered by `id` ascending,
-   so two exports of the same data are byte-identical and diffable.
+   so two exports of the same data are byte-identical and diffable. The order
+   is a courtesy to the reader and to a future streaming importer; **an importer
+   must not depend on it** — it uses its own compile-time ordering, so a file
+   written by hand or by another tool still restores correctly.
 5. **Booleans are `true` / `false`**, not 0 / 1 (drift's serializer already
    does this) — it is a file people are meant to be able to read.
 6. **`rowCounts` is the integrity check.** On import, counts are compared
@@ -156,10 +178,78 @@ Rules, all of them testable:
    exercised by a real file, because no Golfy build before this one can export.
    The day `schemaVersion` becomes 8, a guard test fails until an upgrader and a
    golden file for v7 are added.
+9. **Row ids are part of the data.** Every row carries its `id`, and a restore
+   writes it back unchanged — that is what preserves which hole belongs to which
+   round, which round to which course and set, and which shot to which hole.
+   SQLite's own autoincrement counter re-derives itself from the highest id
+   inserted, so rounds recorded after a restore cannot collide with restored
+   ones. Nothing about the counter needs to be in the file.
+10. **The file is checkable before it is acted on.** Decoding is *total*: it
+    either returns a complete, typed payload or throws, naming the table and row
+    index that defeated it — it never returns something half-understood. On top
+    of that, `BackupPayload.validate()` is a pure cross-table check that every
+    foreign key in the file points at a row that is also in the file, that no
+    unique key is duplicated (`(course_id, hole_number)`, `(round_id,
+    hole_number)`, `(name, season)` and the rest), and that hole numbers are
+    1–18. A restore runs both **before** it touches the database, so a bad file
+    is refused with a readable reason instead of failing halfway through a
+    SQLite constraint error.
 
 Size: a year of serious play (roughly 100 rounds, 1 800 holes, ~7 000 shots) is
 well under 5 MB pretty-printed. Not worth compressing, and compression would
 cost the inspectability that justified JSON in the first place.
+
+### 4.1 The import contract — what #70 inherits
+
+**Finished and tested by #69**, so that #70 starts from a format that is already
+known to be readable:
+
+- **`BackupCodec.decode(String)`** → a typed bundle (manifest + payload), or a
+  `BackupFormatException` that names the table and row index that defeated it.
+- **`BackupPayload.validate()`** → the pure cross-table check of rule 10:
+  foreign keys resolvable within the file, unique keys not duplicated, hole
+  numbers in range. Returns a readable list of problems, writes nothing.
+- **Version gatekeeping** — rule 8's accept / refuse / upgrade decision, with
+  the upgrader registry in place and empty, and the guard test that fails the
+  day `schemaVersion` moves.
+- **Two committed sample files**: `golden/backup_v1_minimal.json` (a handful of
+  rows, pinning the format byte for byte) and `golden/backup_v1_full.json` (the
+  whole seeded multi-round fixture, with every awkward case in it). #70's
+  restore tests read the second rather than inventing their own input, so export
+  and import are tested against *the same bytes*.
+- **A home for the write side** — `BackupDao` already spans all eight tables
+  transactionally, so #70 adds one method (`replaceAll(BackupPayload)`) rather
+  than a new access layer.
+
+**Still #70's to own**, stated here only so the format can be judged against
+what it has to support:
+
+1. Pick a file. `file_selector`'s *open* dialog works on Android as well as
+   Windows (it is only *save* that Android lacks), so import needs **no new
+   dependency** — it reuses what this issue already adds.
+2. Decode and validate. Refuse with the reason, having touched nothing.
+3. Show the user what the file holds (row counts, when it was made, which app
+   version made it) *and* what they currently have, then require an explicit
+   confirmation — replacing is destructive and must look it.
+4. Apply in **one transaction**: delete children → parents, insert parents →
+   children with the ids from the file. If anything fails, the transaction rolls
+   back and the device is exactly as it was. That, rather than a backup-of-the-
+   backup, is the answer to "what if restore dies halfway".
+5. Insert through the tables directly, not through the DAOs. The DAO-layer
+   invariants (`upDownSuccess` requires an attempt, `putts < score`, and so on)
+   exist to stop bad *user input*; a restore replays rows that already passed
+   them, and the SQL-level CHECK constraints still police a hand-edited file.
+6. Nothing else. The database stays the same file, foreign keys stay on, and
+   drift's watchers fire on commit — every screen refreshes by itself, with no
+   app restart and no file swap.
+7. Report what was restored, in the same counts the export tile shows.
+
+Two consequences of the format worth noting for that work: because restore
+*replaces*, there is no id remapping and no conflict resolution to design — the
+ids in the file become the ids on the device. And if merge is ever wanted, this
+format supports it, because every row carries its natural key as well as its id
+(course name + game title, round date + course + number, event name + season,
+hole number within a round); nothing here commits to building it.
 
 ---
 
@@ -197,6 +287,9 @@ Design notes:
 
 - **The codec and the payload are pure Dart** — no database, no file system, no
   plugins. That is where the detailed tests live, and they run in milliseconds.
+  **Both directions ship here** (decision 9): `encode`, `decode` and
+  `validate`, so the file is provably readable before anyone holds one. Only
+  the database write-back and its UI wait for #70.
 - **`BackupPayload` holds typed drift row objects** (`List<Course>`,
   `List<HoleResult>`, …) rather than loose maps, so adding a table is a compile
   error rather than a silent omission, and drift's value equality gives
@@ -218,6 +311,9 @@ Design notes:
   eight tables, so it belongs to none of them; a `@DriftAccessor` over all
   eight keeps it typed and transactional, and gives #70 the obvious home for
   the write-side counterpart (`replaceAll`).
+- **Import needs nothing new from the toolbox.** `file_selector` is being added
+  here for the Windows save dialog, and its *open* dialog is supported on
+  Android too — so #70's file picker is already paid for, on both platforms.
 
 ### UI
 
@@ -297,17 +393,21 @@ UI exists.
    `build_runner`, commit the regenerated `database.g.dart`. Mechanical and
    isolated on purpose — it is a large generated diff with no behaviour change,
    and nothing else should be hidden in it.
-2. **Format and codec (pure).** `backup_manifest.dart`,
-   `backup_payload.dart`, `backup_codec.dart` with its typed
-   `BackupFormatException` cases (`notJson`, `missingManifest`,
+2. **Format and codec, both directions (pure).** `backup_manifest.dart`,
+   `backup_payload.dart`, `backup_codec.dart` — `encode`, `decode` with its
+   typed `BackupFormatException` cases (`notJson`, `missingManifest`,
    `unsupportedFormatVersion`, `newerSchemaVersion`, `unknownTable`,
-   `missingTable`, `rowCountMismatch`, `badRow(table, index, cause)`) — plus
-   their tests and the golden file. No app wiring yet.
+   `missingTable`, `rowCountMismatch`, `badRow(table, index, cause)`), the empty
+   payload-upgrader registry, and `BackupPayload.validate()`. Plus their tests
+   and the minimal golden file. No app wiring yet — this step is the import
+   contract of §4.1, and it is reviewable on its own.
 3. **`BackupDao` + repository method.** `@DriftAccessor` over all eight
    tables; `readAll()` inside `transaction()`, each table ordered by `id`.
    Register the DAO on `@DriftDatabase`, regenerate, add
    `GolfyRepository.readBackupPayload()`, extend `test/dao/_fixtures.dart` with
-   the full multi-round fixture, add the DAO tests and both guard tests.
+   the full multi-round fixture, add the DAO tests and both guard tests. Commit
+   `golden/backup_v1_full.json`, exported from that fixture — the file #70's
+   restore tests will read.
 4. **Destinations.** `backup_destination.dart` — the interface, the Android
    share-sheet implementation, the Windows save-dialog implementation, the
    platform factory and the Riverpod provider. Thin by design; verified on
@@ -324,8 +424,11 @@ UI exists.
 
 ## 8. Testing plan
 
-Target: **roughly 45–55 new tests** on top of today's 585, all runnable with
-`flutter test` against in-memory SQLite — no device, no plugins.
+Target: **roughly 60–75 new tests** on top of today's 585, all runnable with
+`flutter test` against in-memory SQLite — no device, no plugins. Rather more
+than an export alone would need, because the reading and checking half is tested
+here too (decision 9): the suite's job is to make "this file can be imported" a
+fact before anyone owns one of these files.
 
 **New fixture.** `test/dao/_fixtures.dart` gains `seedFullBackupFixture()`,
 returning the expected row counts, and deliberately exercising every awkward
@@ -340,7 +443,9 @@ characters, and a round carrying a legacy `tee_set` value.
 | Suite | File | Covers |
 |---|---|---|
 | Codec, pure | `test/data/backup/backup_codec_test.dart` | encode → decode round trip equals the original payload; key sets per table; booleans as `true`/`false`; nulls present and explicit; dependency order of `data` keys; rows ordered by id; pretty-printing stable; rejects non-JSON, missing envelope, unknown `formatVersion`, a newer `schemaVersion`, an unknown or missing table, a count mismatch, a row with a missing or wrongly typed column — each with the specific exception and a message naming table and row index |
-| Golden | `test/data/backup/backup_v1_golden_test.dart` + `golden/backup_v1.json` | a small fixed payload encodes to a byte-identical committed file, and that file decodes back. This is the format contract; a diff here means the format changed and #70 and every existing user file are affected |
+| Golden, minimal | `test/data/backup/backup_v1_golden_test.dart` + `golden/backup_v1_minimal.json` | a small fixed payload encodes to a byte-identical committed file, and that file decodes back to the same payload. This is the format contract; a diff here means the format changed and #70 and every existing user file are affected |
+| Golden, full | same suite + `golden/backup_v1_full.json` | the whole seeded fixture, exported and committed, decodes back to a payload equal to the fixture and passes `validate()`. This is the file **#70's restore tests read**, so export and import are proven against the same bytes rather than two hand-written approximations |
+| Decode and validate | `test/data/backup/backup_decode_test.dart` | decoding is total — a file is either fully understood or rejected, never half-applied; `validate()` catches a `rounds` row whose `course_id` is absent from the file, a `hole_results` row whose `round_id` is absent, a duplicated `(round_id, hole_number)`, a duplicated `(name, season)`, a hole number of 0 or 19; a valid full payload reports no problems; every rejection message names the table and the row |
 | Coverage guard | same suite | `BackupPayload.tables.keys` equals `db.allTables.map((t) => t.actualTableName)` — **fails the day a ninth table is added** |
 | Column guard | same suite | for each table, the JSON keys of a round-tripped row equal `db.<table>.$columns.map((c) => c.name)` — **fails the day a column is added or renamed**, which is how a silent format change gets caught |
 | Schema-version guard | same suite | `BackupCodec.supportedSchemaVersion == GolfyDatabase().schemaVersion` — **fails the day `schemaVersion` is bumped**, forcing a conscious decision and a payload upgrader |
@@ -351,9 +456,12 @@ characters, and a round carrying a legacy `tee_set` value.
 
 **What is explicitly *not* tested here**, and where it is instead:
 
-- A full export → wipe → import round trip at the database level is #70's
-  acceptance criterion, as the issue says. What #69 proves is that the file
-  contains everything and survives a decode unchanged.
+- A full export → wipe → import round trip **at the database level** is #70's
+  acceptance criterion, as the issue says: writing the rows back, and proving
+  the device ends up in the state it started in. What #69 proves is everything
+  up to that line — the file contains every row and column, decodes back to an
+  identical payload, and passes its own referential checks. #70 inherits a
+  format it cannot misread, plus the sample file to read.
 - The share sheet and the Windows save dialog are platform code behind a
   one-method interface; they are covered by the manual checklist in section 10,
   not by a widget test that would just assert a mock.
@@ -364,7 +472,7 @@ characters, and a round carrying a legacy `tee_set` value.
 cd app
 flutter analyze
 flutter test                              # full suite, expect ~630-640
-flutter test test/data/backup             # codec + service + guards
+flutter test test/data/backup             # codec + decode + service + guards
 flutter test test/dao/backup_dao_test.dart
 flutter test test/features/settings
 ```
@@ -375,7 +483,7 @@ flutter test test/features/settings
 
 | Document | Change |
 |---|---|
-| **`BACKUP_FORMAT.md`** (new, repo root beside `RELEASING.md`) | The format contract: the envelope, the two version numbers and what each one means, table order and why, key naming, type rules, the integrity check, what an importer must accept and refuse, and the runbook "what to do when `schemaVersion` changes" — with the guard tests named as the things that will fail if it is skipped. This is the file #70 implements against and the one a future maintainer reads first. |
+| **`BACKUP_FORMAT.md`** (new, repo root beside `RELEASING.md`) | The two-way contract: the envelope, the two version numbers and what each one means, table order and why an importer must not rely on it, key naming, type rules, ids and why they are restored verbatim, the integrity and referential checks, what an importer must accept and what it must refuse, the restore procedure of §4.1 (validate first, one transaction, no file swap), and the runbook "what to do when `schemaVersion` changes" — with the guard tests named as the things that will fail if it is skipped. This is the file #70 implements against, and the one a future maintainer reads first. |
 | **`app/README.md`** | New **Data backup (export)** section: where the code lives, the one-transaction read, the two platform write paths and *why* Android cannot use a save dialog, the `build.yaml` JSON-key option, and the three guard tests with what each one protects. Plus: the project-layout tree (new `data/backup/`, `features/settings/`, new test dirs), a new architecture bullet ("Export is a pure codec behind a platform seam"), the dependency list, and the test count. |
 | **`README.md`** (top level) | Status section at release time; a line in **Stack** for the three new packages; and a short user-facing **Back up your data** passage under the data-model section — this is the public doc a user actually reads. |
 | **`CHANGELOG.md`** | One `### Added` entry under `[Unreleased]`, in the repo's narrative register: what it does, where it is, what the file contains, that nothing is uploaded, and that restoring arrives with #70. |
@@ -410,8 +518,10 @@ notes. Six steps, written for someone holding a phone:
 Plus the three questions this will actually generate, answered in the same
 place: **How often?** After any session you would not want to re-enter.
 **Does it go anywhere by itself?** No — nothing leaves the phone unless you
-send it. **Can I put it back?** Restoring arrives with #70; keep the files
-until then, they will still be readable.
+send it. **Can I put it back?** The file is built to be
+read back in, and Golfy already knows how to read and check one — putting it
+back on the device arrives with #70. Keep every file you make until then;
+they will still be valid when it lands.
 
 ### In-app copy (part of the UI, reviewed as text)
 
@@ -458,6 +568,7 @@ Run on a device, because none of it can be unit-tested:
 |---|---|
 | **Format lock-in** — the day a user has a v1 file, Golfy must read it forever | Golden file plus the three guard tests make an accidental change a failing build; `BACKUP_FORMAT.md` makes a deliberate one a documented decision |
 | **A field is silently left out of the backup** | Nothing is hand-listed: rows serialize from drift's own definitions, and the column guard test compares the file's keys against the live schema |
+| **The format turns out to be awkward or impossible to import**, discovered after users hold files in it | The reason for decision 9: the reader, the validator and the sample files ship in this issue, so the claim "this file can be imported" is tested before a single user has one. #70 inherits a proven format, not a hopeful one |
 | **A torn file if a hole is saved mid-export** | The whole read is one transaction |
 | **Export lands without import, and a user believes they are safe when they are not** | Decision 4 (release together); in-app and release-note copy is explicit until #70 ships |
 | **Three new native plugins, first in the project** | All standard and current; Windows glue committed and built once locally; Dependabot will now group their bumps onto `deps/patch` like any other dependency |
@@ -469,12 +580,14 @@ Run on a device, because none of it can be unit-tested:
 
 ## 12. Out of scope
 
-Deliberately not in this issue: restoring a backup (#70), merge-vs-replace
-semantics (#70), the rest of the Settings screen (#72), automatic or scheduled
-backups (Golfy has no background work), cloud storage integration (it is
-local-only by design), and any selective or partial export ("just this season")
-— the issue asks for a complete backup, and a filtered export is a different
-feature with a different file.
+Deliberately not in this issue: **writing a decoded backup back into the
+database** and the screens around it (#70) — note the line, since reading and
+validating a file *is* in scope per decision 9, and only the database write-back
+and UI are not; merge-vs-replace semantics (#70); the rest of the Settings
+screen (#72); automatic or scheduled backups (Golfy has no background work);
+cloud storage integration (it is local-only by design); and any selective or
+partial export ("just this season") — the issue asks for a complete backup, and
+a filtered export is a different feature with a different file.
 
 ---
 
@@ -486,7 +599,8 @@ feature with a different file.
 | Captures all eight tables at schema v7 | §4 rule 3, §8 coverage + column guard tests |
 | Embeds the drift schema version for restore to validate/upgrade | §4 rules 1 and 8, §8 schema-version guard |
 | Share sheet / SAF; nothing leaves the device automatically | §4 decision 2, §5 destinations, §10 checklist |
-| Round-trips cleanly to an equivalent logical state | §4 rules 3–4 (ids, order, completeness) and §8 round-trip + golden; the database-level round trip is #70's test, as the issue specifies |
+| Round-trips cleanly to an equivalent logical state | §4 rules 3, 4 and 9 (completeness, order, ids) plus §8's round-trip, both goldens and the decode/validate suite; the database-level round trip is #70's test, as the issue specifies |
+| **The file can be imported** (the pairing with #70) | §4.1: decode, validate, version gatekeeping and the committed sample files all ship here; #70 inherits a format already proven readable and adds only the database write-back and its UI |
 | Unit/integration coverage for a seeded multi-round fixture | §8 `seedFullBackupFixture()` + `backup_dao_test.dart` |
 | Semver: additive user-facing feature → MINOR | §6: v0.4.0+38, derived not chosen (the issue's "v0.3.0" is stale) |
 | Format decision (JSON vs SQLite copy) made during implementation | Decision 1: JSON, with the reasoning recorded |
@@ -495,12 +609,14 @@ feature with a different file.
 
 ## 14. Effort
 
-About **two focused days** for one developer, excluding review:
+About **two and a half focused days** for one developer, excluding review —
+a little more than export alone, because the read half of the contract ships
+here (decision 9) and pays for itself in #70:
 
 | Step | Estimate |
 |---|---|
 | 1 — build.yaml + regenerate | 30 min |
-| 2 — format, codec, their tests and golden | 4 h |
+| 2 — format, codec both directions, validation, tests and minimal golden | 5.5 h |
 | 3 — BackupDao, repository, fixture, DAO + guard tests | 3 h |
 | 4 — destinations (both platforms) | 2 h |
 | 5 — service + tests | 2 h |
@@ -508,4 +624,6 @@ About **two focused days** for one developer, excluding review:
 | 7 — docs, training, device verification | 3 h |
 
 The long poles are the fixture and the codec tests, which is the right place
-for the time to go: they are what make the format safe to live with.
+for the time to go: they are what make the format safe to live with — and what
+let #70 be a short issue about writing rows into a database rather than a long
+one about deciphering a file.
