@@ -8,6 +8,87 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Internal
+
+- **The pinned Flutter SDK moves from 3.44.0 to 3.47.6** ([#114];
+  [`flutter-build.yml`](.github/workflows/flutter-build.yml),
+  [`release.yml`](.github/workflows/release.yml)): three one-line pins, but the
+  reason was not staleness. `flutter_test` in the 3.44 SDK pinned `meta` to
+  exactly 1.18.0, `analyzer` 13.1+ wants `meta ^1.18.3`, and `build_runner`
+  2.16.1 wants `analyzer >=13.3.0` — so `flutter pub get` could not solve at
+  all, and both CI jobs died before analyzing or building anything. No 3.44.x
+  release relaxed that pin, so [#112] had to hold `build_runner` at `^2.15.0`
+  to get green. On 3.47.6 `flutter_test` asks for `meta ^1.18.3` instead; the
+  lock now resolves `meta` 1.19.0 and `analyzer` 13.3.0, and
+  [`app/pubspec.yaml`](app/pubspec.yaml) carries `build_runner: ^2.16.1` again
+  with the hold removed. The Dart floor moves `^3.12.0` → `^3.13.0` to match:
+  the caret on 3.12 would still have admitted 3.13, but it would have let a
+  checkout on the old SDK resolve a lock it cannot build.
+
+- **Windows renders through Impeller** (no repo change): 3.47 makes Impeller the
+  default renderer on Windows, and
+  [`windows/runner/main.cpp`](app/windows/runner/main.cpp) is the stock template
+  with no opt-out, so the switch is taken rather than deferred — Flutter has
+  said the opt-out goes away in a later release. Smoke-tested by hand on
+  Windows: launch, first paint, the Events list, navigating into an event, and
+  Material cards, icons and text at several sizes, all with no artifacts.
+
+- **The Android toolchain is validated rather than assumed**
+  ([`app/README.md`](app/README.md)):
+  [`.github/dependabot.yml`](.github/dependabot.yml) has long said that the AGP
+  and Kotlin versions are coupled to the pinned SDK, that a green CI run does
+  not prove the combination is supported, and that these are best taken
+  alongside a Flutter upgrade. This is that upgrade, so the AGP 9.4.1 /
+  Kotlin 2.4.20 / Gradle 9.8.0 trio waiting on `deps/patch` was checked against
+  it: `flutter analyze --suggestions` reports the Java/Gradle/AGP/KGP
+  combination compatible, and a debug APK builds and still declares
+  `com.golfy.golfy_app.debug`. That command is now written down in
+  [`app/README.md`](app/README.md) as the check CI cannot make for you. The
+  built-in-Kotlin and `newDsl` flags that 3.47's own templates now default to
+  are deliberately left off; adopting them removes the plugin declaration
+  Dependabot watches, which is its own decision.
+
+- **Generated drift code caught up with drift 2.35**
+  ([`database.g.dart`](app/lib/data/database.g.dart)): the drift bump in [#111]
+  changed only the pubspec and the lock, so the committed output was still what
+  drift 2.33 produced — exactly the mismatch
+  [`app/README.md`](app/README.md) warns about when it says a merged drift bump
+  still needs a local `build_runner` pass. Re-running codegen here settled it:
+  alias names are now computed at generation time rather than by a runtime
+  helper, and `readTable` calls carry explicit type arguments. Behaviour is
+  unchanged, and the migration suite still validates every v1→v7 step against
+  the committed schema snapshots. The same bump left `drift_dev` declared at
+  `^2.33.0` while `drift` and `drift_flutter` moved, which the caret quietly
+  papered over — it still resolved 2.35.0, so nothing was broken, but the
+  declared constraint no longer said what the rule says it should. Realigned to
+  `^2.35.0`; the lock does not move.
+
+- **The drift trio rule is now a test rather than a comment**
+  ([`test/tool/drift_trio_test.dart`](app/test/tool/drift_trio_test.dart)):
+  grouping the three packages in [`.github/dependabot.yml`](.github/dependabot.yml)
+  gets them into one pull request, but it does not guarantee all three
+  constraints are rewritten — in [#111] Dependabot updated the lock for all
+  three and said in its own commit message that it had updated `drift_dev`,
+  while leaving `drift_dev` declared a minor behind. Nothing failed, which is
+  the problem: the caret covered for it until the SDK upgrade happened to read
+  the file. Three checks now run with no git, network or sqlite: `drift` and
+  `drift_dev` resolve to the same version, they are declared with the same
+  constraint, and all three are present in both files. The second is the one
+  that catches [#111], and it was confirmed to fail on that exact state before
+  being committed. Test count moves 585 → 588.
+
+- **`flutter analyze` ignores build and platform directories**
+  ([`analysis_options.yaml`](app/analysis_options.yaml)): Flutter's tooling
+  writes this `analyzer: exclude:` block itself on `pub get` from 3.47 onwards.
+  It narrows what is analyzed and relaxes no lint; `lib/` is untouched, so the
+  committed `*.g.dart` files are still covered. Kept, with a comment saying
+  where it came from so the next person does not delete it as noise.
+
+This release stays `### Internal` on the test that matters — would someone
+running the installed APK notice? The released artifact is an APK, Impeller was
+already the default on Android, and the app behaves as it did. If a Windows
+build ever ships as a release artifact, that reasoning needs revisiting.
+
 ## [0.3.2] - 2026-09-27
 
 A release with nothing in it for the app. Golfy behaves exactly as v0.3.1 did —
@@ -575,3 +656,6 @@ Phase 1 — data layer and navigation shell.
 [#81]: https://github.com/aellington89/golfy/issues/81
 [#79]: https://github.com/aellington89/golfy/issues/79
 [#86]: https://github.com/aellington89/golfy/issues/86
+[#111]: https://github.com/aellington89/golfy/pull/111
+[#112]: https://github.com/aellington89/golfy/pull/112
+[#114]: https://github.com/aellington89/golfy/issues/114
