@@ -57,7 +57,11 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   alias names are now computed at generation time rather than by a runtime
   helper, and `readTable` calls carry explicit type arguments. Behaviour is
   unchanged, and the migration suite still validates every v1→v7 step against
-  the committed schema snapshots.
+  the committed schema snapshots. The same bump left `drift_dev` declared at
+  `^2.33.0` while `drift` and `drift_flutter` moved, which the caret quietly
+  papered over — it still resolved 2.35.0, so nothing was broken, but the
+  declared constraint no longer said what the rule says it should. Realigned to
+  `^2.35.0`; the lock does not move.
 
 - **`flutter analyze` ignores build and platform directories**
   ([`analysis_options.yaml`](app/analysis_options.yaml)): Flutter's tooling
