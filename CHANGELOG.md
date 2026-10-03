@@ -63,6 +63,20 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   declared constraint no longer said what the rule says it should. Realigned to
   `^2.35.0`; the lock does not move.
 
+- **The drift trio rule is now a test rather than a comment**
+  ([`test/tool/drift_trio_test.dart`](app/test/tool/drift_trio_test.dart)):
+  grouping the three packages in [`.github/dependabot.yml`](.github/dependabot.yml)
+  gets them into one pull request, but it does not guarantee all three
+  constraints are rewritten — in [#111] Dependabot updated the lock for all
+  three and said in its own commit message that it had updated `drift_dev`,
+  while leaving `drift_dev` declared a minor behind. Nothing failed, which is
+  the problem: the caret covered for it until the SDK upgrade happened to read
+  the file. Three checks now run with no git, network or sqlite: `drift` and
+  `drift_dev` resolve to the same version, they are declared with the same
+  constraint, and all three are present in both files. The second is the one
+  that catches [#111], and it was confirmed to fail on that exact state before
+  being committed. Test count moves 585 → 588.
+
 - **`flutter analyze` ignores build and platform directories**
   ([`analysis_options.yaml`](app/analysis_options.yaml)): Flutter's tooling
   writes this `analyzer: exclude:` block itself on `pub get` from 3.47 onwards.
