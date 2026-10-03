@@ -96,7 +96,7 @@ updates:
   # ─── Android / Gradle ─────────────────────────────────────────────────────
   # The Android Gradle Plugin and the Kotlin plugin declared in
   # app/android/settings.gradle.kts are coupled to the Flutter SDK pinned in
-  # the workflows (3.44.0). A green CI run does not prove the combination is
+  # the workflows (3.47.6). A green CI run does not prove the combination is
   # one Flutter supports, so these are monthly, grouped, and worth reading
   # against the Flutter release notes before merging — usually alongside a
   # Flutter upgrade rather than ahead of one.

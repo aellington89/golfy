@@ -5,7 +5,7 @@ Flutter front-end for Golfy — video-game golf stat tracker. See the
 
 ## Prerequisites
 
-- **Flutter** 3.x with Dart SDK ≥ 3.12 (`flutter doctor` should be all-green
+- **Flutter** 3.x with Dart SDK ≥ 3.13 (`flutter doctor` should be all-green
   for the Windows and Android toolchains).
 - **Windows**: Visual Studio 2022 with the "Desktop development with C++"
   workload (required by `flutter build windows`).
@@ -329,7 +329,7 @@ next version would be.
 procedure, including what belongs in each changelog section, is in
 [`RELEASING.md`](../RELEASING.md).
 
-The Flutter SDK is **pinned** (`flutter-version: 3.44.0`) for reproducible runs —
+The Flutter SDK is **pinned** (`flutter-version: 3.47.6`) for reproducible runs —
 bump it in the workflow in lockstep with local Flutter upgrades, keeping it at or
 above the Dart SDK floor in [`pubspec.yaml`](pubspec.yaml).
 
@@ -363,6 +363,12 @@ Three details worth knowing before you review one:
   Kotlin versions are coupled to the pinned Flutter SDK, so a green CI run
   doesn't prove the combination is supported. Read those against the Flutter
   release notes, and prefer taking them alongside a Flutter upgrade.
+  `flutter analyze --suggestions` is the check worth running — it reports the
+  Java/Gradle/AGP/KGP combination as compatible or not, which CI never does.
+  AGP 9.4.1, Kotlin 2.4.20 and Gradle 9.8.0 were read against the 3.47 release
+  notes and confirmed compatible on Flutter 3.47.6
+  ([#114](https://github.com/aellington89/golfy/issues/114)); anything past
+  those is unproven again.
 
 Dependabot **security** updates ignore this routing by design and open against
 `master` directly, so a CVE fix never waits in the integration branch.

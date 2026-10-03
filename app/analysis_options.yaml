@@ -5,6 +5,16 @@
 # IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
 # invoked from the command line by running `flutter analyze`.
 
+# Build output and the platform scaffolding are not ours to analyze. Flutter's
+# own tooling adds this block on `pub get` from 3.47 onwards; it narrows what
+# `flutter analyze` looks at and does not relax any lint. `lib/` is unaffected,
+# so the committed `*.g.dart` files are still analyzed.
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - windows/**
+
 # The following line activates a set of recommended lints for Flutter apps,
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml

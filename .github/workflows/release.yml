@@ -37,7 +37,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.0   # matches local + flutter-build.yml
+          flutter-version: 3.47.6   # matches local + flutter-build.yml
           channel: stable
           cache: true
 
