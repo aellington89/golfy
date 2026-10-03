@@ -8,6 +8,38 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-02
+
+Another release with nothing in it for the app. Golfy behaves exactly as v0.3.2
+did — the same screens, the same data, the same schema at v7 — and upgrading is
+in place as usual. What it carries is a toolchain that had stopped resolving:
+on the pinned 3.44 SDK `flutter pub get` could not solve at all once `analyzer`
+13.1 wanted a `meta` that `flutter_test` pinned away, and both CI jobs were
+dying before they analyzed or built anything. The pin moves to 3.47.6, which
+unwedges it; the rest of the batch is what that upgrade made it sensible to
+take alongside.
+
+It is also the first time `deps/patch` has been emptied. Eight pull requests
+collected there under their own CI run — four GitHub Actions majors, the Gradle
+trio, the drift trio and the pub group — and merged up to `master` as a single
+batch, which is the procedure v0.3.2 shipped and nothing had yet exercised.
+
+Two of those bumps needed a hand afterwards, and both are the kind that stay
+green while being wrong. [#111] moved the drift lock without regenerating the
+committed `*.g.dart`, leaving the checked-in output as drift 2.33 produced it,
+and declared `drift_dev` a minor behind its siblings where the caret hid it.
+Codegen has been re-run, the constraint realigned, and that divergence is now a
+test instead of a warning in a README. The AGP 9.4.1 / Kotlin 2.4.20 /
+Gradle 9.8.0 trio was read against the new SDK with
+`flutter analyze --suggestions`, which is the check a green build does not
+make for you.
+
+The schema does **not** move: still v7, and no migration runs on upgrade. Under
+the project's own rules this is a **patch** and, like v0.3.2, only just —
+everything below is `### Internal`, which contributes no bump, so the
+calculator reports that no release is needed and offers the patch for exactly
+this case.
+
 ### Internal
 
 - **The pinned Flutter SDK moves from 3.44.0 to 3.47.6** ([#114];
@@ -605,7 +637,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/aellington89/golfy/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/aellington89/golfy/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/aellington89/golfy/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/aellington89/golfy/compare/v0.2.0...v0.3.0
