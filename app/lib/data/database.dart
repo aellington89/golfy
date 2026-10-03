@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'daos/backup_dao.dart';
 import 'daos/course_dao.dart';
 import 'daos/course_hole_dao.dart';
 import 'daos/course_set_dao.dart';
@@ -33,6 +34,7 @@ part 'database.g.dart';
     HoleShots,
   ],
   daos: [
+    BackupDao,
     CourseDao,
     CourseHoleDao,
     CourseSetDao,

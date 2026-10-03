@@ -138,7 +138,7 @@ class Course extends DataClass implements Insertable<Course> {
     return Course(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      gameTitle: serializer.fromJson<String>(json['gameTitle']),
+      gameTitle: serializer.fromJson<String>(json['game_title']),
     );
   }
   @override
@@ -147,7 +147,7 @@ class Course extends DataClass implements Insertable<Course> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'gameTitle': serializer.toJson<String>(gameTitle),
+      'game_title': serializer.toJson<String>(gameTitle),
     };
   }
 
@@ -392,7 +392,7 @@ class CourseSet extends DataClass implements Insertable<CourseSet> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CourseSet(
       id: serializer.fromJson<int>(json['id']),
-      courseId: serializer.fromJson<int>(json['courseId']),
+      courseId: serializer.fromJson<int>(json['course_id']),
       name: serializer.fromJson<String>(json['name']),
     );
   }
@@ -401,7 +401,7 @@ class CourseSet extends DataClass implements Insertable<CourseSet> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'courseId': serializer.toJson<int>(courseId),
+      'course_id': serializer.toJson<int>(courseId),
       'name': serializer.toJson<String>(name),
     };
   }
@@ -748,9 +748,9 @@ class Event extends DataClass implements Insertable<Event> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       season: serializer.fromJson<int>(json['season']),
-      finishPosition: serializer.fromJson<int?>(json['finishPosition']),
+      finishPosition: serializer.fromJson<int?>(json['finish_position']),
       tied: serializer.fromJson<bool>(json['tied']),
-      missedCut: serializer.fromJson<bool>(json['missedCut']),
+      missedCut: serializer.fromJson<bool>(json['missed_cut']),
     );
   }
   @override
@@ -760,9 +760,9 @@ class Event extends DataClass implements Insertable<Event> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'season': serializer.toJson<int>(season),
-      'finishPosition': serializer.toJson<int?>(finishPosition),
+      'finish_position': serializer.toJson<int?>(finishPosition),
       'tied': serializer.toJson<bool>(tied),
-      'missedCut': serializer.toJson<bool>(missedCut),
+      'missed_cut': serializer.toJson<bool>(missedCut),
     };
   }
 
@@ -1366,16 +1366,16 @@ class Round extends DataClass implements Insertable<Round> {
     return Round(
       id: serializer.fromJson<int>(json['id']),
       date: serializer.fromJson<String>(json['date']),
-      courseId: serializer.fromJson<int>(json['courseId']),
-      roundNumber: serializer.fromJson<int>(json['roundNumber']),
-      teeSet: serializer.fromJson<String?>(json['teeSet']),
-      courseSetId: serializer.fromJson<int?>(json['courseSetId']),
+      courseId: serializer.fromJson<int>(json['course_id']),
+      roundNumber: serializer.fromJson<int>(json['round_number']),
+      teeSet: serializer.fromJson<String?>(json['tee_set']),
+      courseSetId: serializer.fromJson<int?>(json['course_set_id']),
       weather: serializer.fromJson<String?>(json['weather']),
-      windSpeedMph: serializer.fromJson<int?>(json['windSpeedMph']),
+      windSpeedMph: serializer.fromJson<int?>(json['wind_speed_mph']),
       difficulty: serializer.fromJson<String?>(json['difficulty']),
       notes: serializer.fromJson<String?>(json['notes']),
-      migrationCanary: serializer.fromJson<String?>(json['migrationCanary']),
-      eventId: serializer.fromJson<int?>(json['eventId']),
+      migrationCanary: serializer.fromJson<String?>(json['migration_canary']),
+      eventId: serializer.fromJson<int?>(json['event_id']),
     );
   }
   @override
@@ -1384,16 +1384,16 @@ class Round extends DataClass implements Insertable<Round> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'date': serializer.toJson<String>(date),
-      'courseId': serializer.toJson<int>(courseId),
-      'roundNumber': serializer.toJson<int>(roundNumber),
-      'teeSet': serializer.toJson<String?>(teeSet),
-      'courseSetId': serializer.toJson<int?>(courseSetId),
+      'course_id': serializer.toJson<int>(courseId),
+      'round_number': serializer.toJson<int>(roundNumber),
+      'tee_set': serializer.toJson<String?>(teeSet),
+      'course_set_id': serializer.toJson<int?>(courseSetId),
       'weather': serializer.toJson<String?>(weather),
-      'windSpeedMph': serializer.toJson<int?>(windSpeedMph),
+      'wind_speed_mph': serializer.toJson<int?>(windSpeedMph),
       'difficulty': serializer.toJson<String?>(difficulty),
       'notes': serializer.toJson<String?>(notes),
-      'migrationCanary': serializer.toJson<String?>(migrationCanary),
-      'eventId': serializer.toJson<int?>(eventId),
+      'migration_canary': serializer.toJson<String?>(migrationCanary),
+      'event_id': serializer.toJson<int?>(eventId),
     };
   }
 
@@ -2181,19 +2181,19 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return HoleResult(
       id: serializer.fromJson<int>(json['id']),
-      roundId: serializer.fromJson<int>(json['roundId']),
-      holeNumber: serializer.fromJson<int>(json['holeNumber']),
+      roundId: serializer.fromJson<int>(json['round_id']),
+      holeNumber: serializer.fromJson<int>(json['hole_number']),
       par: serializer.fromJson<int>(json['par']),
       score: serializer.fromJson<int>(json['score']),
       yards: serializer.fromJson<int>(json['yards']),
-      fairwayHit: serializer.fromJson<bool?>(json['fairwayHit']),
+      fairwayHit: serializer.fromJson<bool?>(json['fairway_hit']),
       gir: serializer.fromJson<bool>(json['gir']),
       putts: serializer.fromJson<int>(json['putts']),
-      upDownAttempt: serializer.fromJson<bool>(json['upDownAttempt']),
-      upDownSuccess: serializer.fromJson<bool>(json['upDownSuccess']),
-      penaltyStrokes: serializer.fromJson<int>(json['penaltyStrokes']),
-      bunkerVisited: serializer.fromJson<bool>(json['bunkerVisited']),
-      sandSave: serializer.fromJson<bool>(json['sandSave']),
+      upDownAttempt: serializer.fromJson<bool>(json['up_down_attempt']),
+      upDownSuccess: serializer.fromJson<bool>(json['up_down_success']),
+      penaltyStrokes: serializer.fromJson<int>(json['penalty_strokes']),
+      bunkerVisited: serializer.fromJson<bool>(json['bunker_visited']),
+      sandSave: serializer.fromJson<bool>(json['sand_save']),
       notes: serializer.fromJson<String?>(json['notes']),
     );
   }
@@ -2202,19 +2202,19 @@ class HoleResult extends DataClass implements Insertable<HoleResult> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'roundId': serializer.toJson<int>(roundId),
-      'holeNumber': serializer.toJson<int>(holeNumber),
+      'round_id': serializer.toJson<int>(roundId),
+      'hole_number': serializer.toJson<int>(holeNumber),
       'par': serializer.toJson<int>(par),
       'score': serializer.toJson<int>(score),
       'yards': serializer.toJson<int>(yards),
-      'fairwayHit': serializer.toJson<bool?>(fairwayHit),
+      'fairway_hit': serializer.toJson<bool?>(fairwayHit),
       'gir': serializer.toJson<bool>(gir),
       'putts': serializer.toJson<int>(putts),
-      'upDownAttempt': serializer.toJson<bool>(upDownAttempt),
-      'upDownSuccess': serializer.toJson<bool>(upDownSuccess),
-      'penaltyStrokes': serializer.toJson<int>(penaltyStrokes),
-      'bunkerVisited': serializer.toJson<bool>(bunkerVisited),
-      'sandSave': serializer.toJson<bool>(sandSave),
+      'up_down_attempt': serializer.toJson<bool>(upDownAttempt),
+      'up_down_success': serializer.toJson<bool>(upDownSuccess),
+      'penalty_strokes': serializer.toJson<int>(penaltyStrokes),
+      'bunker_visited': serializer.toJson<bool>(bunkerVisited),
+      'sand_save': serializer.toJson<bool>(sandSave),
       'notes': serializer.toJson<String?>(notes),
     };
   }
@@ -2766,10 +2766,10 @@ class CourseHole extends DataClass implements Insertable<CourseHole> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CourseHole(
       id: serializer.fromJson<int>(json['id']),
-      courseId: serializer.fromJson<int>(json['courseId']),
-      holeNumber: serializer.fromJson<int>(json['holeNumber']),
+      courseId: serializer.fromJson<int>(json['course_id']),
+      holeNumber: serializer.fromJson<int>(json['hole_number']),
       par: serializer.fromJson<int>(json['par']),
-      strokeIndex: serializer.fromJson<int?>(json['strokeIndex']),
+      strokeIndex: serializer.fromJson<int?>(json['stroke_index']),
     );
   }
   @override
@@ -2777,10 +2777,10 @@ class CourseHole extends DataClass implements Insertable<CourseHole> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'courseId': serializer.toJson<int>(courseId),
-      'holeNumber': serializer.toJson<int>(holeNumber),
+      'course_id': serializer.toJson<int>(courseId),
+      'hole_number': serializer.toJson<int>(holeNumber),
       'par': serializer.toJson<int>(par),
-      'strokeIndex': serializer.toJson<int?>(strokeIndex),
+      'stroke_index': serializer.toJson<int?>(strokeIndex),
     };
   }
 
@@ -3098,8 +3098,8 @@ class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CourseSetYard(
       id: serializer.fromJson<int>(json['id']),
-      courseSetId: serializer.fromJson<int>(json['courseSetId']),
-      holeNumber: serializer.fromJson<int>(json['holeNumber']),
+      courseSetId: serializer.fromJson<int>(json['course_set_id']),
+      holeNumber: serializer.fromJson<int>(json['hole_number']),
       yards: serializer.fromJson<int>(json['yards']),
     );
   }
@@ -3108,8 +3108,8 @@ class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'courseSetId': serializer.toJson<int>(courseSetId),
-      'holeNumber': serializer.toJson<int>(holeNumber),
+      'course_set_id': serializer.toJson<int>(courseSetId),
+      'hole_number': serializer.toJson<int>(holeNumber),
       'yards': serializer.toJson<int>(yards),
     };
   }
@@ -3517,10 +3517,10 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return HoleShot(
       id: serializer.fromJson<int>(json['id']),
-      holeResultId: serializer.fromJson<int>(json['holeResultId']),
-      shotNumber: serializer.fromJson<int>(json['shotNumber']),
+      holeResultId: serializer.fromJson<int>(json['hole_result_id']),
+      shotNumber: serializer.fromJson<int>(json['shot_number']),
       club: serializer.fromJson<String?>(json['club']),
-      distanceYards: serializer.fromJson<int?>(json['distanceYards']),
+      distanceYards: serializer.fromJson<int?>(json['distance_yards']),
       lie: serializer.fromJson<String?>(json['lie']),
       result: serializer.fromJson<String?>(json['result']),
     );
@@ -3530,10 +3530,10 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'holeResultId': serializer.toJson<int>(holeResultId),
-      'shotNumber': serializer.toJson<int>(shotNumber),
+      'hole_result_id': serializer.toJson<int>(holeResultId),
+      'shot_number': serializer.toJson<int>(shotNumber),
       'club': serializer.toJson<String?>(club),
-      'distanceYards': serializer.toJson<int?>(distanceYards),
+      'distance_yards': serializer.toJson<int?>(distanceYards),
       'lie': serializer.toJson<String?>(lie),
       'result': serializer.toJson<String?>(result),
     };
@@ -3769,6 +3769,7 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     'idx_hole_shots_result',
     'CREATE INDEX idx_hole_shots_result ON hole_shots (hole_result_id)',
   );
+  late final BackupDao backupDao = BackupDao(this as GolfyDatabase);
   late final CourseDao courseDao = CourseDao(this as GolfyDatabase);
   late final CourseHoleDao courseHoleDao = CourseHoleDao(this as GolfyDatabase);
   late final CourseSetDao courseSetDao = CourseSetDao(this as GolfyDatabase);

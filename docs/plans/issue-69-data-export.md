@@ -1,7 +1,10 @@
 # Implementation plan — #69 Export all Golfy data to a portable backup file
 
-> Status: **proposed**, not yet implemented. Written 2026-10-03 against
-> `master` @ `72d22ae` (v0.3.2, drift `schemaVersion` 7, 585 tests).
+> Status: **implemented** on `ccr-0dbe29db-wnq84q`. Written and built
+> 2026-10-03 against `master` @ `72d22ae` (v0.3.2, drift `schemaVersion` 7,
+> 585 tests → **685**). What was built differs from the plan below in a few
+> places, all of them additions; §15 records them, and the plan text is left as
+> written so the reasoning stays legible.
 > Issue: [#69](https://github.com/aellington89/golfy/issues/69) ·
 > Pairs with [#70](https://github.com/aellington89/golfy/issues/70) (import /
 > restore) and [#72](https://github.com/aellington89/golfy/issues/72)
@@ -627,3 +630,57 @@ The long poles are the fixture and the codec tests, which is the right place
 for the time to go: they are what make the format safe to live with — and what
 let #70 be a short issue about writing rows into a database rather than a long
 one about deciphering a file.
+
+---
+
+## 15. What was built, and where it departed from this plan
+
+Implemented in one pass on `ccr-0dbe29db-wnq84q`. `flutter analyze` is clean
+and the suite is **685 passing** (585 before, 100 new). The repo's own
+calculator confirms the version: `dart run tool/next_version.dart` → **MINOR,
+0.4.0+38**.
+
+Everything in §§4–10 landed as described. Six departures, each an addition
+rather than a change of direction:
+
+1. **The export checks its own output before handing it over.** `BackupService`
+   decodes the text it just produced and compares it to the payload it came
+   from; a file that does not read back is never written. The suite proves the
+   codec in general, this proves the one file on that device with that data —
+   and it is the strongest possible answer to "is it really importable".
+2. **Decoding rejects a row whose columns do not match the table**, in both
+   directions — an unexpected key *and* a missing one. The missing case is the
+   one that matters: a nullable column whose key had been dropped would
+   otherwise decode as a deliberate null, turning a mangled file into silent
+   data loss. The expected key set comes from the row drift just built, so
+   there is no list to maintain.
+3. **`BackupPayload.copyWith`** exists, because the payload upgraders a future
+   schema bump will need rewrite one or two tables and leave the rest alone —
+   and the validation tests wanted exactly the same shape.
+4. **Temp-file sweeping lives in the destination, not the service.** The
+   Android destination owns the cache directory, so it is the thing that can
+   sensibly clean it.
+5. **100 new tests rather than the estimated 60–75**, mostly in the decode
+   suite: the closed set of refusal reasons turned out to be worth a case each.
+6. **`test/data/backup/_sample.dart`** holds the hand-built sample payload and
+   the JSON-surgery helpers the format suites share, so each test damages one
+   thing and asserts on the complaint.
+
+Two things deliberately left undone, both of which the plan already assigned
+elsewhere:
+
+- **The test counts quoted in both READMEs still say 585.**
+  [`RELEASING.md`](../../RELEASING.md) makes refreshing them step 7 of cutting
+  a release, so a feature branch leaving them alone is the documented
+  behaviour, not an oversight.
+- **The pubspec version is untouched at `0.3.2+37`.** Same reason: the bump
+  belongs to the `release/vX.Y.Z` cut, which this branch is not.
+
+### What could not be verified here, and by what it will be
+
+| Not verified | Covered by |
+|---|---|
+| `flutter build windows --debug` (the regenerated plugin glue links) | The CI Windows job, on every push |
+| The Android share sheet reaching Drive / Files / Gmail, and a cancelled share | §10's device checklist, before the release is cut |
+| The Windows save dialog writing to a chosen folder, and cancel | Same checklist |
+| Export timing on a large database (~100 rounds) | Same checklist; `compute()` stays the one-line fallback |

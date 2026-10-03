@@ -52,14 +52,18 @@ app/lib/
 │   ├── schema_versions.dart       # generated stepByStep migration helpers
 │   ├── tables/                    # Courses, CourseHoles, CourseSets, CourseSetYards,
 │   │                              #   Rounds, HoleResults, HoleShots, Events (drift)
+│   ├── backup/                    # portable backup file: manifest, payload, codec
+│   │                              #   (both directions), destinations, service (#69)
 │   ├── daos/                      # CourseDao, CourseHoleDao, CourseSetDao, RoundDao,
-│   │                              #   HoleResultDao, HoleShotDao, DashboardDao, EventDao
+│   │                              #   HoleResultDao, HoleShotDao, DashboardDao, EventDao,
+│   │                              #   BackupDao
 │   └── models/                    # RoundWithCourse (+ its event), HoleShotInput,
 │                                  #   DashboardStats / EventStats value classes
 ├── features/
 │   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
 │   │                              #   one-screen course setup (par + stroke index +
 │   │                              #   yardage sets, #36/#81)
+│   ├── settings/                  # Settings screen + the Export backup tile (#69)
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
 │   ├── hole_entry/                # 18-card per-hole entry form, in-memory HoleDraft,
@@ -83,8 +87,12 @@ app/test/
 ├── migration_test.dart            # drift SchemaVerifier: every vN -> vN+1 step
 ├── widget_test.dart               # AppShell smoke test
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
+├── data/backup/                  # format: codec (write), decode (read), guards,
+│   │                              #   golden files — the backup contract (#69)
 ├── dao/
-│   ├── _fixtures.dart             # shared in-memory DB fixtures
+│   ├── _fixtures.dart             # shared in-memory DB fixtures (incl. the
+│   │                              #   full multi-round backup fixture)
+│   ├── backup_dao_test.dart       # whole-database export read (#69)
 │   ├── course_card_test.dart      # per-hole upserts + transactional card save (#81)
 │   ├── course_dao_test.dart
 │   ├── course_hole_dao_test.dart
@@ -103,6 +111,7 @@ app/test/
 │   ├── hole_entry/                # hole_entry_screen, hole_card, hole_draft,
 │   │                              #   shot_inference (pure suggestion/warning rules)
 │   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
+│   ├── settings/                  # settings_screen (backup tile, snackbars, #69)
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
 ├── tool/                          # release_rules (version derivation + tag guards)
@@ -152,6 +161,13 @@ app/test/
   format and colour scores identically and unit-test without pumping a widget.
   `scoreToParColor` reads the scheme's `Brightness` so its green / amber bands
   stay legible in dark mode.
+- **A backup is a format, not a file-write.** Export (#69) is a pure codec
+  ([`data/backup/`](lib/data/backup)) behind two seams: `BackupDao` reads all
+  eight tables in one transaction, and `BackupDestination` decides where the
+  finished text goes — the share sheet on Android, a save dialog on Windows.
+  Both directions of the codec ship together, so the file is provably readable
+  before anyone holds one; see [Data backup](#data-backup-export) and
+  [`BACKUP_FORMAT.md`](../BACKUP_FORMAT.md).
 - **Theme is system-driven.** [`app.dart`](lib/app.dart) builds light + dark
   `ThemeData` from one deep-purple seed and sets `themeMode: ThemeMode.system`;
   there's no in-app toggle. Empty screens use the shared
@@ -168,6 +184,7 @@ flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
 flutter test test/tool                 # release version rules (no database)
+flutter test test/data/backup          # backup format: codec, decode, guards, goldens
 ```
 
 The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
@@ -191,6 +208,12 @@ don't have to run `build_runner` before running tests.
 If you see a `*.g.dart` diff after editing a table or DAO, that's expected —
 run `dart run build_runner build` and commit the regenerated file alongside
 your source change.
+
+[`build.yaml`](build.yaml) turns on drift's `use_sql_column_name_as_json_key`,
+so the generated `toJson()` / `fromJson()` key by SQL column name
+(`game_title`, not `gameTitle`). Nothing but the backup file (#69) serializes
+rows, so that option *is* the backup's key naming — changing it changes a file
+format users already hold. See [Data backup](#data-backup-export).
 
 ## Database migrations
 
@@ -258,6 +281,78 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > and **drops** the three superseded flat columns (`tee_club`,
 > `drive_distance_yards`, `approach_distance_yards`) by rebuilding `hole_results`
 > with a `TableMigration`, preserving every existing hole's scoring data.
+
+## Data backup (export)
+
+**Export** writes the whole database to one portable JSON file the user sends
+wherever they like (#69). The format is specified in
+[`BACKUP_FORMAT.md`](../BACKUP_FORMAT.md) — read that before changing anything
+here, because a backup is a contract with files that already exist.
+
+```
+lib/data/backup/
+├── backup_manifest.dart          # the envelope: two version numbers, counts
+├── backup_payload.dart           # typed rows for all 8 tables + validate()
+├── backup_codec.dart             # encode / decode, upgrader registry
+├── backup_format_exception.dart  # the closed set of reasons a file is refused
+├── backup_destination.dart       # share sheet (Android) / save dialog (Windows)
+├── backup_service.dart           # read -> manifest -> encode -> self-check -> save
+└── backup_provider.dart          # Riverpod: service + destination
+```
+
+Four things worth knowing before you touch it:
+
+- **Both directions ship here, not just the writer.** `decode` and
+  `BackupPayload.validate()` are complete and tested, so the file is known to
+  be readable before any user holds one. [#70](https://github.com/aellington89/golfy/issues/70)
+  adds only writing a decoded payload back into the database, and the UI around
+  it — the committed `test/data/backup/golden/backup_v1_full.json` is the file
+  its restore tests read.
+- **Android cannot offer a save dialog.** `file_selector` implements a save
+  location on Windows / macOS / Linux only; on Android the Storage Access
+  Framework hands back a `content://` URI `dart:io` cannot write to
+  ([flutter/flutter#113441](https://github.com/flutter/flutter/issues/113441)).
+  So Android writes to the app cache and hands the file to `share_plus`; the
+  cache copy is deleted afterwards and stale ones are swept. Everything else
+  uses `file_selector`'s save dialog.
+- **The service checks its own output.** Every export decodes the text it just
+  produced and compares it to the payload it came from before handing it over,
+  so a file Golfy could not read is never written. The suite proves the codec
+  in general; this proves the one file, on that device, with that data.
+- **Three guard tests exist to fail**
+  ([`test/data/backup/backup_guards_test.dart`](test/data/backup/backup_guards_test.dart)):
+  a ninth table added to the schema and not to the backup; a column added,
+  renamed or dropped, changing the file's keys; a `schemaVersion` bump, which
+  is the moment to decide whether older backups can still be read. Each failure
+  message says what to do, and
+  [`BACKUP_FORMAT.md`](../BACKUP_FORMAT.md#when-the-schema-changes) has the
+  runbooks.
+
+### Regenerating the golden files
+
+Two committed files are the format's contract: `backup_v1_minimal.json` (one
+row per table, byte for byte) and `backup_v1_full.json` (the whole seeded
+fixture, with every awkward case in it — null columns, legacy columns, a par 3
+with no fairway, a shot with nothing filled in, quotes and non-ASCII notes, a
+recurring event's second season). After a *deliberate* format change:
+
+```powershell
+$env:GOLFY_UPDATE_GOLDEN=1; flutter test test/data/backup/backup_golden_test.dart
+```
+
+Then read the diff as carefully as you would read a migration.
+
+### New dependencies
+
+`share_plus` (Android share sheet), `file_selector` (desktop save dialog, and
+the file *open* dialog both platforms will use for #70) and
+`package_info_plus` (the real installed version, for the manifest — also
+[#72](https://github.com/aellington89/golfy/issues/72)'s). These are the
+project's first plugins with native code, so `flutter pub get` now regenerates
+the Windows plugin glue under `windows/flutter/` — those files are committed
+and LF-pinned (see [`.gitattributes`](../.gitattributes)). No Android manifest
+change and no runtime permission: nothing is written outside app-private
+storage.
 
 ## Release signing
 

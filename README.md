@@ -123,6 +123,9 @@ releases.
 - **Riverpod 3** — dependency injection and reactive state
 - **intl** — locale-aware date formatting in the UI
 - **SQLite** — embedded local-only storage; no network, no sync
+- **share_plus / file_selector** — the system share sheet (Android) and save
+  dialog (Windows) a data backup is handed to; **package_info_plus** for the
+  installed version
 
 The database is a single SQLite file, `golfy.sqlite`, kept in the app's private
 documents directory — nothing is ever sent over the network. On Android each
@@ -162,6 +165,37 @@ constraints on par / score / putts / yards). App-level invariants that SQL can't
 express (e.g. you can't make an up-and-down without attempting one) are enforced
 by the DAO layer with loud `ArgumentError`s.
 
+## Back up your data
+
+Golfy keeps everything on the device and sends nothing anywhere, which also
+means a lost or wiped phone loses every round. **Export** writes the lot —
+courses, yardage sets, rounds, holes, shots and events — to one file you choose
+the home for ([#69](https://github.com/aellington89/golfy/issues/69)):
+
+1. Open the side menu → **Settings**.
+2. Check the line under **Back up your data**: it says how many rounds, courses
+   and events are about to be saved.
+3. Tap it. Android shows your usual share sheet; Windows opens a Save-as box.
+4. Pick somewhere **off the phone** — Google Drive, OneDrive, or email it to
+   yourself. Saving to the phone's own Files app protects you from a mistaken
+   delete, but not from a lost phone.
+5. The bar at the bottom names the file it made, e.g.
+   `golfy-backup-20261003-1432.json`.
+6. Open it once, out of curiosity. It is plain text: at the top you can see
+   when it was made and how many of each thing it holds. That is how you know
+   it worked.
+
+**How often?** After any session you would not want to re-enter. **Does it go
+anywhere by itself?** No — nothing leaves the device unless you send it, and no
+backup is ever made without you asking. **Can I put one back?** The file is
+built to be read back in, and Golfy already knows how to read and check one;
+restoring it onto a device arrives with
+[#70](https://github.com/aellington89/golfy/issues/70). Keep every file you
+make until then — they will still be valid when it lands.
+
+The format is documented in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), which is
+also the contract the restore feature is being built against.
+
 ## Build & run
 
 All Flutter commands run from `app/`. See [`app/README.md`](app/README.md) for
@@ -194,7 +228,8 @@ flutter run -d <android-device-id>     # Android
 golfy/
 ├── app/                 # Flutter app (Dart + drift)
 │   ├── lib/
-│   │   ├── data/        # drift tables, DAOs, repository, providers, models
+│   │   ├── data/        # drift tables, DAOs, repository, providers, models,
+│   │   │                #   backup/ (the portable export format)
 │   │   ├── features/    # rounds / hole_entry / dashboard screens
 │   │   ├── shell/       # AppShell + bottom-nav state
 │   │   ├── app.dart     # MaterialApp root
@@ -208,6 +243,8 @@ golfy/
 ├── .gitignore
 ├── CHANGELOG.md         # Keep a Changelog; the input to the next version
 ├── RELEASING.md         # how a release is cut and its version derived
+├── BACKUP_FORMAT.md     # the backup file format — a contract, read before changing
+├── docs/plans/          # design notes written before a non-trivial feature
 └── README.md            # you are here
 ```
 

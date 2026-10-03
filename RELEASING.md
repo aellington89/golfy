@@ -84,6 +84,12 @@ The marker has to open the bullet (`- **BREAKING:**`) — it is the one place th
 tooling looks inside an entry rather than at its heading, and only at a fixed
 position. It outranks whichever section it sits in.
 
+That example is not hypothetical: the backup file format is a real contract
+with files already on people's drives, and
+[`BACKUP_FORMAT.md`](BACKUP_FORMAT.md#when-the-schema-changes) says when a
+schema change forces this marker rather than an in-place upgrade. A guard test
+fails until that call is made.
+
 ### `### Internal`, and the section order
 
 Keep a Changelog's vocabulary assumes every entry is worth a user's attention.

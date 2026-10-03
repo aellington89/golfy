@@ -8,6 +8,69 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+
+- **Your data can leave the device, on your terms** ([#69]): **Settings → Back
+  up your data** writes everything Golfy holds — every course and yardage set,
+  every round, hole, shot and event — to a single text file, and hands it to
+  the share sheet on Android or a Save-as dialog on Windows so *you* choose
+  where it goes. Nothing is uploaded, nothing happens on a schedule, and no
+  permission is asked for: the file reaches Drive, Files or your own inbox
+  because you sent it there. The tile counts what is about to be saved before
+  you tap, so a backup that looks wrong looks wrong early, and the bar at the
+  bottom names the file it made. A lost or replaced phone has been the one way
+  to lose weeks of rounds, and this is the end of that.
+
+  The file is plain, pretty-printed JSON with the column names the database
+  itself uses, so you can open it and read your own rounds — and a program
+  written years from now can too. It carries the data version it was written
+  at, counts for every table, and each row's id, which is what keeps every hole
+  attached to its round and every shot to its hole when it goes back. Golfy
+  checks the file reads back as the data it came from *before* handing it over,
+  so a backup it could not itself import is never produced.
+
+- **A Settings screen**, reached from the navigation drawer ([#69]). It carries
+  the backup action and the short version of why Golfy needs one. App version,
+  open-source licences, the privacy policy and a support link are [#72]'s and
+  land here as further sections.
+
+### Internal
+
+- **The backup format is a contract, and it is written down**
+  ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)): the envelope and its two version
+  numbers, table order, key naming, how ids and nulls are treated, the
+  integrity and referential checks, what a reader must accept and must refuse,
+  and the restore procedure the format was designed around. Two golden files
+  are committed beside it — one minimal, one the whole seeded fixture — and the
+  larger is the input [#70]'s restore tests will read, so export and import are
+  proven against the same bytes rather than two approximations of them.
+
+- **Reading a backup ships with writing one** ([#69]). `BackupCodec.decode`
+  and `BackupPayload.validate()` are complete and tested: decoding is total
+  (either a whole payload or a refusal naming the table and row), and the
+  referential check catches a file that is well-formed but describes an
+  impossible database — before a restore touches anything. [#70] inherits a
+  format already known to be readable and adds the database write-back and its
+  UI. No Golfy build before this one can export, so no backup older than
+  schema v7 can exist, and the upgrade-an-old-backup path the roadmap assumed
+  is simply not needed.
+
+- **Three guard tests exist to fail** (`app/test/data/backup/`): a ninth table
+  added to the schema and not to the backup, a column added or renamed behind
+  the file's keys, and a `schemaVersion` bump — each one turning a silent
+  change to everybody's backups into a red test that says what to decide.
+  Drift's `use_sql_column_name_as_json_key` ([`app/build.yaml`](app/build.yaml))
+  is what makes a backup read like the schema's own snapshots; the column guard
+  is what keeps it that way.
+
+- **`share_plus`, `file_selector` and `package_info_plus`** are the project's
+  first plugins with native code. Android has no save dialog available to
+  Flutter at all — the Storage Access Framework returns a `content://` URI
+  `dart:io` cannot write to — so a backup is written to the app's own cache and
+  handed to the share sheet, with the cache copy deleted afterwards; desktop
+  uses a real save dialog. `flutter pub get` now regenerates the committed
+  Windows plugin glue.
+
 ## [0.3.2] - 2026-09-27
 
 A release with nothing in it for the app. Golfy behaves exactly as v0.3.1 did —
@@ -575,3 +638,6 @@ Phase 1 — data layer and navigation shell.
 [#81]: https://github.com/aellington89/golfy/issues/81
 [#79]: https://github.com/aellington89/golfy/issues/79
 [#86]: https://github.com/aellington89/golfy/issues/86
+[#69]: https://github.com/aellington89/golfy/issues/69
+[#70]: https://github.com/aellington89/golfy/issues/70
+[#72]: https://github.com/aellington89/golfy/issues/72
