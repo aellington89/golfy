@@ -13,6 +13,13 @@ app/windows/flutter/generated_plugin_registrant.h  text eol=lf
 app/windows/flutter/generated_plugins.cmake        text eol=lf
 
 ###############################################################################
+# Backup golden files are compared byte-for-byte against the exporter, which
+# writes LF on every platform. Pin LF so a Windows checkout doesn't turn them
+# CRLF and fail the golden tests.
+###############################################################################
+app/test/data/backup/golden/*.json text eol=lf
+
+###############################################################################
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by

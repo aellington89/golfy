@@ -25,15 +25,23 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.3.3
+## Status — v0.4.0
 
-**v0.3.3** is the latest release, and like v0.3.2 before it, it changes nothing
-about the app: the same screens, the same data, the same schema at v7. What it
-carries is the toolchain. The pinned Flutter SDK moves 3.44.0 → 3.47.6, which
+**v0.4.0** is the latest release, and the first since v0.3.1 worth installing
+for its own sake: your data can now leave the device. **Settings → Back up your
+data** writes every course, round, hole and shot to one plain JSON file and
+hands it to the share sheet (Android) or a Save-as dialog (Windows). You choose
+where it goes, and nothing is uploaded. Restoring from a backup comes with
+[#70](https://github.com/aellington89/golfy/issues/70); the format is already fixed and documented in
+[`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), so a backup made now will restore then.
+The schema stays at v7, and upgrading is in place.
+
+**v0.3.3**, like v0.3.2 before it, changed nothing about the app: the same
+screens, the same data, the same schema at v7. What it carried was the
+toolchain. The pinned Flutter SDK moved 3.44.0 → 3.47.6, which
 is what unwedged a `flutter pub get` that had stopped resolving at all, and the
-first full batch of dependency updates — eight pull requests — comes up from
-the `deps/patch` branch with it. If you are already on v0.3.1 there is still no
-reason to update.
+first full batch of dependency updates — eight pull requests — came up from
+the `deps/patch` branch with it.
 
 **v0.3.2** put the release machinery itself on a tag: dependency updates that
 collect on their own branch under CI, and a procedure that derives the next
@@ -210,7 +218,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 588 passing tests
+flutter test                           # 689 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

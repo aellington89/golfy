@@ -8,6 +8,30 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-04
+
+The first release since v0.3.1 that changes the app itself, and the reason is
+to stop a lost phone taking your rounds with it. **Settings → Back up your
+data** writes every course, yardage set, round, hole, shot and event to one
+plain JSON file, and hands it to the share sheet on Android or a Save-as
+dialog on Windows. You decide where the file goes: nothing is uploaded, nothing
+runs on a schedule, and Golfy asks for no new permissions. Before handing the
+file over, Golfy checks that it reads back as the data it came from.
+
+This is half of a pair. Restoring a backup is [#70], and it is not in this
+release. The file format is fixed and documented now, though, and the code
+that reads it back already ships and is tested, so a backup made today is one
+the restore will accept. Make one now; you will be able to use it then.
+
+The Settings screen this adds, reached from the navigation drawer, is also
+where the about and support sections from [#72] will go.
+
+The schema does **not** move: still v7, and no migration runs on upgrade, so
+upgrading is in place as usual. The release is a **minor** because of the two
+`### Added` entries below. It is also the first Golfy build with native-code
+plugins (`share_plus`, `file_selector`, `package_info_plus`), which is worth
+knowing if a sideloaded install behaves differently from v0.3.3.
+
 ### Added
 
 - **Your data can leave the device, on your terms** ([#69]): **Settings → Back
@@ -71,6 +95,16 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   because a receiving app may read it long after the sheet closes; each export
   sweeps the previous one out instead. Desktop uses a real save dialog.
   `flutter pub get` now regenerates the committed Windows plugin glue.
+
+- **`cupertino_icons` 1.0.9 → 2.0.0** ([#118]), the one bump waiting on
+  `deps/patch`, merged up to `master` ahead of this cut ([#120]). The app's
+  code never references `CupertinoIcons`, so the major version changes nothing
+  you can see.
+
+- **The backup golden files are pinned to LF**
+  ([`.gitattributes`](.gitattributes)). The exporter writes `\n` on every
+  platform, but `core.autocrlf` checked the goldens out as CRLF on Windows,
+  so both golden tests failed locally while CI on Linux passed.
 
 ## [0.3.3] - 2026-10-02
 
@@ -701,7 +735,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/aellington89/golfy/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/aellington89/golfy/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/aellington89/golfy/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/aellington89/golfy/compare/v0.3.0...v0.3.1
@@ -759,3 +794,5 @@ Phase 1 — data layer and navigation shell.
 [#111]: https://github.com/aellington89/golfy/pull/111
 [#112]: https://github.com/aellington89/golfy/pull/112
 [#114]: https://github.com/aellington89/golfy/issues/114
+[#118]: https://github.com/aellington89/golfy/pull/118
+[#120]: https://github.com/aellington89/golfy/pull/120
