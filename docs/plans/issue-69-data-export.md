@@ -7,8 +7,6 @@
 > **689 tests passing** (585 before this work, 3 from master's new drift-trio
 > test, the rest from export), drift `schemaVersion` still 7.
 >
-> What was built differs from the plan below in a few places; §15 records them,
-> and the plan text is left as written so the reasoning stays legible.
 > Issue: [#69](https://github.com/aellington89/golfy/issues/69) ·
 > Pairs with [#70](https://github.com/aellington89/golfy/issues/70) (import /
 > restore) and [#72](https://github.com/aellington89/golfy/issues/72)
@@ -20,6 +18,9 @@
 > is safe to act on — proven by tests against committed sample files. #70 then
 > implements putting a decoded file back into the database, and the user
 > interface around it. §4.1 states exactly what #70 inherits.
+>
+> What was built differs from the plan below in a few places; §15 records them,
+> and the plan text is left as written so the reasoning stays legible.
 
 ---
 
