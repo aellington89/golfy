@@ -1,10 +1,14 @@
 # Implementation plan — #69 Export all Golfy data to a portable backup file
 
-> Status: **implemented** on `ccr-0dbe29db-wnq84q`. Written and built
-> 2026-10-03 against `master` @ `72d22ae` (v0.3.2, drift `schemaVersion` 7,
-> 585 tests → **685**). What was built differs from the plan below in a few
-> places, all of them additions; §15 records them, and the plan text is left as
-> written so the reasoning stays legible.
+> Status: **implemented** on `ccr-0dbe29db-wnq84q`, and merged up to current
+> `master`. Written 2026-10-03 against `72d22ae` (v0.3.2); v0.3.3 released in
+> the meantime, moving the Flutter pin to 3.47.6 and the drift trio to 2.35, so
+> the work was re-verified there on 2026-10-05: `flutter analyze` clean,
+> **689 tests passing** (585 before this work, 3 from master's new drift-trio
+> test, the rest from export), drift `schemaVersion` still 7.
+>
+> What was built differs from the plan below in a few places; §15 records them,
+> and the plan text is left as written so the reasoning stays legible.
 > Issue: [#69](https://github.com/aellington89/golfy/issues/69) ·
 > Pairs with [#70](https://github.com/aellington89/golfy/issues/70) (import /
 > restore) and [#72](https://github.com/aellington89/golfy/issues/72)
@@ -49,7 +53,8 @@ and no network).
 The issue is sound, with two pieces of stale context:
 
 - **Target release.** It says v0.3.0. v0.3.0 shipped the course editor instead;
-  the project is at **v0.3.2**, so this lands in **v0.4.0+38** — confirmed by
+  the project is at **v0.3.3** (it was v0.3.2 when this was written), so this
+  lands in **v0.4.0+40** — confirmed by
   `dart run tool/next_version.dart` at implementation time, which derives it
   from the `### Added` entry this work adds to `CHANGELOG.md`.
   ([`RELEASING.md`](../../RELEASING.md) is explicit that versions are derived,
@@ -373,7 +378,8 @@ snapshot, no migration step, no change to `migration_test.dart`.
 `## [Unreleased]` in `CHANGELOG.md`. The version bump itself belongs to the
 separate `release/vX.Y.Z` cut described in `RELEASING.md` (promote the section,
 update link references, bump `app/pubspec.yaml`, refresh both READMEs' status
-and test counts, tag). Expected outcome: **0.4.0+38**.
+and test counts, tag). Expected outcome: **0.4.0+40** — the calculator's own
+answer, re-run after v0.3.3 landed.
 
 **CI.** No workflow change. The existing Linux job (`flutter analyze`, full
 `flutter test`, debug APK) and Windows build job cover this; the new plugins add
@@ -605,7 +611,7 @@ a filtered export is a different feature with a different file.
 | Round-trips cleanly to an equivalent logical state | §4 rules 3, 4 and 9 (completeness, order, ids) plus §8's round-trip, both goldens and the decode/validate suite; the database-level round trip is #70's test, as the issue specifies |
 | **The file can be imported** (the pairing with #70) | §4.1: decode, validate, version gatekeeping and the committed sample files all ship here; #70 inherits a format already proven readable and adds only the database write-back and its UI |
 | Unit/integration coverage for a seeded multi-round fixture | §8 `seedFullBackupFixture()` + `backup_dao_test.dart` |
-| Semver: additive user-facing feature → MINOR | §6: v0.4.0+38, derived not chosen (the issue's "v0.3.0" is stale) |
+| Semver: additive user-facing feature → MINOR | §6: v0.4.0+40, derived not chosen (the issue's "v0.3.0" is stale) |
 | Format decision (JSON vs SQLite copy) made during implementation | Decision 1: JSON, with the reasoning recorded |
 
 ---
@@ -636,9 +642,8 @@ one about deciphering a file.
 ## 15. What was built, and where it departed from this plan
 
 Implemented in one pass on `ccr-0dbe29db-wnq84q`. `flutter analyze` is clean
-and the suite is **685 passing** (585 before, 100 new). The repo's own
-calculator confirms the version: `dart run tool/next_version.dart` → **MINOR,
-0.4.0+38**.
+and the suite is **689 passing**. The repo's own calculator confirms the
+version: `dart run tool/next_version.dart` → **MINOR, 0.4.0+40**.
 
 Everything in §§4–10 landed as described. Six departures, each an addition
 rather than a change of direction:
@@ -673,14 +678,39 @@ rather than a change of direction:
    the JSON-surgery helpers the format suites share, so each test damages one
    thing and asserts on the complaint.
 
+Three further changes came out of re-reading the diff rather than from a
+failing test, which is worth noting because no test in this suite would have
+caught the first two:
+
+7. **A shared backup now stays in the Android cache until the next export.**
+   It was deleted the moment the share sheet returned, on the assumption the
+   receiving app had finished with it. A content URI can be read long after
+   that — Gmail holding a draft, a drive app queueing an upload — so the file
+   could vanish under its reader and leave a 0-byte attachment behind a "Backup
+   created" message. `share_plus` says the same of files it writes itself:
+   clean up once in a while, not immediately. The sweep that already runs
+   before each export is that cleanup.
+8. **The export's self-check covers the file, not the data in it.** It also ran
+   `validate()` and refused to write anything that failed — the wrong gate in
+   the wrong place, since that check answers a restore's question, and asking
+   it here lets a cross-table oddity (or a bug in the check) deny the user any
+   backup at all. Export is faithful; import is careful.
+9. **One hypothesis was disproved and backed out.** The failure snackbar's
+   Retry action looked like it could outlive the screen and call `setState` on
+   a disposed widget. A test written to pin it showed the premise is false:
+   disposing the Scaffold that showed a snackbar takes the snackbar with it, so
+   `_export` is only ever entered while the tile is mounted. The guard and its
+   test were both removed rather than left as dead code with a misleading
+   comment.
+
 Two things deliberately left undone, both of which the plan already assigned
 elsewhere:
 
-- **The test counts quoted in both READMEs still say 585.**
+- **The test counts quoted in both READMEs still say 588** (master's figure).
   [`RELEASING.md`](../../RELEASING.md) makes refreshing them step 7 of cutting
   a release, so a feature branch leaving them alone is the documented
   behaviour, not an oversight.
-- **The pubspec version is untouched at `0.3.2+37`.** Same reason: the bump
+- **The pubspec version is untouched at `0.3.3+39`.** Same reason: the bump
   belongs to the `release/vX.Y.Z` cut, which this branch is not.
 
 ### What could not be verified here, and by what it will be
