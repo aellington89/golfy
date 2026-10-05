@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 
+import 'backup/backup_payload.dart';
 import 'database.dart';
 import 'models/dashboard_stats.dart';
 import 'models/event_stats.dart';
@@ -231,4 +232,11 @@ class GolfyRepository {
   /// [DashboardDao.watchEventStats].
   Stream<EventStats> watchEventStats(int eventId) =>
       _db.dashboardDao.watchEventStats(eventId);
+
+  // ── Backup ─────────────────────────────────────────────────────────────
+
+  /// Reads every table into a [BackupPayload] for export (#69), in one
+  /// transaction so the result is a consistent snapshot. See
+  /// [BackupDao.readAll].
+  Future<BackupPayload> readBackupPayload() => _db.backupDao.readAll();
 }

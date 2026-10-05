@@ -40,6 +40,14 @@ dependencies:
   path: ^1.9.1
   flutter_riverpod: ^3.4.3
   intl: ^0.20.3
+  # Backup export (#69). `share_plus` is the Android share sheet, which is how
+  # a backup file reaches Drive / Files / mail — Android cannot offer a
+  # "save as" dialog to Flutter at all. `file_selector` is that dialog on
+  # Windows (and, for #70, the file *open* dialog on both platforms).
+  # `package_info_plus` reads the installed version for a backup's manifest.
+  share_plus: ^13.3.1
+  file_selector: ^1.1.0
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,19 @@
+# drift code-generation options.
+#
+# `use_sql_column_name_as_json_key` makes the generated `toJson()` / `fromJson()`
+# on every row class key itself by the real SQL column name (`game_title`)
+# rather than the Dart getter name (`gameTitle`). The backup file (#69) is built
+# from those two methods, so with this on, its keys read identically to the
+# committed schema snapshots in `drift_schemas/` — the schema's own description
+# of itself. See `BACKUP_FORMAT.md`.
+#
+# Nothing else in the app serializes rows, so this affects the backup format
+# only. `test/data/backup/backup_guards_test.dart` pins the resulting key sets
+# against the live schema, so a change here fails a test rather than silently
+# rewriting the format.
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          use_sql_column_name_as_json_key: true
