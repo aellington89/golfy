@@ -67,9 +67,10 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   first plugins with native code. Android has no save dialog available to
   Flutter at all — the Storage Access Framework returns a `content://` URI
   `dart:io` cannot write to — so a backup is written to the app's own cache and
-  handed to the share sheet, with the cache copy deleted afterwards; desktop
-  uses a real save dialog. `flutter pub get` now regenerates the committed
-  Windows plugin glue.
+  handed to the share sheet. That copy outlives the share sheet on purpose,
+  because a receiving app may read it long after the sheet closes; each export
+  sweeps the previous one out instead. Desktop uses a real save dialog.
+  `flutter pub get` now regenerates the committed Windows plugin glue.
 
 ## [0.3.3] - 2026-10-02
 

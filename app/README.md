@@ -312,9 +312,13 @@ Four things worth knowing before you touch it:
   location on Windows / macOS / Linux only; on Android the Storage Access
   Framework hands back a `content://` URI `dart:io` cannot write to
   ([flutter/flutter#113441](https://github.com/flutter/flutter/issues/113441)).
-  So Android writes to the app cache and hands the file to `share_plus`; the
-  cache copy is deleted afterwards and stale ones are swept. Everything else
-  uses `file_selector`'s save dialog.
+  So Android writes to the app cache and hands the file to `share_plus`.
+  **That copy deliberately outlives the share sheet**: a receiving app may read
+  the content URI long after the sheet closes (Gmail holding a draft, a drive
+  app queueing an upload), so deleting it when `share` returns risks a 0-byte
+  attachment behind a "Backup created" message. Each export sweeps the previous
+  backups out of the cache instead, so one file sits there at a time. Desktop
+  uses `file_selector`'s save dialog and writes straight to the chosen path.
 - **The service checks its own output.** Every export decodes the text it just
   produced and compares it to the payload it came from before handing it over,
   so a file Golfy could not read is never written. The suite proves the codec

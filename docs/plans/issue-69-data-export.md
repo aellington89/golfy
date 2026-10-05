@@ -453,7 +453,7 @@ characters, and a round carrying a legacy `tee_set` value.
 | Column guard | same suite | for each table, the JSON keys of a round-tripped row equal `db.<table>.$columns.map((c) => c.name)` — **fails the day a column is added or renamed**, which is how a silent format change gets caught |
 | Schema-version guard | same suite | `BackupCodec.supportedSchemaVersion == GolfyDatabase().schemaVersion` — **fails the day `schemaVersion` is bumped**, forcing a conscious decision and a payload upgrader |
 | Export read | `test/dao/backup_dao_test.dart` | against `seedFullBackupFixture()`: every table's rows present and complete; counts match; ordering by id; null columns preserved; legacy columns preserved; an empty database yields eight empty lists; read is transactional (a concurrent write is not half-captured) |
-| Service | `test/data/backup/backup_service_test.dart` | manifest fields (`formatVersion`, `schemaVersion`, app version from a mocked `PackageInfo`, UTC `exportedAt`, platform, counts matching the payload); file name shape and local-time stamp; outcome mapping for saved / shared / cancelled / destination failure / database failure; temp file deleted after a share; stale temp files swept |
+| Service | `test/data/backup/backup_service_test.dart` | manifest fields (`formatVersion`, `schemaVersion`, app version from a mocked `PackageInfo`, UTC `exportedAt`, platform, counts matching the payload); file name shape and local-time stamp; outcome mapping for saved / shared / cancelled / destination failure / database failure; the file read back before it is handed over (see §15) |
 | Screen | `test/features/settings/settings_screen_test.dart` | tile and explanatory copy render; subtitle counts render, including the empty-database wording; tap calls the destination exactly once with the expected file name and non-empty contents; success snackbar names the file; failure snackbar offers Retry and a retry calls again; progress indicator shown while in flight |
 | Drawer | `test/shell/app_drawer_test.dart` (existing) | the Settings entry exists and pushes `SettingsScreen` |
 
@@ -657,9 +657,16 @@ rather than a change of direction:
 3. **`BackupPayload.copyWith`** exists, because the payload upgraders a future
    schema bump will need rewrite one or two tables and leave the rest alone —
    and the validation tests wanted exactly the same shape.
-4. **Temp-file sweeping lives in the destination, not the service.** The
-   Android destination owns the cache directory, so it is the thing that can
-   sensibly clean it.
+4. **Temp-file sweeping lives in the destination, not the service, and the
+   shared file is not deleted after the share.** §5 above says the cache copy
+   is deleted "once the share sheet returns"; building it made clear that is
+   wrong. A receiving app may read the content URI long after the sheet closes
+   — Gmail holding a draft, a drive app queueing an upload — so deleting it
+   then risks a 0-byte attachment behind a "Backup created" message, which is
+   the worst failure this feature has. `share_plus` says the same of files it
+   writes itself: clean up "once in a while", not immediately. Each export
+   therefore sweeps the *previous* backups out of the cache before writing its
+   own, which the Android destination owns because it owns the directory.
 5. **100 new tests rather than the estimated 60–75**, mostly in the decode
    suite: the closed set of refusal reasons turned out to be worth a case each.
 6. **`test/data/backup/_sample.dart`** holds the hand-built sample payload and

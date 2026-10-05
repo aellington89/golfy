@@ -82,9 +82,17 @@ BackupDestination createPlatformBackupDestination() {
 
 /// Android: write to the app's cache, then let the user send it somewhere.
 ///
-/// The cache copy is deleted as soon as the share sheet is done with it, and
-/// any leftovers from an interrupted earlier attempt are swept first — the
-/// cache is the one place a backup could otherwise pile up unnoticed.
+/// **The cache copy outlives the share sheet on purpose.** A receiving app may
+/// read the content URI long after the sheet closes — Gmail holding a draft, a
+/// cloud-drive app queueing an upload — so deleting the file the moment
+/// `share` returns can leave the user with a 0-byte attachment *and* a
+/// "Backup created" message, which is the worst failure this feature has.
+/// `share_plus` says the same of the temporary files it writes itself: clean
+/// them up "once in a while", not immediately.
+///
+/// So each export sweeps the *previous* backups out of the cache before
+/// writing its own. One file at a time, app-private, and reclaimable by the OS
+/// under pressure.
 class ShareSheetBackupDestination implements BackupDestination {
   const ShareSheetBackupDestination();
 
@@ -93,11 +101,10 @@ class ShareSheetBackupDestination implements BackupDestination {
     required String fileName,
     required String contents,
   }) async {
-    File? file;
     try {
       final directory = await getTemporaryDirectory();
       await _sweepStaleBackups(directory, keep: fileName);
-      file = File(p.join(directory.path, fileName));
+      final file = File(p.join(directory.path, fileName));
       await file.writeAsString(contents, flush: true);
 
       final result = await SharePlus.instance.share(
@@ -117,14 +124,6 @@ class ShareSheetBackupDestination implements BackupDestination {
       };
     } catch (e) {
       return BackupSaveOutcome.failed('$e');
-    } finally {
-      // The share sheet has copied whatever it needed by the time it returns.
-      try {
-        if (file != null && file.existsSync()) await file.delete();
-      } catch (_) {
-        // A cache file we cannot delete is not worth failing an export over;
-        // the sweep above will catch it next time.
-      }
     }
   }
 
@@ -144,7 +143,7 @@ class ShareSheetBackupDestination implements BackupDestination {
       }
     } catch (_) {
       // Best effort only — never fail an export because the cache could not
-      // be tidied.
+      // be tidied. The OS reclaims this directory anyway.
     }
   }
 }

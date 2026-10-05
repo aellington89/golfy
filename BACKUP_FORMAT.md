@@ -252,7 +252,9 @@ already catch.
 returns a `content://` URI `dart:io` cannot write to
 ([flutter/flutter#113441](https://github.com/flutter/flutter/issues/113441)).
 Writing to the app's own cache and handing the file to the share sheet needs no
-permission and reaches Drive, Files and mail. A direct "save to device" can be
+permission and reaches Drive, Files and mail. The cache copy is left in place
+after the share — a receiving app may read the content URI long after the sheet
+closes — and the next export sweeps it away. A direct "save to device" can be
 added later behind the same `BackupDestination` interface without touching this
 format.
 
