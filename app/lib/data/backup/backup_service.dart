@@ -120,17 +120,19 @@ class BackupService {
   /// this device, with this data — a backup that cannot be imported is not a
   /// backup, and finding that out on the day it is needed is too late. It costs
   /// one extra parse of a file measured in megabytes.
+  ///
+  /// Deliberately checks the **file**, not the data in it:
+  /// [BackupPayload.validate] is not run here. It answers "would these rows go
+  /// back into a database", which is a restore's question (#70) and is asked
+  /// there. If it were asked here, a cross-table oddity — or a bug in the check
+  /// — would deny the user any backup at all, when the file they were refused
+  /// is a faithful copy of what they have and the very thing a diagnosis would
+  /// start from. Export's job is to be faithful; import's job is to be careful.
   void _verifyReadableBack(String contents, BackupPayload payload) {
     final bundle = BackupCodec.decode(contents);
     if (bundle.payload != payload) {
       throw StateError(
         'the backup did not read back as the data it was built from',
-      );
-    }
-    final problems = bundle.payload.validate();
-    if (problems.isNotEmpty) {
-      throw StateError(
-        'the backup failed its own checks: ${problems.take(3).join('; ')}',
       );
     }
   }

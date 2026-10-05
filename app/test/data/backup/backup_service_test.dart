@@ -44,6 +44,23 @@ class ThrowingDestination implements BackupDestination {
   }
 }
 
+/// Returns a payload that would not survive a restore: a round pointing at a
+/// course that is not in the file. The database's own foreign keys make this
+/// unreachable in practice, which is the point — it stands in for data gone
+/// odd, or for a bug in the referential check itself.
+class UnsoundRepository extends GolfyRepository {
+  UnsoundRepository(super.db);
+
+  @override
+  Future<BackupPayload> readBackupPayload() async {
+    return const BackupPayload.empty().copyWith(
+      rounds: const [
+        Round(id: 1, date: '2026-05-19', courseId: 404, roundNumber: 1),
+      ],
+    );
+  }
+}
+
 /// Stands in for a database that cannot be read — a locked file, a corrupt
 /// page, a disk that went away mid-read.
 class UnreadableRepository extends GolfyRepository {
@@ -206,6 +223,28 @@ void main() {
     final bundle = BackupCodec.decode(destination.contents!);
     expect(bundle.payload, await db.backupDao.readAll());
     expect(bundle.payload.validate(), isEmpty);
+  });
+
+  test('still produces a file when the data itself looks unsound', () async {
+    // Export's job is to be faithful, not to be the gatekeeper: refusing to
+    // write a file because the rows in it would trouble a *restore* would deny
+    // the user the one copy of their data they asked for — and that copy is
+    // where any diagnosis would start. #70 is where the referential check is
+    // asked, with a readable reason and an untouched database.
+    final destination = FakeDestination();
+
+    final result = await service(
+      destination,
+      repo: UnsoundRepository(db),
+    ).createBackup();
+
+    expect(result.isSuccess, isTrue);
+    expect(result.rowCounts['rounds'], 1);
+
+    final bundle = BackupCodec.decode(destination.contents!);
+    expect(bundle.payload.rounds.single.courseId, 404);
+    // The file is faithful, and honest about what a restore would find in it.
+    expect(bundle.payload.validate(), isNotEmpty);
   });
 
   test('the destination is called exactly once per export', () async {
