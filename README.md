@@ -25,15 +25,20 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.3.2
+## Status — v0.3.3
 
-**v0.3.2** is the latest release, and it changes nothing about the app: the
-same screens, the same data, the same schema at v7. It exists to put the
-release machinery itself on a tag — dependency updates that collect on their
-own branch under CI, and a procedure that derives the next version number from
-what actually merged instead of leaving it to be typed into four files. See
-[`RELEASING.md`](RELEASING.md). If you are already on v0.3.1 there is no reason
-to update.
+**v0.3.3** is the latest release, and like v0.3.2 before it, it changes nothing
+about the app: the same screens, the same data, the same schema at v7. What it
+carries is the toolchain. The pinned Flutter SDK moves 3.44.0 → 3.47.6, which
+is what unwedged a `flutter pub get` that had stopped resolving at all, and the
+first full batch of dependency updates — eight pull requests — comes up from
+the `deps/patch` branch with it. If you are already on v0.3.1 there is still no
+reason to update.
+
+**v0.3.2** put the release machinery itself on a tag: dependency updates that
+collect on their own branch under CI, and a procedure that derives the next
+version number from what actually merged instead of leaving it to be typed into
+four files. See [`RELEASING.md`](RELEASING.md).
 
 **v0.3.1** is the release worth having: a bug fix that makes per-shot entry
 survive a second save. Saving a hole again — the normal way a hole is entered,
@@ -205,7 +210,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 585 passing tests
+flutter test                           # 588 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

@@ -3875,7 +3875,7 @@ final class $$CoursesTableReferences
   static MultiTypedResultKey<$CourseSetsTable, List<CourseSet>>
   _courseSetsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
     db.courseSets,
-    aliasName: $_aliasNameGenerator(db.courses.id, db.courseSets.courseId),
+    aliasName: 'courses__id__course_sets__course_id',
   );
 
   $$CourseSetsTableProcessedTableManager get courseSetsRefs {
@@ -3894,7 +3894,7 @@ final class $$CoursesTableReferences
     _$GolfyDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rounds,
-    aliasName: $_aliasNameGenerator(db.courses.id, db.rounds.courseId),
+    aliasName: 'courses__id__rounds__course_id',
   );
 
   $$RoundsTableProcessedTableManager get roundsRefs {
@@ -3912,7 +3912,7 @@ final class $$CoursesTableReferences
   static MultiTypedResultKey<$CourseHolesTable, List<CourseHole>>
   _courseHolesRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
     db.courseHoles,
-    aliasName: $_aliasNameGenerator(db.courses.id, db.courseHoles.courseId),
+    aliasName: 'courses__id__course_holes__course_id',
   );
 
   $$CourseHolesTableProcessedTableManager get courseHolesRefs {
@@ -4196,7 +4196,7 @@ class $$CoursesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$CoursesTable, Course>(table),
                   $$CoursesTableReferences(db, table, e),
                 ),
               )
@@ -4319,8 +4319,8 @@ final class $$CourseSetsTableReferences
     extends BaseReferences<_$GolfyDatabase, $CourseSetsTable, CourseSet> {
   $$CourseSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $CoursesTable _courseIdTable(_$GolfyDatabase db) => db.courses
-      .createAlias($_aliasNameGenerator(db.courseSets.courseId, db.courses.id));
+  static $CoursesTable _courseIdTable(_$GolfyDatabase db) =>
+      db.courses.createAlias('course_sets__course_id__courses__id');
 
   $$CoursesTableProcessedTableManager get courseId {
     final $_column = $_itemColumn<int>('course_id')!;
@@ -4340,7 +4340,7 @@ final class $$CourseSetsTableReferences
     _$GolfyDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rounds,
-    aliasName: $_aliasNameGenerator(db.courseSets.id, db.rounds.courseSetId),
+    aliasName: 'course_sets__id__rounds__course_set_id',
   );
 
   $$RoundsTableProcessedTableManager get roundsRefs {
@@ -4358,10 +4358,7 @@ final class $$CourseSetsTableReferences
   static MultiTypedResultKey<$CourseSetYardsTable, List<CourseSetYard>>
   _courseSetYardsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
     db.courseSetYards,
-    aliasName: $_aliasNameGenerator(
-      db.courseSets.id,
-      db.courseSetYards.courseSetId,
-    ),
+    aliasName: 'course_sets__id__course_set_yards__course_set_id',
   );
 
   $$CourseSetYardsTableProcessedTableManager get courseSetYardsRefs {
@@ -4651,7 +4648,7 @@ class $$CourseSetsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$CourseSetsTable, CourseSet>(table),
                   $$CourseSetsTableReferences(db, table, e),
                 ),
               )
@@ -4798,7 +4795,7 @@ final class $$EventsTableReferences
     _$GolfyDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rounds,
-    aliasName: $_aliasNameGenerator(db.events.id, db.rounds.eventId),
+    aliasName: 'events__id__rounds__event_id',
   );
 
   $$RoundsTableProcessedTableManager get roundsRefs {
@@ -5034,8 +5031,10 @@ class $$EventsTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$EventsTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$EventsTable, Event>(table),
+                  $$EventsTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback: ({roundsRefs = false}) {
@@ -5114,8 +5113,8 @@ final class $$RoundsTableReferences
     extends BaseReferences<_$GolfyDatabase, $RoundsTable, Round> {
   $$RoundsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $CoursesTable _courseIdTable(_$GolfyDatabase db) => db.courses
-      .createAlias($_aliasNameGenerator(db.rounds.courseId, db.courses.id));
+  static $CoursesTable _courseIdTable(_$GolfyDatabase db) =>
+      db.courses.createAlias('rounds__course_id__courses__id');
 
   $$CoursesTableProcessedTableManager get courseId {
     final $_column = $_itemColumn<int>('course_id')!;
@@ -5132,9 +5131,7 @@ final class $$RoundsTableReferences
   }
 
   static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) =>
-      db.courseSets.createAlias(
-        $_aliasNameGenerator(db.rounds.courseSetId, db.courseSets.id),
-      );
+      db.courseSets.createAlias('rounds__course_set_id__course_sets__id');
 
   $$CourseSetsTableProcessedTableManager? get courseSetId {
     final $_column = $_itemColumn<int>('course_set_id');
@@ -5150,8 +5147,8 @@ final class $$RoundsTableReferences
     );
   }
 
-  static $EventsTable _eventIdTable(_$GolfyDatabase db) => db.events
-      .createAlias($_aliasNameGenerator(db.rounds.eventId, db.events.id));
+  static $EventsTable _eventIdTable(_$GolfyDatabase db) =>
+      db.events.createAlias('rounds__event_id__events__id');
 
   $$EventsTableProcessedTableManager? get eventId {
     final $_column = $_itemColumn<int>('event_id');
@@ -5170,7 +5167,7 @@ final class $$RoundsTableReferences
   static MultiTypedResultKey<$HoleResultsTable, List<HoleResult>>
   _holeResultsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
     db.holeResults,
-    aliasName: $_aliasNameGenerator(db.rounds.id, db.holeResults.roundId),
+    aliasName: 'rounds__id__hole_results__round_id',
   );
 
   $$HoleResultsTableProcessedTableManager get holeResultsRefs {
@@ -5687,8 +5684,10 @@ class $$RoundsTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$RoundsTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$RoundsTable, Round>(table),
+                  $$RoundsTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback:
@@ -5852,8 +5851,8 @@ final class $$HoleResultsTableReferences
     extends BaseReferences<_$GolfyDatabase, $HoleResultsTable, HoleResult> {
   $$HoleResultsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $RoundsTable _roundIdTable(_$GolfyDatabase db) => db.rounds
-      .createAlias($_aliasNameGenerator(db.holeResults.roundId, db.rounds.id));
+  static $RoundsTable _roundIdTable(_$GolfyDatabase db) =>
+      db.rounds.createAlias('hole_results__round_id__rounds__id');
 
   $$RoundsTableProcessedTableManager get roundId {
     final $_column = $_itemColumn<int>('round_id')!;
@@ -5872,10 +5871,7 @@ final class $$HoleResultsTableReferences
   static MultiTypedResultKey<$HoleShotsTable, List<HoleShot>>
   _holeShotsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
     db.holeShots,
-    aliasName: $_aliasNameGenerator(
-      db.holeResults.id,
-      db.holeShots.holeResultId,
-    ),
+    aliasName: 'hole_results__id__hole_shots__hole_result_id',
   );
 
   $$HoleShotsTableProcessedTableManager get holeShotsRefs {
@@ -6331,7 +6327,7 @@ class $$HoleResultsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$HoleResultsTable, HoleResult>(table),
                   $$HoleResultsTableReferences(db, table, e),
                 ),
               )
@@ -6439,9 +6435,7 @@ final class $$CourseHolesTableReferences
   $$CourseHolesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $CoursesTable _courseIdTable(_$GolfyDatabase db) =>
-      db.courses.createAlias(
-        $_aliasNameGenerator(db.courseHoles.courseId, db.courses.id),
-      );
+      db.courses.createAlias('course_holes__course_id__courses__id');
 
   $$CoursesTableProcessedTableManager get courseId {
     final $_column = $_itemColumn<int>('course_id')!;
@@ -6670,7 +6664,7 @@ class $$CourseHolesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$CourseHolesTable, CourseHole>(table),
                   $$CourseHolesTableReferences(db, table, e),
                 ),
               )
@@ -6758,10 +6752,8 @@ final class $$CourseSetYardsTableReferences
     super.$_typedResult,
   );
 
-  static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) =>
-      db.courseSets.createAlias(
-        $_aliasNameGenerator(db.courseSetYards.courseSetId, db.courseSets.id),
-      );
+  static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) => db.courseSets
+      .createAlias('course_set_yards__course_set_id__course_sets__id');
 
   $$CourseSetsTableProcessedTableManager get courseSetId {
     final $_column = $_itemColumn<int>('course_set_id')!;
@@ -6973,7 +6965,7 @@ class $$CourseSetYardsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$CourseSetYardsTable, CourseSetYard>(table),
                   $$CourseSetYardsTableReferences(db, table, e),
                 ),
               )
@@ -7063,10 +7055,9 @@ final class $$HoleShotsTableReferences
     extends BaseReferences<_$GolfyDatabase, $HoleShotsTable, HoleShot> {
   $$HoleShotsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $HoleResultsTable _holeResultIdTable(_$GolfyDatabase db) =>
-      db.holeResults.createAlias(
-        $_aliasNameGenerator(db.holeShots.holeResultId, db.holeResults.id),
-      );
+  static $HoleResultsTable _holeResultIdTable(_$GolfyDatabase db) => db
+      .holeResults
+      .createAlias('hole_shots__hole_result_id__hole_results__id');
 
   $$HoleResultsTableProcessedTableManager get holeResultId {
     final $_column = $_itemColumn<int>('hole_result_id')!;
@@ -7329,7 +7320,7 @@ class $$HoleShotsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$HoleShotsTable, HoleShot>(table),
                   $$HoleShotsTableReferences(db, table, e),
                 ),
               )

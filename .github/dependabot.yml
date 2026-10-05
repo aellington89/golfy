@@ -77,6 +77,15 @@ updates:
       # CI builds against generated code from a different drift version, so
       # they must move in a single PR. A merged drift bump still needs a local
       # `build_runner` pass if the generated output changes.
+      #
+      # Grouping gets them into one PR but does not guarantee all three
+      # constraints are rewritten. In #111 Dependabot moved drift to ^2.35.0
+      # and drift_flutter to ^0.3.1, updated the lock for all three, and
+      # reported drift_dev as updated in the commit message — but left
+      # drift_dev declared at ^2.33.0. The caret still admitted 2.35.0, so
+      # nothing failed and it went unnoticed. Read the pubspec diff of a drift
+      # PR, not just its description; `app/test/tool/drift_trio_test.dart`
+      # fails if the three diverge.
       drift:
         patterns:
           - drift
@@ -96,7 +105,7 @@ updates:
   # ─── Android / Gradle ─────────────────────────────────────────────────────
   # The Android Gradle Plugin and the Kotlin plugin declared in
   # app/android/settings.gradle.kts are coupled to the Flutter SDK pinned in
-  # the workflows (3.44.0). A green CI run does not prove the combination is
+  # the workflows (3.47.6). A green CI run does not prove the combination is
   # one Flutter supports, so these are monthly, grouped, and worth reading
   # against the Flutter release notes before merging — usually alongside a
   # Flutter upgrade rather than ahead of one.

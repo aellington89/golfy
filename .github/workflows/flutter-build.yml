@@ -27,10 +27,10 @@ jobs:
       run:
         working-directory: app    # all run: steps execute in app/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 17 (Android/Gradle toolchain)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -38,7 +38,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.0   # matches local; guarantees Dart >= 3.12
+          flutter-version: 3.47.6   # matches local; guarantees Dart >= 3.13
           channel: stable
           cache: true               # caches SDK + pub packages
 
@@ -65,7 +65,7 @@ jobs:
           test "$PKG" = "com.golfy.golfy_app.debug"
 
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-debug-apk
           # path is workspace-root-relative (NOT affected by working-directory)
@@ -78,12 +78,12 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.0
+          flutter-version: 3.47.6
           channel: stable
           cache: true
 
@@ -94,7 +94,7 @@ jobs:
         run: flutter build windows --debug
 
       - name: Upload Windows build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-windows-debug
           # confirm path on first run; recent Flutter emits to .../x64/runner/Debug
