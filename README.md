@@ -25,16 +25,24 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.4.0
+## Status — v0.5.0
 
-**v0.4.0** is the latest release, and the first since v0.3.1 worth installing
-for its own sake: your data can now leave the device. **Settings → Back up your
+**v0.5.0** is the latest release, and it reworks the hole entry card. Each shot
+is now entered beside the stats it decides — the tee shot with "Fairway hit?",
+approach shots with GIR, bunker and up & down, putts as the Putts count — so a
+hole is one pass down the card, and the form fills in what follows from what
+you enter. **Save Hole** now checks that the hole adds up before saving it, and
+offers a one-tap fix when the score and the shots disagree. Holes saved before
+this keep their values. The schema stays at v7, and upgrading is in place.
+
+**v0.4.0** was the first release since v0.3.1 worth installing
+for its own sake: your data could now leave the device. **Settings → Back up your
 data** writes every course, round, hole and shot to one plain JSON file and
 hands it to the share sheet (Android) or a Save-as dialog (Windows). You choose
 where it goes, and nothing is uploaded. Restoring from a backup comes with
 [#70](https://github.com/aellington89/golfy/issues/70); the format is already fixed and documented in
 [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), so a backup made now will restore then.
-The schema stays at v7, and upgrading is in place.
+The schema stayed at v7.
 
 **v0.3.3**, like v0.3.2 before it, changed nothing about the app: the same
 screens, the same data, the same schema at v7. What it carried was the

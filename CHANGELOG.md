@@ -8,6 +8,26 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-10
+
+A release about the one screen you use on every hole. Entering a hole used to
+mean filling in the stats, scrolling down to a shot list at the bottom, and
+scrolling back up to make the two agree. Now each shot sits beside the stats it
+decides — the tee shot with "Fairway hit?", the approach shots with GIR, bunker
+and up & down, and the putts as the Putts count — so a hole is one pass down
+the card. The form fills in what follows from what you have entered, and
+leaves alone anything you override.
+
+The other half is that **Save Hole now checks the hole first**. A score that
+isn't the shots plus putts plus penalties, an unanswered tee shot, or a shot
+list that can't have happened is refused with the reason above the button, and
+the common fixes are one tap ("Add N shots", "Make the score N"). Holes you
+saved before this keep their values and still read "Saved".
+
+The schema does **not** move: still v7, and no migration runs on upgrade, so
+upgrading is in place as usual. The release is a **minor** because of the
+`### Changed` entry below.
+
 ### Changed
 
 - **Hole entry follows the hole, and checks it before saving.** Each shot is
@@ -769,7 +789,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/aellington89/golfy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/aellington89/golfy/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/aellington89/golfy/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/aellington89/golfy/compare/v0.3.1...v0.3.2
