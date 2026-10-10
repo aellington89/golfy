@@ -26,8 +26,8 @@ void main() {
 
   void resizeForForm(WidgetTester tester) {
     // Default 800x600 is shorter than the form card. Resize tall enough that
-    // the Save button, every switch, and the Shots section land on-screen.
-    tester.view.physicalSize = const Size(800, 2000);
+    // the Save button, every switch, and the shot cards land on-screen.
+    tester.view.physicalSize = const Size(800, 2600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
   }
@@ -55,6 +55,16 @@ void main() {
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
+    await tester.pumpAndSettle();
+  }
+
+  /// Answers the visible hole's "Fairway hit?" / "Green hit?" — Save Hole
+  /// won't go through until it is.
+  Future<void> answerTee(WidgetTester tester, {bool hit = true}) async {
+    await tester.tap(find.descendant(
+      of: find.byKey(const ValueKey('tee_result')),
+      matching: find.text(hit ? 'Yes' : 'No'),
+    ));
     await tester.pumpAndSettle();
   }
 
@@ -168,6 +178,7 @@ void main() {
 
     expect(find.text('Holes saved: 0 / 18'), findsOneWidget);
 
+    await answerTee(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -211,6 +222,25 @@ void main() {
     );
   });
 
+  testWidgets("an unanswered tee shot isn't saved", (tester) async {
+    final seed = await seedRound();
+    final container = makeContainer(activeRoundId: seed.roundId);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await settle(tester);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+    await settle(tester);
+
+    final rows = await tester
+        .runAsync(() => db.holeResultDao.watchForRound(seed.roundId).first);
+    expect(rows, isEmpty);
+    expect(find.text('Holes saved: 0 / 18'), findsOneWidget);
+    expect(find.text('Required before saving'), findsOneWidget);
+  });
+
   testWidgets('saving the same hole twice keeps a single row (upsert)',
       (tester) async {
     final seed = await seedRound();
@@ -224,15 +254,16 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    // Save once with default score.
+    // Save once: tee shot, shot 2 from the fairway, one putt — a 3.
+    await answerTee(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
 
-    // Bump score, save again.
-    await tester.tap(find.byKey(const ValueKey('Score_inc')));
+    // A second putt makes it a 4 — the score follows. Save again.
+    await tester.tap(find.byKey(const ValueKey('Putts_inc')));
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
@@ -243,7 +274,8 @@ void main() {
     final rows = await tester
         .runAsync(() => db.holeResultDao.watchForRound(seed.roundId).first);
     expect(rows, hasLength(1));
-    expect(rows!.single.score, 5);
+    expect(rows!.single.score, 4);
+    expect(rows.single.putts, 2);
     expect(find.text('Holes saved: 1 / 18'), findsOneWidget);
   });
 
@@ -315,7 +347,9 @@ void main() {
       'editing a pre-saved hole upserts the same row with the new value',
       (tester) async {
     final seed = await seedRound();
-    final savedId = await fx.upsertHole(seed.roundId, 1, score: 5);
+    // Saved with no shots, as every hole before #22 was: a tee shot and two
+    // putts is a 3, so the score agrees with the strokes it implies.
+    final savedId = await fx.upsertHole(seed.roundId, 1, score: 3, putts: 2);
 
     final container = makeContainer(activeRoundId: seed.roundId);
     addTearDown(container.dispose);
@@ -334,14 +368,14 @@ void main() {
           of: find.byKey(const ValueKey('hole_card_1')),
           matching: find.byKey(const ValueKey('score')),
         ),
-        matching: find.text('5'),
+        matching: find.text('3'),
       ),
       findsOneWidget,
     );
     expect(find.text('Saved'), findsOneWidget);
 
-    // Bump the score; the card flips to "Unsaved" until saved again.
-    await tester.tap(find.byKey(const ValueKey('Score_inc')));
+    // A third putt; the card flips to "Unsaved" until saved again.
+    await tester.tap(find.byKey(const ValueKey('Putts_inc')));
     await tester.pump();
     expect(find.text('Unsaved'), findsOneWidget);
 
@@ -356,7 +390,8 @@ void main() {
         .runAsync(() => db.holeResultDao.watchForRound(seed.roundId).first);
     expect(rows, hasLength(1));
     expect(rows!.single.id, savedId);
-    expect(rows.single.score, 6);
+    expect(rows.single.score, 4);
+    expect(rows.single.putts, 3);
 
     // Counter stays at 1 and the card is "Saved" again.
     expect(find.text('Holes saved: 1 / 18'), findsOneWidget);
@@ -403,7 +438,8 @@ void main() {
     );
     expect(yards.controller!.text, '540');
 
-    // Saving the untouched hole persists the auto-filled par/yards.
+    // Saving the hole persists the auto-filled par/yards.
+    await answerTee(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -463,8 +499,6 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('add_shot')));
-    await tester.pump();
     // Club is a dropdown; open it and pick "Driver".
     await tester.tap(find.byKey(const ValueKey('shot_club_0')));
     await tester.pumpAndSettle();
@@ -473,6 +507,7 @@ void main() {
     await tester.enterText(
         find.byKey(const ValueKey('shot_distance_0')), '268');
     await tester.pump();
+    await answerTee(tester);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
@@ -482,18 +517,27 @@ void main() {
 
     final byHole = await tester
         .runAsync(() => db.holeShotDao.watchForRound(seed.roundId).first);
-    expect(byHole![1], hasLength(1));
-    expect(byHole[1]!.single.club, 'Driver');
-    expect(byHole[1]!.single.distanceYards, 268);
-    expect(byHole[1]!.single.shotNumber, 1);
+    final shots = byHole![1]!;
+    // Every stroke is a row: the tee shot, shot 2 from the fairway "Fairway
+    // hit" laid out, and the putt the putts count stands for.
+    expect([for (final s in shots) s.shotNumber], [1, 2, 3]);
+    expect(shots[0].club, 'Driver');
+    expect(shots[0].distanceYards, 268);
+    expect(shots[0].lie, 'Tee');
+    expect(shots[1].lie, 'Fairway');
+    expect(shots[1].club, isNull);
+    expect(shots[1].distanceYards, isNull);
+    expect(shots[2].club, 'Putter');
+    expect(shots[2].lie, 'Green');
+    expect(shots[2].result, 'Holed');
   });
 
   testWidgets('a saved hole that has shots reads "Saved", not "Unsaved" (#81)',
       (tester) async {
-    // The live draft is seeded with its shots while the saved-state snapshot is
-    // built from hole_results alone, which carries none. HoleDraft equality
-    // compares the shot lists, so if the two disagree every saved hole with a
-    // shot is permanently dirty.
+    // The live draft and the saved-state snapshot must both be built from the
+    // saved row *and* its shots, normalised the same way — the putt rows the
+    // save wrote come off both. HoleDraft equality compares the shot lists, so
+    // if the two disagree every saved hole with a shot is permanently dirty.
     final seed = await seedRound();
     final container = makeContainer(activeRoundId: seed.roundId);
     addTearDown(container.dispose);
@@ -505,6 +549,7 @@ void main() {
     });
     await tester.pumpAndSettle();
 
+    await answerTee(tester);
     await tester.tap(find.byKey(const ValueKey('add_shot')));
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
@@ -549,6 +594,7 @@ void main() {
 
     // Saving the missing hole 1 (shown by default) reaches 18/18 in-session,
     // so the FAB must read "Finish Round" — not "Done".
+    await answerTee(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -566,9 +612,9 @@ void main() {
       (tester) async {
     // The workflow this protects: a par-3 tee shot misses the green, so the
     // player records where it actually finished on shot 2. Nothing about the
-    // hole implies that lie — `fairwayHit` is N/A on a par 3 and GIR is off —
-    // so the scaffolded row arrives blank and is filled in by hand, on a hole
-    // that has already been saved once.
+    // hole implies that lie — a par 3 has no fairway — so "Green hit? No"
+    // lays the row out blank and it is filled in by hand, on a hole that has
+    // already been saved once.
     final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
     await fx.insertCourseHoles(cid, par: 3);
     final setId = await fx.insertCourseSet(cid);
@@ -578,23 +624,21 @@ void main() {
     final container = makeContainer(activeRoundId: rid);
     addTearDown(container.dispose);
 
-    // Taller than `resizeForForm`: three shot rows push the Save button down.
-    tester.view.physicalSize = const Size(800, 3200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
+    resizeForForm(tester);
     await tester.pumpWidget(wrap(container));
     await settle(tester);
 
-    await tester.tap(find.byKey(const ValueKey('build_shots_from_score')));
-    await tester.pump();
+    await answerTee(tester, hit: false);
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await settle(tester);
 
     // The blank middle row survives the save: dropping it would renumber the
     // putt to shot 2 and take the row being filled in with it.
     expect(lieShown(tester, 1), isNull);
-    expect(lieShown(tester, 2), 'Green');
+    final first =
+        await tester.runAsync(() => db.holeShotDao.watchForRound(rid).first);
+    expect(first![1], hasLength(3));
+    expect(first[1]![2].club, 'Putter');
 
     await tester.tap(find.byKey(const ValueKey('shot_lie_1')));
     await tester.pumpAndSettle();
@@ -669,6 +713,7 @@ void main() {
         matching: find.text('3'),
       ));
       await tester.pumpAndSettle();
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -691,6 +736,7 @@ void main() {
       await courseMenu(tester, 'Update course as I play');
       expect(container.read(courseSyncEnabledProvider), isFalse);
 
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -715,6 +761,7 @@ void main() {
         '410',
       );
       await tester.pumpAndSettle();
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -738,6 +785,7 @@ void main() {
       await tester.enterText(
           find.byKey(const ValueKey('stroke_index')), '7');
       await tester.pumpAndSettle();
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -763,6 +811,7 @@ void main() {
       await tester.enterText(
           find.byKey(const ValueKey('stroke_index')), '5');
       await tester.pumpAndSettle();
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -793,6 +842,7 @@ void main() {
       await tester.enterText(
           find.byKey(const ValueKey('stroke_index')), '4');
       await tester.pumpAndSettle();
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -816,6 +866,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Must be 1-18'), findsOneWidget);
 
+      await answerTee(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));

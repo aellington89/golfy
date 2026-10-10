@@ -67,8 +67,9 @@ app/lib/
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
 │   ├── hole_entry/                # 18-card per-hole entry form, in-memory HoleDraft,
-│   │                              #   per-shot list + shot_inference suggestions (#22, #81),
-│   │                              #   course-template sheet + sync toggle (#81)
+│   │                              #   per-shot list (#22), hole_rules (derived fields +
+│   │                              #   save-blocking checks), course-template sheet + sync
+│   │                              #   toggle (#81)
 │   ├── events/                    # EventPicker + AddEventDialog, event-result formatter + edit-result dialog (#35, #51)
 │   ├── dashboard/                 # lifetime-stats screen
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
@@ -109,7 +110,7 @@ app/test/
 │   │                              #   course_setup_screen, course_template
 │   ├── rounds/                    # rounds_screen, new_round_dialog, scorecard/
 │   ├── hole_entry/                # hole_entry_screen, hole_card, hole_draft,
-│   │                              #   shot_inference (pure suggestion/warning rules)
+│   │                              #   hole_rules + shot_inference (pure rules)
 │   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
 │   ├── settings/                  # settings_screen (backup tile, snackbars, #69)
 │   ├── dashboard/                 # dashboard_screen
@@ -148,13 +149,23 @@ app/test/
   cleared on Finish Round or delete.
 - **Hole Entry edits stay in memory until saved.** Each hole is a
   [`HoleDraft`](lib/features/hole_entry/hole_draft.dart) kept across `PageView`
-  swipes; **Save Hole** upserts it via `HoleResultDao`. The card's fields are
-  grouped under stage headers in course-play order (Tee → Approach & Around the
-  Green → Putting → Score), so **Score is entered last**. Par and yardage
+  swipes; **Save Hole** upserts it via `HoleResultDao`. The card runs in
+  course-play order (Hole → Tee shot → Approach & around the green → Putting →
+  Score), and each shot is entered in the section whose stats it decides: the
+  tee shot with "Fairway hit?" / "Green hit?", the approach shots with GIR and
+  the bunker and up & down switches, the putts as a count. Par and yardage
   pre-fill from the round's course template and chosen yardage set (#36),
-  editable per hole; each hole also carries an ordered **shot list** — club /
-  distance / lie / result per shot (#22) — persisted to `hole_shots` alongside
-  the hole via `GolfyRepository.saveHole`.
+  editable per hole; the shots — club / distance / lie / result (#22) — persist
+  to `hole_shots` alongside the hole via `GolfyRepository.saveHole`, one row per
+  stroke with the putts written out from the count.
+- **Hole rules are pure and decide everything.**
+  [`hole_rules.dart`](lib/features/hole_entry/hole_rules.dart) re-derives what
+  follows from an edit — the score from the strokes, GIR from the strokes to the
+  green, shot 2's lie from the tee result, up & down success and sand save from
+  the putts — only when that field's inputs change, so an override sticks; and
+  `holeIssues` lists what blocks a save (an unanswered tee shot, a score that
+  disagrees with the strokes, more penalty shots than strokes) with one-tap
+  fixes. The card only renders it, and the rules unit-test without a widget.
 - **Presentation logic is pure and shared.** [`features/stats/`](lib/features/stats/)
   holds widget-free helpers — `score_format` / `stat_format` (formatting) and
   `scoreToParColor` (colour bands) — so the rounds list, scorecard, and dashboard
@@ -179,7 +190,7 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (689 tests)
+flutter test                           # everything (729 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only

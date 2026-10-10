@@ -8,6 +8,40 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+
+- **Hole entry follows the hole, and checks it before saving.** Each shot is
+  now entered beside the stats it decides, so filling in a hole is one pass
+  down the card instead of scrolling between the stats and a shot list at the
+  bottom: the tee shot sits under **Tee shot** with "Fairway hit?" (or "Green
+  hit?" on a par 3), approach shots sit under **Approach & around the green**
+  with GIR, bunker and up & down, and putts are simply the **Putts** count —
+  each one a stroke, written out as shot rows when the hole is saved, so the
+  putts and the shot list can no longer disagree.
+
+  The form fills in what follows from what you have entered. Answering "Fairway
+  hit? Yes" lays out shot 2 played from the fairway ("No" from the rough), and
+  changing the answer moves it. The score counts itself from the shots, putts
+  and penalty strokes; GIR follows the strokes it took to reach the green; an
+  up & down attempt with one putt or a chip-in is marked a success, and two
+  putts clears it; a shot from a bunker turns on "Bunker visited", and getting
+  down in one putt from there is a sand save; marking a shot as a penalty counts
+  the stroke. Each of these is re-worked only when something it depends on
+  changes, so a value you override stays put. The form no longer suggests a
+  club, and only the tee shot arrives with a distance (the hole's yardage).
+
+  **Save Hole now refuses a hole that doesn't add up**, and says why above the
+  button: the tee shot's result must be recorded; the score must equal the
+  shots plus putts plus penalty strokes; there can't be more shots marked as a
+  penalty than penalty strokes; with no putts, the last shot must be the one
+  that went in; and a par-3 tee shot that found the green can't be followed by
+  more shots. A score that disagrees offers "Add N shots" or "Make the score N".
+  A shot played from the green, or an up & down attempt on a green hit in
+  regulation, is flagged but doesn't block. Holes saved before this keep their
+  values and still read "Saved"; one whose score is ahead of the shots it has
+  recorded shows the gap, and "Add N shots" closes it in one tap. No schema
+  change.
+
 ## [0.4.0] - 2026-10-04
 
 The first release since v0.3.1 that changes the app itself, and the reason is
