@@ -3,26 +3,32 @@ import 'package:flutter/material.dart';
 import '../../widgets/par_selector.dart';
 
 import 'hole_draft.dart';
+import 'hole_rules.dart';
 import 'shot_inference.dart';
 
 /// Form for a single hole's entry. Stateless w.r.t. the draft data — the
 /// parent owns the [HoleDraft] map and pushes a fresh card each rebuild.
-/// The only local state is the `ExpansionTile` open flag for the notes
-/// row.
+/// Local state is only the notes row's open flag and whether a save has been
+/// tried (which is when a missing answer starts showing as an error).
 ///
-/// Fields are grouped into stage sections (Tee → Approach & Around the
-/// Green → Putting → Score) following the order a golfer learns each value
-/// during play, so Score is entered last once the hole is complete (#34).
+/// The card reads top to bottom in the order a hole is played, and each shot is
+/// entered in the section whose stats it decides, so nothing sends you back up:
 ///
-/// Conditional resets and bounds enforced here mirror the DAO invariants in
-/// `hole_result_dao.dart::_assertInvariants` so the upsert can't throw:
+///  * **Hole** — par, yards, stroke index.
+///  * **Tee shot** — the tee shot (club; its distance is the hole's yardage),
+///    and whether it found the fairway, or the green on a par 3. Required.
+///  * **Approach & around the green** — every shot after the tee and before
+///    the green, then GIR, bunker visited and up & down attempt.
+///  * **Putting** — putts (each one a stroke; no rows to fill in), then up &
+///    down success and sand save once they apply.
+///  * **Score** — penalties and the score, which counts itself from the
+///    strokes above; then what's left to fix, and Save.
 ///
-///  * `par == 3` → fairwayHit forced to `null`
-///  * `upDownAttempt == false` → upDownSuccess forced to `false`
-///  * `putts > 1` → upDownSuccess forced to `false` (an up & down is a 1-putt)
-///  * `bunkerVisited == false` → sandSave forced to `false`
-///  * putts is capped at `score - 1` and score floored at `putts + 1` (the tee
-///    shot is never a putt)
+/// Every edit goes through `hole_rules.dart`, which fills in what follows from
+/// it (shot 2's lie from "Fairway hit?", GIR from the strokes to the green, up &
+/// down success from the putts, the score from everything) and forces the
+/// combinations `HoleResultDao` rejects, so the upsert can't throw. Save Hole
+/// refuses a hole with a blocking issue and says why.
 class HoleCard extends StatefulWidget {
   const HoleCard({
     super.key,
@@ -49,11 +55,10 @@ class HoleCard extends StatefulWidget {
   final HoleDraft? savedDraft;
 
   final ValueChanged<HoleDraft> onChanged;
+
+  /// Persists the hole. Only called once the draft has no blocking issue.
   final VoidCallback onSave;
 
-  /// Navigates to the previous / next hole in the parent's PageView.
-  /// `null` means "no neighbour in that direction" (hole 1 / hole 18) and
-  /// the corresponding chevron renders disabled.
   /// Name of the yardage set this round is played from, or null when it has
   /// none. Labels the yards field so it's obvious at the point of entry which
   /// tee box the pre-filled number came from (#81).
@@ -74,6 +79,9 @@ class HoleCard extends StatefulWidget {
   /// the Saved / Unsaved chip, which otherwise only tracks the round draft.
   final bool strokeIndexDirty;
 
+  /// Navigates to the previous / next hole in the parent's PageView.
+  /// `null` means "no neighbour in that direction" (hole 1 / hole 18) and
+  /// the corresponding chevron renders disabled.
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
 
@@ -87,6 +95,14 @@ class HoleCard extends StatefulWidget {
 
 class _HoleCardState extends State<HoleCard> {
   bool _notesExpanded = false;
+
+  /// Whether Save Hole has been tapped while something still blocked it. Until
+  /// then a missing answer reads as a to-do rather than an error, so a hole you
+  /// have only just opened isn't already shouting at you.
+  bool _attemptedSave = false;
+
+  /// The tee shot's result, scrolled into view when a save is refused for it.
+  final GlobalKey _teeResultKey = GlobalKey();
 
   /// Controller for the free-entry yards field. Kept in state (rather than a
   /// `TextFormField.initialValue`) so an auto-fill that arrives after the first
@@ -124,10 +140,46 @@ class _HoleCardState extends State<HoleCard> {
     super.dispose();
   }
 
+  void _edit(HoleDraft next) => widget.onChanged(next);
+
+  void _save(HoleDraft d) {
+    final blocking = holeIssues(d).where((i) => i.blocking).toList();
+    if (blocking.isEmpty) {
+      setState(() => _attemptedSave = false);
+      widget.onSave();
+      return;
+    }
+    setState(() => _attemptedSave = true);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(
+      content: Text(
+        blocking.length == 1
+            ? "Can't save yet. ${blocking.single.message}"
+            : "Can't save yet — ${blocking.length} things to fix.",
+      ),
+    ));
+    // The tee shot sits at the top of the card, far from the button, so take
+    // the player to it.
+    if (blocking.first.kind == HoleIssueKind.teeShotResult) {
+      final target = _teeResultKey.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 250),
+          alignment: 0.2,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final d = widget.draft;
+    final d = withTeeShot(widget.draft);
+    final issues = holeIssues(d);
+    final fromBunker = d.shots.any((s) => s.lie == 'Bunker');
+    final toGreen = strokesToGreen(d);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -166,18 +218,10 @@ class _HoleCardState extends State<HoleCard> {
                     ),
                 ],
               ),
-              const _SectionHeader('Tee'),
+              const _SectionHeader('Hole'),
               ParSelector(
                 value: d.par,
-                onChanged: (newPar) {
-                  // Switching to par 3 wipes fairwayHit — par 3s have no
-                  // fairway and the DAO will throw otherwise.
-                  widget.onChanged(d.copyWith(
-                    par: newPar,
-                    score: d.score < 1 ? 1 : d.score,
-                    fairwayHit: newPar == 3 ? null : d.fairwayHit,
-                  ));
-                },
+                onChanged: (par) => _edit(changePar(d, par)),
               ),
               const SizedBox(height: 12),
               _YardsRow(
@@ -187,7 +231,7 @@ class _HoleCardState extends State<HoleCard> {
                   // Numeric keyboard + a >= 0 floor mirror the `yards >= 0`
                   // CHECK; an empty field means "unknown" and stores 0.
                   final yards = (int.tryParse(v) ?? 0).clamp(0, 100000);
-                  widget.onChanged(d.copyWith(yards: yards));
+                  _edit(changeYards(d, yards));
                 },
               ),
               if (widget.onStrokeIndexChanged != null) ...[
@@ -198,44 +242,64 @@ class _HoleCardState extends State<HoleCard> {
                   onChanged: widget.onStrokeIndexChanged!,
                 ),
               ],
-              const SizedBox(height: 12),
-              _FairwayRow(
-                value: d.fairwayHit,
-                disabled: d.par == 3,
-                onChanged: (v) =>
-                    widget.onChanged(d.copyWith(fairwayHit: v)),
-              ),
-              const _SectionHeader('Approach & Around the Green'),
-              _SwitchRow(
-                label: 'GIR',
-                value: d.gir,
-                onChanged: (v) => widget.onChanged(d.copyWith(gir: v)),
+              const _SectionHeader('Tee shot'),
+              _ShotCard(
+                key: const ValueKey('shot_row_0'),
+                index: 0,
+                isTee: true,
+                shot: d.shots.first,
+                holed: d.putts == 0 && d.shots.length == 1,
+                onChanged: (s) => _edit(updateShot(d, 0, s)),
               ),
               const SizedBox(height: 8),
-              _SwitchRow(
-                label: 'Up/Down attempt',
-                value: d.upDownAttempt,
-                onChanged: (v) {
-                  // Turning attempt off cancels any recorded success — the
-                  // DAO won't accept success=true without attempt=true. The
-                  // success toggle itself lives in the Score section below.
-                  widget.onChanged(d.copyWith(
-                    upDownAttempt: v,
-                    upDownSuccess: v ? d.upDownSuccess : false,
-                  ));
-                },
+              _TeeResultRow(
+                key: _teeResultKey,
+                par: d.par,
+                value: d.par == 3 ? d.gir : d.fairwayHit,
+                showError: _attemptedSave && !teeShotAnswered(d),
+                onChanged: (hit) => _edit(answerTeeShot(d, hit)),
               ),
-              const SizedBox(height: 8),
+              const _SectionHeader('Approach & around the green'),
+              for (var i = 1; i < d.shots.length; i++)
+                _ShotCard(
+                  key: ValueKey('shot_row_$i'),
+                  index: i,
+                  shot: d.shots[i],
+                  holed: d.putts == 0 && i == d.shots.length - 1,
+                  onChanged: (s) => _edit(updateShot(d, i, s)),
+                  onDelete: () => _edit(removeShot(d, i)),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('add_shot'),
+                  onPressed: () => _edit(addShot(d)),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add shot'),
+                ),
+              ),
+              // On a par 3, GIR is the tee shot's "Green hit?" answer above.
+              if (d.par != 3)
+                _SwitchRow(
+                  label: 'GIR',
+                  value: d.gir ?? false,
+                  enabled: girPossible(d),
+                  disabledReason: 'N/A — $toGreen strokes before putting',
+                  onChanged: (v) => _edit(applyEdit(d, d.copyWith(gir: v))),
+                ),
               _SwitchRow(
                 label: 'Bunker visited',
                 value: d.bunkerVisited,
-                onChanged: (v) {
-                  // Its success half (sand save) lives in the Score section.
-                  widget.onChanged(d.copyWith(
-                    bunkerVisited: v,
-                    sandSave: v ? d.sandSave : false,
-                  ));
-                },
+                enabled: !fromBunker,
+                disabledReason: 'A shot is played from a bunker',
+                onChanged: (v) =>
+                    _edit(applyEdit(d, d.copyWith(bunkerVisited: v))),
+              ),
+              _SwitchRow(
+                label: 'Up/Down attempt',
+                value: d.upDownAttempt,
+                onChanged: (v) =>
+                    _edit(applyEdit(d, d.copyWith(upDownAttempt: v))),
               ),
               const _SectionHeader('Putting'),
               _StepperRow(
@@ -243,42 +307,36 @@ class _HoleCardState extends State<HoleCard> {
                 label: 'Putts',
                 value: d.putts,
                 min: 0,
-                // Putts can't reach the score — the tee shot is never a putt.
-                max: d.score - 1,
-                onChanged: (v) => widget.onChanged(d.copyWith(
-                  putts: v,
-                  // An up & down is a 1-putt (or chip-in); 2+ putts can't be a
-                  // recorded success, and the DAO would reject it.
-                  upDownSuccess: v > 1 ? false : d.upDownSuccess,
-                )),
+                onChanged: (v) => _edit(applyEdit(d, d.copyWith(putts: v))),
               ),
+              // The outcomes the putts decide, right under them, and only once
+              // there is something to decide.
+              if (d.upDownAttempt)
+                _SwitchRow(
+                  label: 'Up/Down success',
+                  value: d.upDownSuccess,
+                  enabled: d.putts <= 1,
+                  disabledReason: 'N/A — 2+ putts',
+                  onChanged: (v) =>
+                      _edit(applyEdit(d, d.copyWith(upDownSuccess: v))),
+                ),
+              if (d.bunkerVisited)
+                _SwitchRow(
+                  label: 'Sand save',
+                  value: d.sandSave,
+                  enabled: d.putts <= 1,
+                  disabledReason: 'N/A — 2+ putts',
+                  onChanged: (v) =>
+                      _edit(applyEdit(d, d.copyWith(sandSave: v))),
+                ),
               const _SectionHeader('Score'),
-              // Up/down success and sand save are scoring outcomes known only
-              // once the hole is done, so they sit here with the tally — their
-              // enabling toggles (attempt / bunker) stay in the Approach group.
-              _SwitchRow(
-                label: 'Up/Down success',
-                value: d.upDownSuccess,
-                enabled: d.upDownAttempt && d.putts <= 1,
-                disabledReason:
-                    d.upDownAttempt && d.putts > 1 ? 'N/A — 2+ putts' : null,
-                onChanged: (v) =>
-                    widget.onChanged(d.copyWith(upDownSuccess: v)),
-              ),
-              _SwitchRow(
-                label: 'Sand save',
-                value: d.sandSave,
-                enabled: d.bunkerVisited,
-                onChanged: (v) => widget.onChanged(d.copyWith(sandSave: v)),
-              ),
-              const SizedBox(height: 8),
               _StepperRow(
                 key: const ValueKey('penalty'),
                 label: 'Penalty strokes',
                 value: d.penaltyStrokes,
                 min: 0,
                 onChanged: (v) =>
-                    widget.onChanged(d.copyWith(penaltyStrokes: v)),
+                    _edit(applyEdit(d, d.copyWith(penaltyStrokes: v))),
               ),
               const SizedBox(height: 12),
               _StepperRow(
@@ -287,13 +345,12 @@ class _HoleCardState extends State<HoleCard> {
                 value: d.score,
                 // Score must exceed putts — at least the tee shot isn't a putt.
                 min: d.putts + 1,
-                onChanged: (v) => widget.onChanged(d.copyWith(score: v)),
-              ),
-              const _SectionHeader('Shots'),
-              _ShotsSection(
-                draft: d,
-                onShotsChanged: (list) =>
-                    widget.onChanged(d.copyWith(shots: list)),
+                helperText:
+                    d.score == d.countedScore ? strokeTally(d) : null,
+                errorText: d.score == d.countedScore
+                    ? null
+                    : 'The strokes add up to ${d.countedScore}',
+                onChanged: (v) => _edit(applyEdit(d, d.copyWith(score: v))),
               ),
               const SizedBox(height: 12),
               _NotesSection(
@@ -301,8 +358,16 @@ class _HoleCardState extends State<HoleCard> {
                 expanded: _notesExpanded,
                 onExpansionChanged: (open) =>
                     setState(() => _notesExpanded = open),
-                onChanged: (v) => widget.onChanged(d.copyWith(notes: v)),
+                onChanged: (v) => _edit(d.copyWith(notes: v)),
               ),
+              if (issues.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _IssuesPanel(
+                  issues: issues,
+                  attemptedSave: _attemptedSave,
+                  onFix: (fix) => _edit(fix.apply(d)),
+                ),
+              ],
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -315,7 +380,7 @@ class _HoleCardState extends State<HoleCard> {
                   Expanded(
                     child: Center(
                       child: FilledButton.icon(
-                        onPressed: widget.onSave,
+                        onPressed: () => _save(d),
                         icon: const Icon(Icons.save),
                         label: const Text('Save Hole'),
                       ),
@@ -337,8 +402,8 @@ class _HoleCardState extends State<HoleCard> {
   }
 }
 
-/// A stage sub-header ("Tee", "Approach & Around the Green", "Putting",
-/// "Score") that labels each group of fields. Purely visual — it makes the
+/// A stage sub-header ("Hole", "Tee shot", "Approach & around the green",
+/// "Putting", "Score") that labels each group of fields. Purely visual — it makes the
 /// play-order sequence explicit and carries its own top spacing so sections
 /// are separated without extra `SizedBox`es around it.
 class _SectionHeader extends StatelessWidget {
@@ -405,17 +470,16 @@ class _StepperRow extends StatelessWidget {
     required this.value,
     required this.min,
     required this.onChanged,
-    this.max,
+    this.helperText,
+    this.errorText,
   });
 
   final String label;
   final int value;
   final int min;
-
-  /// Optional upper bound; the increment button disables once `value` reaches
-  /// it. `null` means unbounded (the default for penalty strokes).
-  final int? max;
   final ValueChanged<int> onChanged;
+  final String? helperText;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -424,6 +488,8 @@ class _StepperRow extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
+        helperText: helperText,
+        errorText: errorText,
       ),
       child: Row(
         children: [
@@ -442,9 +508,7 @@ class _StepperRow extends StatelessWidget {
           ),
           IconButton(
             key: ValueKey('${label}_inc'),
-            onPressed: (max != null && value >= max!)
-                ? null
-                : () => onChanged(value + 1),
+            onPressed: () => onChanged(value + 1),
             icon: const Icon(Icons.add),
           ),
         ],
@@ -529,51 +593,49 @@ class _StrokeIndexRowState extends State<_StrokeIndexRow> {
   }
 }
 
-class _FairwayRow extends StatelessWidget {
-  const _FairwayRow({
+/// The tee shot's result: whether it found the fairway, or on a par 3 the
+/// green (which is GIR). Required — Save Hole won't go through without it,
+/// because the fairway and GIR stats would otherwise be recorded as a guess.
+///
+/// Starts with neither answer selected, and once answered can be switched but
+/// not cleared.
+class _TeeResultRow extends StatelessWidget {
+  const _TeeResultRow({
+    super.key,
+    required this.par,
     required this.value,
-    required this.disabled,
+    required this.showError,
     required this.onChanged,
   });
 
+  final int par;
   final bool? value;
-  final bool disabled;
-  final ValueChanged<bool?> onChanged;
-
-  // `null` is the "N/A" selection. SegmentedButton can't hold a null in
-  // its Set<T>, so we map null to a sentinel int and back.
-  static const int _yes = 1;
-  static const int _no = 0;
-  static const int _na = -1;
-
-  int _encode(bool? v) {
-    if (v == null) return _na;
-    return v ? _yes : _no;
-  }
-
-  bool? _decode(int v) {
-    if (v == _na) return null;
-    return v == _yes;
-  }
+  final bool showError;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final answered = value;
     return InputDecorator(
       decoration: InputDecoration(
-        labelText: disabled ? 'Fairway hit (N/A on par 3)' : 'Fairway hit',
+        labelText: par == 3 ? 'Green hit?' : 'Fairway hit?',
         border: const OutlineInputBorder(),
+        helperText: answered == null && !showError ? 'Required' : null,
+        errorText: showError ? 'Required before saving' : null,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: SegmentedButton<int>(
+        child: SegmentedButton<bool>(
+          key: const ValueKey('tee_result'),
           segments: const [
-            ButtonSegment(value: _yes, label: Text('Yes')),
-            ButtonSegment(value: _no, label: Text('No')),
-            ButtonSegment(value: _na, label: Text('N/A')),
+            ButtonSegment(value: true, label: Text('Yes')),
+            ButtonSegment(value: false, label: Text('No')),
           ],
-          selected: {disabled ? _na : _encode(value)},
-          onSelectionChanged:
-              disabled ? null : (sel) => onChanged(_decode(sel.first)),
+          selected: answered == null ? const <bool>{} : {answered},
+          emptySelectionAllowed: true,
+          onSelectionChanged: (sel) {
+            if (sel.isNotEmpty) onChanged(sel.first);
+          },
         ),
       ),
     );
@@ -653,146 +715,162 @@ class _NotesSection extends StatelessWidget {
   }
 }
 
-/// The ordered per-hole shot list (#22): one [_ShotRow] per shot, a
-/// reconciliation banner, and the controls that add rows. Stateless w.r.t. the
-/// data — the parent owns the list and gets a whole new list on any add / edit
-/// / delete.
+/// What still stands between this hole and Save Hole, then anything merely
+/// worth a look, each with its one-tap fixes (see [holeIssues]).
 ///
-/// Takes the whole [draft], not just the shots, because both the suggestions
-/// (#81) and the warnings are derived from the hole-level fields the same card
-/// captures — par, yards, score, putts, fairwayHit, gir, bunkerVisited.
-class _ShotsSection extends StatelessWidget {
-  const _ShotsSection({required this.draft, required this.onShotsChanged});
+/// Before a save has been tried, blocking issues read as a neutral to-do list;
+/// after a refused save they turn into errors.
+class _IssuesPanel extends StatelessWidget {
+  const _IssuesPanel({
+    required this.issues,
+    required this.attemptedSave,
+    required this.onFix,
+  });
 
-  final HoleDraft draft;
-  final ValueChanged<List<ShotDraft>> onShotsChanged;
+  final List<HoleIssue> issues;
+  final bool attemptedSave;
+  final ValueChanged<HoleFix> onFix;
 
   @override
   Widget build(BuildContext context) {
-    final shots = draft.shots;
-    final warnings = shotWarnings(draft);
+    final scheme = Theme.of(context).colorScheme;
+    final blocking = issues.where((i) => i.blocking).toList();
+    final warnings = issues.where((i) => !i.blocking).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (warnings.isNotEmpty) _ShotWarnings(warnings: warnings),
-        for (var i = 0; i < shots.length; i++)
-          _ShotRow(
-            key: ValueKey('shot_row_$i'),
-            index: i,
-            shot: shots[i],
-            onChanged: (s) {
-              final next = [...shots];
-              next[i] = s;
-              onShotsChanged(next);
-            },
-            onDelete: () => onShotsChanged([...shots]..removeAt(i)),
+        if (blocking.isNotEmpty)
+          _IssueBox(
+            key: const ValueKey('hole_errors'),
+            title: attemptedSave ? "Can't save yet" : 'Before saving',
+            icon: attemptedSave ? Icons.error_outline : Icons.checklist,
+            background: attemptedSave
+                ? scheme.errorContainer
+                : scheme.secondaryContainer,
+            foreground: attemptedSave
+                ? scheme.onErrorContainer
+                : scheme.onSecondaryContainer,
+            issues: blocking,
+            onFix: onFix,
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: 8,
-            children: [
-              TextButton.icon(
-                key: const ValueKey('add_shot'),
-                // Pre-filled from the hole's own data rather than blank (#81);
-                // every field stays overrideable.
-                onPressed: () =>
-                    onShotsChanged([...shots, suggestNextShot(draft)]),
-                icon: const Icon(Icons.add),
-                label: const Text('Add shot'),
-              ),
-              // Only offered while the list is empty: rebuilding a list the user
-              // has already edited would destroy work, and nothing in this app
-              // has an undo.
-              if (shots.isEmpty)
-                TextButton.icon(
-                  key: const ValueKey('build_shots_from_score'),
-                  onPressed: () =>
-                      onShotsChanged(scaffoldShotsFromScore(draft)),
-                  icon: const Icon(Icons.auto_fix_high),
-                  label: const Text('Build from score'),
-                ),
-            ],
+        if (blocking.isNotEmpty && warnings.isNotEmpty)
+          const SizedBox(height: 8),
+        if (warnings.isNotEmpty)
+          _IssueBox(
+            key: const ValueKey('hole_warnings'),
+            title: 'Worth a look',
+            icon: Icons.info_outline,
+            background: scheme.tertiaryContainer,
+            foreground: scheme.onTertiaryContainer,
+            issues: warnings,
+            onFix: onFix,
           ),
-        ),
       ],
     );
   }
 }
 
-/// Non-blocking notes about shots that disagree with the hole-level fields.
-/// Informational on purpose — the entry is never corrected automatically and
-/// saving is never blocked (see [shotWarnings]).
-class _ShotWarnings extends StatelessWidget {
-  const _ShotWarnings({required this.warnings});
+class _IssueBox extends StatelessWidget {
+  const _IssueBox({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.issues,
+    required this.onFix,
+  });
 
-  final List<String> warnings;
+  final String title;
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final List<HoleIssue> issues;
+  final ValueChanged<HoleFix> onFix;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final text = Theme.of(context).textTheme;
     return Container(
-      key: const ValueKey('shot_warnings'),
-      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.tertiaryContainer,
+        color: background,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 18,
-            color: theme.colorScheme.onTertiaryContainer,
+          Row(
+            children: [
+              Icon(icon, size: 18, color: foreground),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: text.titleSmall?.copyWith(color: foreground),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final w in warnings)
-                  Text(
-                    w,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onTertiaryContainer,
-                    ),
-                  ),
-              ],
+          for (final issue in issues) ...[
+            const SizedBox(height: 6),
+            Text(
+              issue.message,
+              style: text.bodySmall?.copyWith(color: foreground),
             ),
-          ),
+            if (issue.fixes.isNotEmpty)
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final fix in issue.fixes)
+                    TextButton(
+                      key: ValueKey('fix_${fix.id}'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: foreground,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () => onFix(fix),
+                      child: Text(fix.label),
+                    ),
+                ],
+              ),
+          ],
         ],
       ),
     );
   }
 }
 
-/// One shot's editable row: club + distance (free entry) and lie + result
-/// (small preset dropdowns), with a delete action. The text fields are backed
-/// by controllers synced in [didUpdateWidget] so a value that changes from the
-/// outside (e.g. a deleted earlier shot shifting this row's data up) refreshes
-/// without clobbering active typing.
-class _ShotRow extends StatefulWidget {
-  const _ShotRow({
+/// One shot's editable card: lie (not for the tee shot — it's always from the
+/// tee), club and distance, a Penalty toggle, and a delete action for every
+/// shot but the tee shot. The last stroke before the hole is complete with no
+/// putts carries a "Holed" badge; the form sets that itself.
+///
+/// Nothing here suggests a club, and only the tee shot arrives with a distance.
+/// The distance field is backed by a controller synced in [didUpdateWidget] so
+/// a value that changes from the outside (e.g. a deleted earlier shot shifting
+/// this card's data up) refreshes without clobbering active typing.
+class _ShotCard extends StatefulWidget {
+  const _ShotCard({
     super.key,
     required this.index,
     required this.shot,
     required this.onChanged,
-    required this.onDelete,
+    this.onDelete,
+    this.isTee = false,
+    this.holed = false,
   });
 
   final int index;
   final ShotDraft shot;
   final ValueChanged<ShotDraft> onChanged;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final bool isTee;
+  final bool holed;
 
   @override
-  State<_ShotRow> createState() => _ShotRowState();
+  State<_ShotCard> createState() => _ShotCardState();
 }
 
-class _ShotRowState extends State<_ShotRow> {
-  // Only distance is a free-entry field (club / lie / result are dropdowns).
+class _ShotCardState extends State<_ShotCard> {
   late final TextEditingController _distance;
 
   @override
@@ -804,7 +882,7 @@ class _ShotRowState extends State<_ShotRow> {
   }
 
   @override
-  void didUpdateWidget(covariant _ShotRow oldWidget) {
+  void didUpdateWidget(covariant _ShotCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.shot.distanceYards != int.tryParse(_distance.text)) {
       _distance.text = widget.shot.distanceYards?.toString() ?? '';
@@ -820,6 +898,7 @@ class _ShotRowState extends State<_ShotRow> {
   @override
   Widget build(BuildContext context) {
     final s = widget.shot;
+    final i = widget.index;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -830,24 +909,59 @@ class _ShotRowState extends State<_ShotRow> {
             Row(
               children: [
                 Text(
-                  'Shot ${widget.index + 1}',
+                  'Shot ${i + 1}',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
+                if (widget.holed) ...[
+                  const SizedBox(width: 8),
+                  Chip(
+                    key: ValueKey('shot_holed_$i'),
+                    avatar: const Icon(Icons.flag, size: 16),
+                    label: const Text('Holed'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
                 const Spacer(),
-                IconButton(
-                  key: ValueKey('shot_delete_${widget.index}'),
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Remove shot',
+                FilterChip(
+                  key: ValueKey('shot_penalty_$i'),
+                  label: const Text('Penalty'),
+                  selected: s.isPenalty,
                   visualDensity: VisualDensity.compact,
-                  onPressed: widget.onDelete,
+                  onSelected: (on) => widget.onChanged(
+                    s.copyWith(result: on ? penaltyResult : null),
+                  ),
                 ),
+                if (widget.onDelete != null)
+                  IconButton(
+                    key: ValueKey('shot_delete_$i'),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Remove shot',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: widget.onDelete,
+                  )
+                else
+                  const SizedBox(width: 8),
               ],
             ),
+            if (!widget.isTee) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _ShotDropdown(
+                  fieldKey: ValueKey('shot_lie_$i'),
+                  label: 'Played from',
+                  value: s.lie,
+                  options: shotLies,
+                  onChanged: (v) => widget.onChanged(s.copyWith(lie: v)),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: _ShotDropdown(
-                    fieldKey: ValueKey('shot_club_${widget.index}'),
+                    fieldKey: ValueKey('shot_club_$i'),
                     label: 'Club',
                     value: s.club,
                     options: shotClubs,
@@ -858,52 +972,24 @@ class _ShotRowState extends State<_ShotRow> {
                 SizedBox(
                   width: 96,
                   child: TextField(
-                    key: ValueKey('shot_distance_${widget.index}'),
+                    key: ValueKey('shot_distance_$i'),
                     controller: _distance,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Dist',
+                      labelText: 'To pin',
                       isDense: true,
                       suffixText: 'yds',
                     ),
                     onChanged: (v) {
                       final text = v.trim();
-                      final d = text.isEmpty
+                      final yards = text.isEmpty
                           ? null
                           : (int.tryParse(text) ?? 0).clamp(0, 100000);
-                      // Distance is what's left to the pin, so it implies a
-                      // club — but only fill one the user hasn't chosen yet.
-                      final club = s.club ?? (d == null ? null : suggestClub(d));
-                      widget.onChanged(
-                        s.copyWith(distanceYards: d, club: club),
-                      );
+                      widget.onChanged(s.copyWith(distanceYards: yards));
                     },
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _ShotDropdown(
-                    fieldKey: ValueKey('shot_lie_${widget.index}'),
-                    label: 'Lie',
-                    value: s.lie,
-                    options: shotLies,
-                    onChanged: (v) => widget.onChanged(s.copyWith(lie: v)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ShotDropdown(
-                    fieldKey: ValueKey('shot_result_${widget.index}'),
-                    label: 'Result',
-                    value: s.result,
-                    options: shotResults,
-                    onChanged: (v) => widget.onChanged(s.copyWith(result: v)),
-                  ),
-                ),
+                const SizedBox(width: 8),
               ],
             ),
           ],
@@ -913,8 +999,8 @@ class _ShotRowState extends State<_ShotRow> {
   }
 }
 
-/// A small nullable preset dropdown for a shot's club / lie / result. The first
-/// item ("—") clears the value.
+/// A small nullable preset dropdown for a shot's club / lie. The first item
+/// ("—") clears the value.
 ///
 /// Deliberately an [InputDecorator] wrapping a plain [DropdownButton] rather
 /// than a [DropdownButtonFormField]: the form-field variant seeds itself from

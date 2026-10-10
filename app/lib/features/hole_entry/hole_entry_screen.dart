@@ -130,8 +130,10 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   void _seedFromSaved(Map<int, HoleResult> savedByHole) {
     for (final entry in savedByHole.entries) {
       if (_dirty.contains(entry.key)) continue;
-      _drafts[entry.key] = HoleDraft.fromHoleResult(entry.value)
-          .copyWith(shots: _shotsByHole[entry.key] ?? const []);
+      _drafts[entry.key] = HoleDraft.fromSaved(
+        entry.value,
+        _shotsByHole[entry.key] ?? const [],
+      );
     }
   }
 
@@ -414,14 +416,15 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
         itemBuilder: (context, index) {
           final holeNumber = index + 1;
           final draft = _drafts[holeNumber] ?? _initialForHole(holeNumber);
-          // Attach the saved shots here too. `fromHoleResult` leaves `shots`
-          // empty (they live in a separate table), while the live draft was
-          // seeded *with* them in `_seedFromSaved` — and HoleDraft equality
-          // compares the shot lists, so without this every saved hole that has
-          // a shot would read "Unsaved" forever.
+          // Built exactly as `_seedFromSaved` builds the live draft — saved
+          // shots attached and normalised the same way — because HoleDraft
+          // equality compares the shot lists: built any other way, every saved
+          // hole would read "Unsaved" forever.
           final savedDraft = savedByHole.containsKey(holeNumber)
-              ? HoleDraft.fromHoleResult(savedByHole[holeNumber]!)
-                  .copyWith(shots: _shotsByHole[holeNumber] ?? const [])
+              ? HoleDraft.fromSaved(
+                  savedByHole[holeNumber]!,
+                  _shotsByHole[holeNumber] ?? const [],
+                )
               : null;
           return HoleCard(
             key: ValueKey('hole_card_$holeNumber'),
