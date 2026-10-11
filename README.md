@@ -25,15 +25,21 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.5.0
+## Status — v0.6.0
 
-**v0.5.0** is the latest release, and it reworks the hole entry card. Each shot
-is now entered beside the stats it decides — the tee shot with "Fairway hit?",
-approach shots with GIR, bunker and up & down, putts as the Putts count — so a
-hole is one pass down the card, and the form fills in what follows from what
-you enter. **Save Hole** now checks that the hole adds up before saving it, and
-offers a one-tap fix when the score and the shots disagree. Holes saved before
-this keep their values. The schema stays at v7, and upgrading is in place.
+**v0.6.0** is the latest release, and it gives each putt a shot row of its own
+under **Putting**, with its distance to the hole in feet — the unit golf games
+show on the green. Adding or removing a putt row is how the putts are counted.
+Putts you measured in yards before are converted to feet on upgrade; every
+other shot keeps its yards. The schema moves to v8, so a migration runs when
+you install it, and backups made by v0.4.0 and v0.5.0 still read.
+
+**v0.5.0** reworked the hole entry card. Each shot was entered beside the stats
+it decides — the tee shot with "Fairway hit?", approach shots with GIR, bunker
+and up & down, putts as a Putts count — so a hole is one pass down the card,
+and the form fills in what follows from what you enter. **Save Hole** checks
+that the hole adds up before saving it, and offers a one-tap fix when the score
+and the shots disagree. The schema stayed at v7.
 
 **v0.4.0** was the first release since v0.3.1 worth installing
 for its own sake: your data could now leave the device. **Settings → Back up your
@@ -227,7 +233,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 729 passing tests
+flutter test                           # 770 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

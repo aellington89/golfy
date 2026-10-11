@@ -8,6 +8,27 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-11
+
+A release that gives the putts their shots back ([#125]). v0.5.0 put every
+shot beside the stats it decides except the putts, which it cut down to a bare
+count. Now each putt is a row of its own under **Putting**, measured the way
+golf games show it on the green: in feet. Add or remove a putt and the count,
+the score and the up & down follow.
+
+Putts you measured before this were in yards, the only unit a shot had, and
+they come across converted: a 4-yard putt now reads 12 feet. Only putts are
+converted; every other shot keeps its yards. One thing can't come back: v0.5.0
+dropped the distances from a hole's putts whenever that hole was re-saved, so
+those putts arrive without one.
+
+The schema **moves**, v7 → v8, and a migration runs on every device that
+installs this. It adds the putt distance column and converts the putts in
+yards, in a single step that either finishes or leaves the database as it was.
+Backups made by v0.4.0 and v0.5.0 still read, their putts converted the same
+way. The release is a **minor**, both for the `### Changed` entries below and
+because the schema rose.
+
 ### Changed
 
 - **Each putt is a shot again, entered under Putting, with its distance in
@@ -830,7 +851,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/aellington89/golfy/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/aellington89/golfy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/aellington89/golfy/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/aellington89/golfy/compare/v0.3.2...v0.3.3
@@ -892,3 +914,4 @@ Phase 1 — data layer and navigation shell.
 [#114]: https://github.com/aellington89/golfy/issues/114
 [#118]: https://github.com/aellington89/golfy/pull/118
 [#120]: https://github.com/aellington89/golfy/pull/120
+[#125]: https://github.com/aellington89/golfy/pull/125
