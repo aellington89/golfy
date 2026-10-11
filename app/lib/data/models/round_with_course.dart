@@ -11,7 +11,8 @@ class RoundWithCourse {
     required this.totalScore,
     required this.totalPar,
     this.event,
-    this.courseSetName,
+    this.teeSetName,
+    this.pinSetName,
   });
 
   final Round round;
@@ -21,10 +22,15 @@ class RoundWithCourse {
   /// event. Sourced from the left-outer join in [RoundDao.watchAllWithCourse].
   final Event? event;
 
-  /// Name of the yardage set this round was played from, or null when the
-  /// round has none (its yardages were never pre-filled). Sourced from the
-  /// left-outer join in [RoundDao.watchAllWithCourse].
-  final String? courseSetName;
+  /// Names of the tee set and pin set this round was played on — together its
+  /// yardage set — each null when the round has none. Sourced from the
+  /// left-outer joins in [RoundDao.watchAllWithCourse].
+  final String? teeSetName;
+  final String? pinSetName;
+
+  /// The round's yardage set as one label — "Blue · Sunday pins", or just the
+  /// half it has — or null when it has neither.
+  String? get yardageSetLabel => yardageSetLabelOf(teeSetName, pinSetName);
 
   final int holesEntered;
 
@@ -46,19 +52,27 @@ class RoundWithCourse {
           round == other.round &&
           courseName == other.courseName &&
           event == other.event &&
-          courseSetName == other.courseSetName &&
+          teeSetName == other.teeSetName &&
+          pinSetName == other.pinSetName &&
           holesEntered == other.holesEntered &&
           totalScore == other.totalScore &&
           totalPar == other.totalPar;
 
   @override
-  int get hashCode => Object.hash(round, courseName, event, courseSetName,
-      holesEntered, totalScore, totalPar);
+  int get hashCode => Object.hash(round, courseName, event, teeSetName,
+      pinSetName, holesEntered, totalScore, totalPar);
 
   @override
   String toString() =>
       'RoundWithCourse(round: $round, courseName: $courseName, '
-      'event: $event, courseSetName: $courseSetName, '
+      'event: $event, teeSetName: $teeSetName, pinSetName: $pinSetName, '
       'holesEntered: $holesEntered, totalScore: $totalScore, '
       'totalPar: $totalPar)';
+}
+
+/// A yardage set's label from its tee set and pin set names — "Blue · Sunday
+/// pins", or whichever half is present — or null when neither is.
+String? yardageSetLabelOf(String? teeSetName, String? pinSetName) {
+  final parts = [?teeSetName, ?pinSetName];
+  return parts.isEmpty ? null : parts.join(' · ');
 }

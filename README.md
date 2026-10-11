@@ -133,7 +133,8 @@ The historical [`golf_stats.xlsx`](https://github.com/aellington89/golfy/issues/
 data was imported once, on-device, via a one-time migration tool
 ([#33](https://github.com/aellington89/golfy/issues/33)); by design no import UI
 ships in the app. Per-hole **yardage** is captured via reusable course templates
-with multiple yardage sets ([#36](https://github.com/aellington89/golfy/issues/36)),
+— course yards per tee set, and tee-to-pin yards per tee set and pin set
+([#36](https://github.com/aellington89/golfy/issues/36)),
 and each hole carries an ordered **per-shot list** — club, distance, lie and
 result ([#22](https://github.com/aellington89/golfy/issues/22)).
 
@@ -165,39 +166,55 @@ build modes share `%USERPROFILE%\Documents\golfy.sqlite`.
 ## Data model
 
 ```
-courses ──┬── course_holes (18 per course)   → shared par + stroke index
-          ├── course_sets (named yardage sets) ── course_set_yards (18 per set)
+courses ──┬── course_holes (18 per course)  → par + stroke index, per hole
+          ├── tee_sets ──── course_yards (18 per tee set)
+          ├── pin_sets       └─ the scorecard yards; vary with the tee set only
+          ├── tee_to_pin_yards (18 per tee set × pin set)
+          │     └─ distance from a tee set to a pin set's pin; vary with both
           ▼
         rounds ──── hole_results (18 per round) ── hole_shots (per-shot list)
           │         └─ par, score, yards, fairwayHit,    └─ club, distance
-          └─ course_set_id  gir, putts, upDown…,            (yds, or ft for a
-             (played set)   penalty, bunker, sandSave, …     putt), lie, result
+          └─ tee_set_id + gir, putts, upDown…,            (yds, or ft for a
+             pin_set_id    penalty, bunker, sandSave, …     putt), lie, result
+             (yardage set)
 ```
 
-A course optionally saves a **template**: a shared per-hole par + stroke index
-(`course_holes`) and one or more named **yardage sets** (`course_sets`), each
-with its own 18-hole yardage card (`course_set_yards`) so the same course can be
-played at different yardages. A round records which set it used
-(`rounds.course_set_id`); starting a round pre-fills each hole's par from the
-course and yardage from the chosen set, and the round keeps its own editable
-copy in `hole_results` — so a template edit never rewrites past rounds. Each hole
-optionally carries an ordered **shot list** (`hole_shots`) — club, distance (yards
-to the pin, or feet to the hole for a putt), lie and result per shot — separate
-from the authoritative `score` / `putts`.
+A course optionally saves a **template**. **Par and stroke index** belong to the
+hole whatever it is played from (`course_holes`). A **tee set** (`tee_sets`) is
+a tee box with a standard yardage per hole — its **course yards**
+(`course_yards`), which change with the tee set and never with where the pin is.
+A **pin set** (`pin_sets`) is a set of pin positions with no yardage of its own:
+how far a hole plays depends on the tee set and the pin set together, so
+**tee-to-pin** yards (`tee_to_pin_yards`) are kept per tee set × pin set — the
+same pins are a different distance from each tee set. A **yardage set** is one
+tee set plus one pin set, and its yards on a hole are that pair's tee-to-pin
+yards.
+
+A round records its yardage set (`rounds.tee_set_id`, `rounds.pin_set_id`, both
+optional and both on the round's own course). Starting a round pre-fills each
+hole's par from the course and its yards from the yardage set — tee to pin, or
+the tee set's course yards when the round has no pin set — and the round keeps
+its own editable copy in `hole_results`, so a template edit never rewrites past
+rounds. Each hole optionally carries an ordered **shot list** (`hole_shots`) —
+club, distance (yards to the pin, or feet to the hole for a putt), lie and
+result per shot — separate from the authoritative `score` / `putts`.
 Round totals and lifetime aggregates are **derived** from `hole_results` at
 query time. The schema is enforced at the SQL level (FK RESTRICT on course
-delete, FK CASCADE on round / set / hole delete, UNIQUE on `(round_id,
-hole_number)`, `(course_id, hole_number)`, `(course_id, name)`,
-`(course_set_id, hole_number)`, `(hole_result_id, shot_number)`, CHECK
+delete, FK CASCADE on round / set / hole delete, FK SET NULL from a round to
+its tee set and pin set, UNIQUE on `(round_id, hole_number)`, `(course_id,
+hole_number)`, `(course_id, name)` per set kind, `(tee_set_id, hole_number)`,
+`(tee_set_id, pin_set_id, hole_number)`, `(hole_result_id, shot_number)`, CHECK
 constraints on par / score / putts / yards). App-level invariants that SQL can't
-express (e.g. you can't make an up-and-down without attempting one) are enforced
-by the DAO layer with loud `ArgumentError`s.
+express (e.g. you can't make an up-and-down without attempting one, or pair a
+tee set with another course's pin set) are enforced by the DAO layer with loud
+`ArgumentError`s.
 
 ## Back up your data
 
 Golfy keeps everything on the device and sends nothing anywhere, which also
 means a lost or wiped phone loses every round. **Export** writes the lot —
-courses, yardage sets, rounds, holes, shots and events — to one file you choose
+courses, tee sets, pin sets and their yards, rounds, holes, shots and events —
+to one file you choose
 the home for ([#69](https://github.com/aellington89/golfy/issues/69)):
 
 1. Open the side menu → **Settings**.

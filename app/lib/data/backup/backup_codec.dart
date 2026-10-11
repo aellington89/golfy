@@ -9,6 +9,13 @@ import 'backup_manifest.dart';
 import 'backup_payload.dart';
 
 /// A decoded backup file: its envelope and its rows (#69).
+/// Rewrites an older file's raw rows, and its row counts, into the next
+/// schema version's shape. See [BackupCodec._upgraders].
+typedef _Upgrader = void Function(
+  Map<String, Object?> data,
+  Map<String, int> rowCounts,
+);
+
 class BackupBundle {
   const BackupBundle(this.manifest, this.payload);
 
@@ -35,11 +42,13 @@ class BackupCodec {
   /// `test/data/backup/backup_guards_test.dart` fails the day the two
   /// disagree, which is the prompt to decide whether old files can still be
   /// read and to register an upgrader below.
-  static const int supportedSchemaVersion = 8;
+  static const int supportedSchemaVersion = 9;
 
   /// Upgraders for an older file's rows, keyed by the schema version they
   /// upgrade **from**. Each one rewrites the raw `data` section into the shape
-  /// of the next version.
+  /// of the next version, and the file's `rowCounts` with it where a table was
+  /// renamed or added — so the counts can still be checked against what the
+  /// file said.
   ///
   /// They run on the rows as JSON, before decoding, because a decoded row
   /// already has today's columns: checking a v7 row against them is exactly
@@ -48,16 +57,123 @@ class BackupCodec {
   ///
   /// Nothing below v7 is here, and never will be: export did not exist before
   /// schema v7, so no Golfy build can have written an older backup.
-  static const Map<int, void Function(Map<String, Object?> data)> _upgraders =
-      <int, void Function(Map<String, Object?> data)>{
+  static const Map<int, _Upgrader> _upgraders = <int, _Upgrader>{
     // v7 -> v8: putts record their distance in feet. No shot in a v7 file
     // has the column, and its putts saved with a distance have it in yards.
     7: _upgradeFrom7,
+    // v8 -> v9: yardage splits into tee sets and pin sets.
+    8: _upgradeFrom8,
   };
 
-  static void _upgradeFrom7(Map<String, Object?> data) {
+  /// The tables a file of data version 7 or 8 carries — before v9 split the
+  /// yardage sets into tee sets and pin sets. Checked before upgrading, so an
+  /// old file is refused for what *it* lacks, in its own table names.
+  static const List<String> _tablesBeforeV9 = <String>[
+    'courses',
+    'course_holes',
+    'course_sets',
+    'course_set_yards',
+    'events',
+    'rounds',
+    'hole_results',
+    'hole_shots',
+  ];
+
+  static List<String> _tablesAt(int schemaVersion) =>
+      schemaVersion < 9 ? _tablesBeforeV9 : backupTableOrder;
+
+  static void _upgradeFrom7(
+    Map<String, Object?> data,
+    Map<String, int> rowCounts,
+  ) {
     _addNullColumn(data, 'hole_shots', 'distance_feet', fromVersion: 7);
     _puttYardsToFeet(data);
+  }
+
+  /// v8 had one kind of yardage set, with one yardage per hole: a tee set and
+  /// its course yards, in v9's terms. Exactly what the v8 -> v9 database
+  /// migration does, so a restored v8 backup matches a migrated v8 database:
+  ///
+  /// * `course_sets` becomes `tee_sets`, rows unchanged;
+  /// * `course_set_yards` becomes `course_yards`, `course_set_id` renamed
+  ///   `tee_set_id`;
+  /// * `pin_sets` and `tee_to_pin_yards` start empty;
+  /// * each round's `course_set_id` becomes its `tee_set_id` — cleared when
+  ///   that set is another course's, which v9 refuses — with `pin_set_id`
+  ///   null, and the never-written `tee_set` label goes.
+  static void _upgradeFrom8(
+    Map<String, Object?> data,
+    Map<String, int> rowCounts,
+  ) {
+    // Read before the rename: which course each v8 set is on.
+    final setCourse = <Object?, Object?>{
+      for (final row in _objects(data['course_sets']))
+        row['id']: row['course_id'],
+    };
+
+    _renameTable(data, rowCounts, 'course_sets', 'tee_sets');
+    _renameTable(data, rowCounts, 'course_set_yards', 'course_yards');
+    _renameColumn(data, 'course_yards', 'course_set_id', 'tee_set_id',
+        fromVersion: 8);
+    data['pin_sets'] = <Object?>[];
+    data['tee_to_pin_yards'] = <Object?>[];
+    rowCounts['pin_sets'] = 0;
+    rowCounts['tee_to_pin_yards'] = 0;
+
+    _renameColumn(data, 'rounds', 'course_set_id', 'tee_set_id',
+        fromVersion: 8);
+    _addNullColumn(data, 'rounds', 'pin_set_id', fromVersion: 8);
+    for (final row in _objects(data['rounds'])) {
+      row.remove('tee_set');
+      // Only a set the file has and puts on another course; a set it lacks
+      // is a broken reference, left for validation to refuse.
+      final teeSetId = row['tee_set_id'];
+      if (setCourse.containsKey(teeSetId) &&
+          setCourse[teeSetId] != row['course_id']) {
+        row['tee_set_id'] = null;
+      }
+    }
+  }
+
+  /// Moves a table's rows, and its row count, to a new name.
+  static void _renameTable(
+    Map<String, Object?> data,
+    Map<String, int> rowCounts,
+    String from,
+    String to,
+  ) {
+    data[to] = data.remove(from);
+    final count = rowCounts.remove(from);
+    if (count != null) rowCounts[to] = count;
+  }
+
+  /// Renames a column in every row of [table]. A row without [from] is
+  /// refused, since a file of [fromVersion] always has it, as is one that
+  /// already has [to], which it never does.
+  static void _renameColumn(
+    Map<String, Object?> data,
+    String table,
+    String from,
+    String to, {
+    required int fromVersion,
+  }) {
+    final rows = data[table];
+    if (rows is! List) return;
+    for (var index = 0; index < rows.length; index++) {
+      final row = rows[index];
+      if (row is! Map<String, Object?>) continue;
+      if (!row.containsKey(from) || row.containsKey(to)) {
+        throw BackupFormatException(
+          BackupFormatProblem.badRow,
+          row.containsKey(to)
+              ? 'row has `$to`, which data version $fromVersion does not have'
+              : 'row is missing `$from`',
+          table: table,
+          rowIndex: index,
+        );
+      }
+      row[to] = row.remove(from);
+    }
   }
 
   /// Rewrites the putts a v7 file saved in yards in feet, exactly as the v7 ->
@@ -223,8 +339,9 @@ class BackupCodec {
         'no `data` section — the backup carries no tables',
       );
     }
+    final fileTables = _tablesAt(manifest.schemaVersion);
     for (final table in data.keys) {
-      if (!backupTableOrder.contains(table)) {
+      if (!fileTables.contains(table)) {
         throw BackupFormatException(
           BackupFormatProblem.unknownTable,
           '`data.$table` is not a table this version of Golfy knows',
@@ -232,7 +349,7 @@ class BackupCodec {
         );
       }
     }
-    for (final table in backupTableOrder) {
+    for (final table in fileTables) {
       if (!data.containsKey(table)) {
         throw BackupFormatException(
           BackupFormatProblem.missingTable,
@@ -243,20 +360,23 @@ class BackupCodec {
     }
 
     // Bring an older file's rows up to this version before reading them.
-    // Upgraders add or rewrite columns, never rows, so the counts checked
-    // below are still the ones the file said.
+    // Upgraders add, rename or rewrite columns and tables, never rows, so the
+    // counts checked below are still the ones the file said — under the
+    // table names they carry now.
+    final rowCounts = Map<String, int>.of(manifest.rowCounts);
     for (var version = manifest.schemaVersion;
         version < supportedSchemaVersion;
         version++) {
-      _upgraders[version]!(data);
+      _upgraders[version]!(data, rowCounts);
     }
 
     final payload = BackupPayload(
       courses: _rows(data, 'courses', Course.fromJson),
       courseHoles: _rows(data, 'course_holes', CourseHole.fromJson),
-      courseSets: _rows(data, 'course_sets', CourseSet.fromJson),
-      courseSetYards:
-          _rows(data, 'course_set_yards', CourseSetYard.fromJson),
+      teeSets: _rows(data, 'tee_sets', TeeSet.fromJson),
+      courseYards: _rows(data, 'course_yards', CourseYard.fromJson),
+      pinSets: _rows(data, 'pin_sets', PinSet.fromJson),
+      teeToPinYards: _rows(data, 'tee_to_pin_yards', TeeToPinYard.fromJson),
       events: _rows(data, 'events', Event.fromJson),
       rounds: _rows(data, 'rounds', Round.fromJson),
       holeResults: _rows(data, 'hole_results', HoleResult.fromJson),
@@ -266,7 +386,7 @@ class BackupCodec {
     // The counts are checked against what the file *said*.
     final counts = payload.rowCounts;
     for (final table in backupTableOrder) {
-      final claimed = manifest.rowCounts[table];
+      final claimed = rowCounts[table];
       if (claimed == null) {
         throw BackupFormatException(
           BackupFormatProblem.rowCountMismatch,

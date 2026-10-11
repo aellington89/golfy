@@ -54,7 +54,7 @@ app/lib/
 │   │                              #   Rounds, HoleResults, HoleShots, Events (drift)
 │   ├── backup/                    # portable backup file: manifest, payload, codec
 │   │                              #   (both directions), destinations, service (#69)
-│   ├── daos/                      # CourseDao, CourseHoleDao, CourseSetDao, RoundDao,
+│   ├── daos/                      # CourseDao, CourseHoleDao, YardageDao, RoundDao,
 │   │                              #   HoleResultDao, HoleShotDao, DashboardDao, EventDao,
 │   │                              #   BackupDao
 │   ├── models/                    # RoundWithCourse (+ its event), HoleShotInput,
@@ -64,7 +64,7 @@ app/lib/
 ├── features/
 │   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
 │   │                              #   one-screen course setup (par + stroke index +
-│   │                              #   yardage sets, #36/#81)
+│   │                              #   tee sets and pin sets, #36/#81)
 │   ├── settings/                  # Settings screen + the Export backup tile (#69)
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
@@ -100,7 +100,7 @@ app/test/
 │   ├── course_card_test.dart      # per-hole upserts + transactional card save (#81)
 │   ├── course_dao_test.dart
 │   ├── course_hole_dao_test.dart
-│   ├── course_set_dao_test.dart
+│   ├── yardage_dao_test.dart      # tee sets, pin sets, course + tee-to-pin yards
 │   ├── round_dao_test.dart
 │   ├── event_dao_test.dart
 │   ├── event_stats_dao_test.dart
@@ -158,8 +158,9 @@ app/test/
   tee shot with "Fairway hit?" / "Green hit?", the approach shots with GIR and
   the bunker and up & down switches, and a row per putt under Putting with its
   distance to the hole in feet (the putts count is how many there are). Par and
-  yardage pre-fill from the round's course template and chosen yardage set
-  (#36), editable per hole; the shots — club / distance / lie / result (#22),
+  yardage pre-fill from the round's course template and yardage set — tee to
+  pin for its tee set and pin set, or the tee set's course yards without a pin
+  set (#36) — editable per hole; the shots — club / distance / lie / result (#22),
   plus a putt's distance in feet — persist to `hole_shots` alongside the hole
   via `GolfyRepository.saveHole`, one row per stroke, putts included.
 - **Hole rules are pure and decide everything.**
@@ -295,7 +296,15 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > table (an ordered per-hole shot list, cascading from `hole_results`) for #22
 > and **drops** the three superseded flat columns (`tee_club`,
 > `drive_distance_yards`, `approach_distance_yards`) by rebuilding `hole_results`
-> with a `TableMigration`, preserving every existing hole's scoring data.
+> with a `TableMigration`, preserving every existing hole's scoring data. The
+> v8 migration adds `hole_shots.distance_feet` and converts putts saved in
+> yards. The v9 migration splits yardage by tee set and pin set: each
+> `course_sets` row becomes a `tee_sets` row (ids kept) and its yardages that
+> tee set's `course_yards`; `pin_sets` and `tee_to_pin_yards` (per tee set ×
+> pin set) start empty; and `rounds` is rebuilt with a `TableMigration` swapping
+> `course_set_id` and the never-written `tee_set` label for `tee_set_id` +
+> `pin_set_id` (`SET NULL` on delete) — a round's set becomes its tee set,
+> cleared if the set was another course's.
 
 ## Data backup (export)
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:golfy_app/data/backup/backup_codec.dart';
 import 'package:golfy_app/data/backup/backup_manifest.dart';
 import 'package:golfy_app/data/backup/backup_payload.dart';
@@ -20,11 +21,17 @@ BackupPayload samplePayload() {
       // strokeIndex left null.
       CourseHole(id: 2, courseId: 1, holeNumber: 2, par: 3),
     ],
-    courseSets: const [
-      CourseSet(id: 1, courseId: 1, name: 'Blue tees'),
+    teeSets: const [
+      TeeSet(id: 1, courseId: 1, name: 'Blue tees'),
     ],
-    courseSetYards: const [
-      CourseSetYard(id: 1, courseSetId: 1, holeNumber: 1, yards: 412),
+    courseYards: const [
+      CourseYard(id: 1, teeSetId: 1, holeNumber: 1, yards: 412),
+    ],
+    pinSets: const [
+      PinSet(id: 1, courseId: 1, name: 'Sunday pins'),
+    ],
+    teeToPinYards: const [
+      TeeToPinYard(id: 1, teeSetId: 1, pinSetId: 1, holeNumber: 1, yards: 398),
     ],
     events: const [
       Event(
@@ -42,7 +49,8 @@ BackupPayload samplePayload() {
         date: '2026-05-19',
         courseId: 1,
         roundNumber: 1,
-        courseSetId: 1,
+        teeSetId: 1,
+        pinSetId: 1,
         eventId: 1,
         notes: 'Said "nice shot" — then this:\nthree-putt. ⛳',
       ),
@@ -78,6 +86,20 @@ BackupPayload samplePayload() {
   );
 }
 
+/// [samplePayload] as a file written before schema v9 reads once upgraded: its
+/// one yardage set a tee set with course yards, and no pin sets — so no
+/// tee-to-pin yards, and a round played from the tee set alone.
+BackupPayload upgradedV8SamplePayload() {
+  final sample = samplePayload();
+  return sample.copyWith(
+    pinSets: const [],
+    teeToPinYards: const [],
+    rounds: [
+      for (final r in sample.rounds) r.copyWith(pinSetId: const Value(null)),
+    ],
+  );
+}
+
 /// A manifest whose counts match [payload], fixed in time so encodings are
 /// reproducible.
 BackupManifest sampleManifest(BackupPayload payload) {
@@ -100,6 +122,44 @@ String encodeSample([BackupPayload? payload]) {
 /// assert on the complaint.
 Map<String, Object?> sampleTree() =>
     jsonDecode(encodeSample()) as Map<String, Object?>;
+
+/// The sample file as Golfy wrote it before schema v9 split yardage sets into
+/// tee sets and pin sets, claiming [schemaVersion]: its tee set a
+/// `course_sets` row, its course yards `course_set_yards` keyed by
+/// `course_set_id`, no pin tables, and rounds carrying `course_set_id` and the
+/// legacy `tee_set` label. Everything else — `distance_feet` included — is left
+/// as today's, for the test to shape further.
+Map<String, Object?> preV9SampleTree(int schemaVersion) {
+  final tree = sampleTree();
+  final manifest = manifestOf(tree);
+  manifest['schemaVersion'] = schemaVersion;
+  final counts = manifest['rowCounts']! as Map<String, Object?>;
+  final data = dataOf(tree);
+
+  data['course_sets'] = data.remove('tee_sets');
+  data['course_set_yards'] = [
+    for (final row in data.remove('course_yards')! as List<Object?>)
+      {
+        for (final MapEntry(:key, :value)
+            in (row! as Map<String, Object?>).entries)
+          key == 'tee_set_id' ? 'course_set_id' : key: value,
+      },
+  ];
+  data.remove('pin_sets');
+  data.remove('tee_to_pin_yards');
+  for (final row in tableOf(tree, 'rounds')) {
+    final round = row! as Map<String, Object?>;
+    round['tee_set'] = null;
+    round['course_set_id'] = round.remove('tee_set_id');
+    round.remove('pin_set_id');
+  }
+
+  counts['course_sets'] = counts.remove('tee_sets');
+  counts['course_set_yards'] = counts.remove('course_yards');
+  counts.remove('pin_sets');
+  counts.remove('tee_to_pin_yards');
+  return tree;
+}
 
 String reencode(Map<String, Object?> tree) => jsonEncode(tree);
 

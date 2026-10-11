@@ -38,7 +38,7 @@ void main() {
         totalPar: 0,
       );
 
-  /// The shared par/SI card (yardage lives on sets, not here).
+  /// The par/SI card (yardage lives on tee sets and pin sets, not here).
   List<CourseHole> uniformCard({int par = 5, int? strokeIndex}) => [
         for (var h = 1; h <= 18; h++)
           CourseHole(
@@ -50,14 +50,28 @@ void main() {
           ),
       ];
 
-  CourseSet set(int id, String name) =>
-      CourseSet(id: id, courseId: courseId, name: name);
+  TeeSet tee(int id, String name) =>
+      TeeSet(id: id, courseId: courseId, name: name);
 
-  List<CourseSetYard> uniformYards(int setId, int yards) => [
+  PinSet pin(int id, String name) =>
+      PinSet(id: id, courseId: courseId, name: name);
+
+  List<CourseYard> uniformYards(int teeSetId, int yards) => [
         for (var h = 1; h <= 18; h++)
-          CourseSetYard(
-            id: setId * 100 + h,
-            courseSetId: setId,
+          CourseYard(
+            id: teeSetId * 100 + h,
+            teeSetId: teeSetId,
+            holeNumber: h,
+            yards: yards,
+          ),
+      ];
+
+  List<TeeToPinYard> uniformToPin(int teeSetId, int pinSetId, int yards) => [
+        for (var h = 1; h <= 18; h++)
+          TeeToPinYard(
+            id: teeSetId * 1000 + pinSetId * 100 + h,
+            teeSetId: teeSetId,
+            pinSetId: pinSetId,
             holeNumber: h,
             yards: yards,
           ),
@@ -75,10 +89,12 @@ void main() {
     List<Course>? courses,
     List<RoundWithCourse> rounds = const [],
     List<CourseHole>? card,
-    List<CourseSet> sets = const [],
-    Map<int, List<CourseSetYard>> yards = const {},
+    List<TeeSet> tees = const [],
+    List<PinSet> pins = const [],
+    Map<int, List<CourseYard>> yards = const {},
+    Map<(int, int), List<TeeToPinYard>> toPin = const {},
   }) async {
-    tester.view.physicalSize = const Size(900, 3200);
+    tester.view.physicalSize = const Size(900, 4400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -93,9 +109,13 @@ void main() {
         roundsStreamProvider.overrideWith((ref) => Stream.value(rounds)),
         courseHolesStreamProvider
             .overrideWith((ref, id) => Stream.value(parSiCard)),
-        courseSetsStreamProvider.overrideWith((ref, id) => Stream.value(sets)),
-        courseSetYardsStreamProvider.overrideWith(
-          (ref, id) => Stream.value(yards[id] ?? const <CourseSetYard>[]),
+        teeSetsStreamProvider.overrideWith((ref, id) => Stream.value(tees)),
+        pinSetsStreamProvider.overrideWith((ref, id) => Stream.value(pins)),
+        courseYardsStreamProvider.overrideWith(
+          (ref, id) => Stream.value(yards[id] ?? const <CourseYard>[]),
+        ),
+        teeToPinYardsStreamProvider.overrideWith(
+          (ref, sets) => Stream.value(toPin[sets] ?? const <TeeToPinYard>[]),
         ),
       ],
       child: MaterialApp(
@@ -151,18 +171,26 @@ void main() {
       expect(find.text('Par 5'), findsNothing);
     });
 
-    testWidgets('seeds par, stroke index and the active set\'s yardage',
+    testWidgets('seeds par, stroke index, course yards and tee to pin',
         (tester) async {
       await pump(
         tester,
         card: uniformCard(par: 5, strokeIndex: 7),
-        sets: [set(9, 'Blue tees')],
+        tees: [tee(9, 'Blue')],
+        pins: [pin(4, 'Sunday pins')],
         yards: {9: uniformYards(9, 431)},
+        toPin: {(9, 4): uniformToPin(9, 4, 418)},
       );
 
       expect(parShown(tester, 1), 5);
       expect(textShown(tester, const ValueKey('course_hole_si_1')), '7');
       expect(textShown(tester, const ValueKey('course_hole_yards_1')), '431');
+      expect(
+        textShown(tester, const ValueKey('course_hole_tee_to_pin_1')),
+        '418',
+      );
+      expect(find.text('Course yards · Blue'), findsWidgets);
+      expect(find.text('Tee to pin · Sunday pins'), findsWidgets);
     });
 
     testWidgets('shows a progress counter and jumps to a tapped hole',
@@ -170,7 +198,7 @@ void main() {
       await pump(
         tester,
         card: uniformCard(par: 4, strokeIndex: 3),
-        sets: [set(9, 'Blue tees')],
+        tees: [tee(9, 'Blue')],
         yards: {9: uniformYards(9, 400)},
       );
 
@@ -267,40 +295,50 @@ void main() {
     });
   });
 
-  group('CourseSetupScreen — yardage sets (#81)', () {
-    testWidgets('saving writes the active set\'s yardages alongside the card',
+  group('CourseSetupScreen — tee sets and pin sets', () {
+    testWidgets('saving writes course yards and tee to pin with the card',
         (tester) async {
       final cid = await db.courseDao
           .insert(CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'));
-      final setId = await db.courseSetDao
-          .insertSet(CourseSetsCompanion.insert(courseId: cid, name: 'Blue'));
+      final blue = await db.yardageDao
+          .insertTeeSet(TeeSetsCompanion.insert(courseId: cid, name: 'Blue'));
+      final sunday = await db.yardageDao.insertPinSet(
+          PinSetsCompanion.insert(courseId: cid, name: 'Sunday pins'));
 
       await pump(
         tester,
         card: uniformCard(par: 4, strokeIndex: 3),
-        sets: [set(setId, 'Blue')],
-        yards: {setId: uniformYards(setId, 400)},
+        tees: [tee(blue, 'Blue')],
+        pins: [pin(sunday, 'Sunday pins')],
+        yards: {blue: uniformYards(blue, 400)},
       );
 
       await tester.enterText(
           find.byKey(const ValueKey('course_hole_yards_1')), '455');
+      await tester.enterText(
+          find.byKey(const ValueKey('course_hole_tee_to_pin_1')), '441');
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('save_course_card')));
       await settleDb(tester);
 
-      final stored = await tester
-          .runAsync(() => db.courseSetDao.getYardsForSet(setId));
-      expect(stored, hasLength(18));
-      expect(stored!.firstWhere((y) => y.holeNumber == 1).yards, 455);
-      expect(stored.firstWhere((y) => y.holeNumber == 2).yards, 400);
+      final course =
+          await tester.runAsync(() => db.yardageDao.getCourseYards(blue));
+      expect(course, hasLength(18));
+      expect(course!.firstWhere((y) => y.holeNumber == 1).yards, 455);
+      expect(course.firstWhere((y) => y.holeNumber == 2).yards, 400);
+      final toPin = await tester
+          .runAsync(() => db.yardageDao.getTeeToPinYards(blue, sunday));
+      expect(toPin, hasLength(18));
+      expect(toPin!.firstWhere((y) => y.holeNumber == 1).yards, 441);
+      expect(find.text('All saved'), findsOneWidget);
     });
 
-    testWidgets('switching sets swaps the yardage shown and carries edits back',
+    testWidgets('switching tee sets swaps the course yards and carries edits',
         (tester) async {
       await pump(
         tester,
         card: uniformCard(par: 4, strokeIndex: 3),
-        sets: [set(9, 'Blue'), set(10, 'White')],
+        tees: [tee(9, 'Blue'), tee(10, 'White')],
         yards: {9: uniformYards(9, 431), 10: uniformYards(10, 388)},
       );
 
@@ -310,38 +348,80 @@ void main() {
           find.byKey(const ValueKey('course_hole_yards_1')), '440');
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const ValueKey('yardage_set_chip_10')));
+      await tester.tap(find.byKey(const ValueKey('tee_set_chip_10')));
       await tester.pumpAndSettle();
       expect(textShown(tester, const ValueKey('course_hole_yards_1')), '388');
 
       // Coming back must still show the unsaved edit — switching tee boxes is
       // not a reason to lose work.
-      await tester.tap(find.byKey(const ValueKey('yardage_set_chip_9')));
+      await tester.tap(find.byKey(const ValueKey('tee_set_chip_9')));
       await tester.pumpAndSettle();
       expect(textShown(tester, const ValueKey('course_hole_yards_1')), '440');
       expect(find.text('Save card · 1 unsaved'), findsOneWidget);
     });
 
-    testWidgets('a set the user never opened keeps its stored yardages',
+    testWidgets('switching pin sets swaps tee to pin, not course yards',
         (tester) async {
-      // The danger of a wholesale replace: writing a never-loaded set would
+      await pump(
+        tester,
+        card: uniformCard(par: 4, strokeIndex: 3),
+        tees: [tee(9, 'Blue')],
+        pins: [pin(4, 'Monday pins'), pin(5, 'Sunday pins')],
+        yards: {9: uniformYards(9, 431)},
+        toPin: {
+          (9, 4): uniformToPin(9, 4, 425),
+          (9, 5): uniformToPin(9, 5, 409),
+        },
+      );
+
+      expect(
+          textShown(tester, const ValueKey('course_hole_tee_to_pin_1')), '425');
+
+      await tester.tap(find.byKey(const ValueKey('pin_set_chip_5')));
+      await tester.pumpAndSettle();
+      expect(
+          textShown(tester, const ValueKey('course_hole_tee_to_pin_1')), '409');
+      // The scorecard yardage is the tee set's, whatever the pins.
+      expect(textShown(tester, const ValueKey('course_hole_yards_1')), '431');
+    });
+
+    testWidgets('a pin set with nothing entered does not read unsaved',
+        (tester) async {
+      // Every tee set has its own tee-to-pin card for every pin set; looking at
+      // one not filled in yet must not make eighteen holes unsaved.
+      await pump(
+        tester,
+        card: uniformCard(par: 4, strokeIndex: 3),
+        tees: [tee(9, 'Blue')],
+        pins: [pin(4, 'Sunday pins')],
+        yards: {9: uniformYards(9, 431)},
+      );
+
+      expect(
+          textShown(tester, const ValueKey('course_hole_tee_to_pin_1')), '');
+      expect(find.text('All saved'), findsOneWidget);
+    });
+
+    testWidgets('a set the user never opened keeps its stored yards',
+        (tester) async {
+      // The danger of a wholesale replace: writing a never-loaded card would
       // blank an entire tee box.
       final cid = await db.courseDao
           .insert(CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'));
-      final blue = await db.courseSetDao
-          .insertSet(CourseSetsCompanion.insert(courseId: cid, name: 'Blue'));
-      final white = await db.courseSetDao
-          .insertSet(CourseSetsCompanion.insert(courseId: cid, name: 'White'));
-      await db.courseSetDao.replaceYardsForSet(white, [
+      final blue = await db.yardageDao
+          .insertTeeSet(TeeSetsCompanion.insert(courseId: cid, name: 'Blue'));
+      final white = await db.yardageDao
+          .insertTeeSet(TeeSetsCompanion.insert(courseId: cid, name: 'White'));
+      await db.yardageDao.replaceCourseYards(white, [
         for (var h = 1; h <= 18; h++)
-          CourseSetYardsCompanion.insert(
-              courseSetId: white, holeNumber: h, yards: 360),
+          CourseYardsCompanion.insert(
+              teeSetId: white, holeNumber: h, yards: 360),
       ]);
 
       await pump(
         tester,
         card: uniformCard(par: 4, strokeIndex: 3),
-        sets: [set(blue, 'Blue'), set(white, 'White')],
+        tees: [tee(blue, 'Blue'), tee(white, 'White')],
         yards: {blue: uniformYards(blue, 400), white: uniformYards(white, 360)},
       );
 
@@ -352,12 +432,12 @@ void main() {
       await settleDb(tester);
 
       final untouched =
-          await tester.runAsync(() => db.courseSetDao.getYardsForSet(white));
+          await tester.runAsync(() => db.yardageDao.getCourseYards(white));
       expect(untouched, hasLength(18));
       expect(untouched!.every((y) => y.yards == 360), isTrue);
     });
 
-    testWidgets('with no sets, the yardage field is disabled and says why',
+    testWidgets('with no sets, both yards fields are disabled and say why',
         (tester) async {
       await pump(tester, card: uniformCard(par: 4, strokeIndex: 3));
 
@@ -365,8 +445,30 @@ void main() {
         find.byKey(const ValueKey('course_hole_yards_1')),
       );
       expect(yards.enabled, isFalse);
-      expect(find.text('No yardage sets yet. Add one (e.g. a tee box or pin '
-          'set) to record per-hole yardages.'), findsOneWidget);
+      final toPin = tester.widget<TextField>(
+        find.byKey(const ValueKey('course_hole_tee_to_pin_1')),
+      );
+      expect(toPin.enabled, isFalse);
+      expect(find.text("No tee sets yet. Add one (e.g. Blue) to record each "
+          "hole's course yards."), findsOneWidget);
+      expect(find.text('No pin sets yet. Add one (e.g. Sunday pins) to record '
+          'tee-to-pin yards from each tee set.'), findsOneWidget);
+    });
+
+    testWidgets('with a tee set but no pin set, tee to pin says why',
+        (tester) async {
+      await pump(
+        tester,
+        card: uniformCard(par: 4, strokeIndex: 3),
+        tees: [tee(9, 'Blue')],
+        yards: {9: uniformYards(9, 431)},
+      );
+
+      final toPin = tester.widget<TextField>(
+        find.byKey(const ValueKey('course_hole_tee_to_pin_1')),
+      );
+      expect(toPin.enabled, isFalse);
+      expect(toPin.decoration!.helperText, 'No pin set');
     });
   });
 

@@ -22,9 +22,12 @@ Future<void> showCourseTemplateSheet(
   required int holeNumber,
   required int par,
   int? strokeIndex,
-  int? yards,
-  int? courseSetId,
-  String? setName,
+  int? teeSetId,
+  String? teeSetName,
+  int courseYards = 0,
+  int? pinSetId,
+  String? pinSetName,
+  int teeToPinYards = 0,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -35,9 +38,12 @@ Future<void> showCourseTemplateSheet(
       holeNumber: holeNumber,
       par: par,
       strokeIndex: strokeIndex,
-      yards: yards,
-      courseSetId: courseSetId,
-      setName: setName,
+      teeSetId: teeSetId,
+      teeSetName: teeSetName,
+      courseYards: courseYards,
+      pinSetId: pinSetId,
+      pinSetName: pinSetName,
+      teeToPinYards: teeToPinYards,
     ),
   );
 }
@@ -48,18 +54,26 @@ class _CourseTemplateSheet extends ConsumerStatefulWidget {
     required this.holeNumber,
     required this.par,
     required this.strokeIndex,
-    required this.yards,
-    required this.courseSetId,
-    required this.setName,
+    required this.teeSetId,
+    required this.teeSetName,
+    required this.courseYards,
+    required this.pinSetId,
+    required this.pinSetName,
+    required this.teeToPinYards,
   });
 
   final int courseId;
   final int holeNumber;
   final int par;
   final int? strokeIndex;
-  final int? yards;
-  final int? courseSetId;
-  final String? setName;
+
+  /// The round's yardage set, each half null when the round has none.
+  final int? teeSetId;
+  final String? teeSetName;
+  final int courseYards;
+  final int? pinSetId;
+  final String? pinSetName;
+  final int teeToPinYards;
 
   @override
   ConsumerState<_CourseTemplateSheet> createState() =>
@@ -69,7 +83,8 @@ class _CourseTemplateSheet extends ConsumerStatefulWidget {
 class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
   late int _par = widget.par;
   late int? _si = widget.strokeIndex;
-  late int _yards = widget.yards ?? 0;
+  late int _courseYards = widget.courseYards;
+  late int _teeToPin = widget.teeToPinYards;
   bool _saving = false;
 
   Future<void> _save() async {
@@ -90,13 +105,26 @@ class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
         par: _par,
         strokeIndex: Value(_si),
       ));
-      final setId = widget.courseSetId;
-      if (setId != null) {
-        await repo.upsertCourseSetYard(CourseSetYardsCompanion.insert(
-          courseSetId: setId,
-          holeNumber: widget.holeNumber,
-          yards: _yards,
-        ));
+      final teeSetId = widget.teeSetId;
+      final pinSetId = widget.pinSetId;
+      if (teeSetId != null) {
+        // With a pin set the round plays tee-to-pin, so course yards are only
+        // written when actually edited — not as a 0 nobody entered.
+        if (pinSetId == null || _courseYards != widget.courseYards) {
+          await repo.upsertCourseYard(CourseYardsCompanion.insert(
+            teeSetId: teeSetId,
+            holeNumber: widget.holeNumber,
+            yards: _courseYards,
+          ));
+        }
+        if (pinSetId != null) {
+          await repo.upsertTeeToPinYard(TeeToPinYardsCompanion.insert(
+            teeSetId: teeSetId,
+            pinSetId: pinSetId,
+            holeNumber: widget.holeNumber,
+            yards: _teeToPin,
+          ));
+        }
       }
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -117,8 +145,8 @@ class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final hasSet = widget.courseSetId != null;
-    final setLabel = widget.setName ?? 'this set';
+    final hasTee = widget.teeSetId != null;
+    final hasPin = hasTee && widget.pinSetId != null;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -136,12 +164,13 @@ class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            hasSet
+            hasTee
                 ? 'Saved on the course, not this round — future rounds start '
-                    'from these values. Par and stroke index apply to every '
-                    'yardage set; only the yardage belongs to $setLabel.'
-                : 'This round has no yardage set, so only par and stroke index '
-                    'can be saved — and those apply to every set.',
+                    'from these values. Par and stroke index apply from every '
+                    'tee; course yards belong to the tee set, and tee-to-pin '
+                    'yards to the tee set and pin set together.'
+                : 'This round has no tee set, so only par and stroke index '
+                    'can be saved — and those apply from every tee.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
@@ -149,12 +178,17 @@ class _CourseTemplateSheetState extends ConsumerState<_CourseTemplateSheet> {
             holeNumber: widget.holeNumber,
             par: _par,
             strokeIndex: _si,
-            yards: hasSet ? _yards : null,
-            setName: widget.setName,
+            courseYards: hasTee ? _courseYards : null,
+            teeSetName: widget.teeSetName,
+            teeToPinYards: hasPin ? _teeToPin : null,
+            pinSetName: widget.pinSetName,
             showStatus: false,
             onParChanged: (v) => setState(() => _par = v),
             onStrokeIndexChanged: (v) => setState(() => _si = v),
-            onYardsChanged: hasSet ? (v) => setState(() => _yards = v) : null,
+            onCourseYardsChanged:
+                hasTee ? (v) => setState(() => _courseYards = v) : null,
+            onTeeToPinYardsChanged:
+                hasPin ? (v) => setState(() => _teeToPin = v) : null,
           ),
           const SizedBox(height: 12),
           FilledButton.icon(

@@ -51,8 +51,10 @@ void main() {
     // filtering cannot agree with itself.
     expect(payload.courses, await db.select(db.courses).get());
     expect(payload.courseHoles, await db.select(db.courseHoles).get());
-    expect(payload.courseSets, await db.select(db.courseSets).get());
-    expect(payload.courseSetYards, await db.select(db.courseSetYards).get());
+    expect(payload.teeSets, await db.select(db.teeSets).get());
+    expect(payload.courseYards, await db.select(db.courseYards).get());
+    expect(payload.pinSets, await db.select(db.pinSets).get());
+    expect(payload.teeToPinYards, await db.select(db.teeToPinYards).get());
     expect(payload.events, await db.select(db.events).get());
     expect(payload.rounds, await db.select(db.rounds).get());
     expect(payload.holeResults, await db.select(db.holeResults).get());
@@ -110,18 +112,34 @@ void main() {
     // A casual round with nothing optional set at all.
     final casual = payload.rounds.firstWhere((r) => r.date == '2026-05-01');
     expect(casual.eventId, isNull);
-    expect(casual.courseSetId, isNull);
+    expect(casual.teeSetId, isNull);
+    expect(casual.pinSetId, isNull);
     expect(casual.notes, isNull);
   });
 
-  test('preserves the legacy tee_set and migration_canary columns', () async {
+  test('preserves the legacy migration_canary column', () async {
     await fixtures.seedFullBackupFixture();
 
     final payload = await db.backupDao.readAll();
 
-    final round = payload.rounds.firstWhere((r) => r.teeSet != null);
-    expect(round.teeSet, 'Blue (legacy label)');
+    final round = payload.rounds.firstWhere((r) => r.migrationCanary != null);
     expect(round.migrationCanary, 'v2 canary');
+  });
+
+  test('carries each round\'s yardage set, whole or half', () async {
+    await fixtures.seedFullBackupFixture();
+
+    final payload = await db.backupDao.readAll();
+
+    // One round on a tee set and a pin set, one from a tee set alone.
+    expect(
+      payload.rounds.where((r) => r.teeSetId != null && r.pinSetId != null),
+      hasLength(1),
+    );
+    expect(
+      payload.rounds.where((r) => r.teeSetId != null && r.pinSetId == null),
+      hasLength(1),
+    );
   });
 
   test('preserves text holding quotes, newlines and non-ASCII', () async {

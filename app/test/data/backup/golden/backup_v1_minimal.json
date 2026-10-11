@@ -1,15 +1,17 @@
 {
   "golfyBackup": {
     "formatVersion": 1,
-    "schemaVersion": 8,
+    "schemaVersion": 9,
     "appVersion": "0.4.0+38",
     "exportedAt": "2026-10-03T14:32:07.000Z",
     "platform": "android",
     "rowCounts": {
       "courses": 1,
       "course_holes": 2,
-      "course_sets": 1,
-      "course_set_yards": 1,
+      "tee_sets": 1,
+      "course_yards": 1,
+      "pin_sets": 1,
+      "tee_to_pin_yards": 1,
       "events": 1,
       "rounds": 1,
       "hole_results": 1,
@@ -40,19 +42,35 @@
         "stroke_index": null
       }
     ],
-    "course_sets": [
+    "tee_sets": [
       {
         "id": 1,
         "course_id": 1,
         "name": "Blue tees"
       }
     ],
-    "course_set_yards": [
+    "course_yards": [
       {
         "id": 1,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 1,
         "yards": 412
+      }
+    ],
+    "pin_sets": [
+      {
+        "id": 1,
+        "course_id": 1,
+        "name": "Sunday pins"
+      }
+    ],
+    "tee_to_pin_yards": [
+      {
+        "id": 1,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 1,
+        "yards": 398
       }
     ],
     "events": [
@@ -71,8 +89,8 @@
         "date": "2026-05-19",
         "course_id": 1,
         "round_number": 1,
-        "tee_set": null,
-        "course_set_id": 1,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
         "weather": null,
         "wind_speed_mph": null,
         "difficulty": null,

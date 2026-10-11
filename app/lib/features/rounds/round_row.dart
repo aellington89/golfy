@@ -49,7 +49,7 @@ class RoundRow extends ConsumerWidget {
         ),
         subtitle: _RoundSubtitle(
           date: formattedDate,
-          courseSetName: round.courseSetName,
+          yardageSet: round.yardageSetLabel,
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -105,22 +105,25 @@ class RoundRow extends ConsumerWidget {
   }
 }
 
-/// Date, plus the yardage set the round was played from when it has one (#81).
+/// Date, plus the yardage set — tee set and pin set — the round was played on
+/// when it has one (#81).
 ///
-/// The set decides which yardages pre-fill the round's holes, so which one is
-/// attached is worth seeing without opening the round. No set means none was
-/// chosen — the absent ruler icon is the signal, rather than a "No yardage set"
-/// caption on every casual round.
+/// The yardage set decides which yards pre-fill the round's holes, so which
+/// one is attached is worth seeing without opening the round. None means none
+/// was chosen — the absent ruler icon is the signal, rather than a "No yardage
+/// set" caption on every casual round.
 class _RoundSubtitle extends StatelessWidget {
-  const _RoundSubtitle({required this.date, required this.courseSetName});
+  const _RoundSubtitle({required this.date, required this.yardageSet});
 
   final String date;
-  final String? courseSetName;
+
+  /// "Blue · Sunday pins", or whichever half the round has; null for neither.
+  final String? yardageSet;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final setName = courseSetName;
+    final setName = yardageSet;
     if (setName == null) return Text(date);
     return Row(
       children: [

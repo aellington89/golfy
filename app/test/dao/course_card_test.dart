@@ -32,9 +32,17 @@ void main() {
         strokeIndex: Value(si),
       );
 
-  CourseSetYardsCompanion yard(int setId, int n, int yards) =>
-      CourseSetYardsCompanion.insert(
-        courseSetId: setId,
+  CourseYardsCompanion yard(int teeSetId, int n, int yards) =>
+      CourseYardsCompanion.insert(
+        teeSetId: teeSetId,
+        holeNumber: n,
+        yards: yards,
+      );
+
+  TeeToPinYardsCompanion toPin(int teeSetId, int pinSetId, int n, int yards) =>
+      TeeToPinYardsCompanion.insert(
+        teeSetId: teeSetId,
+        pinSetId: pinSetId,
         holeNumber: n,
         yards: yards,
       );
@@ -130,15 +138,15 @@ void main() {
     });
   });
 
-  group('upsertCourseSetYard', () {
+  group('upsertCourseYard', () {
     test('inserts then updates one hole without disturbing the rest', () async {
       final courseId = await fx.insertCourse();
-      final setId = await fx.insertCourseSet(courseId);
-      await fx.insertCourseSetYards(setId, yards: 400);
+      final teeSetId = await fx.insertTeeSet(courseId);
+      await fx.insertCourseYards(teeSetId, yards: 400);
 
-      await repo.upsertCourseSetYard(yard(setId, 4, 172));
+      await repo.upsertCourseYard(yard(teeSetId, 4, 172));
 
-      final card = await db.courseSetDao.getYardsForSet(setId);
+      final card = await db.yardageDao.getCourseYards(teeSetId);
       expect(card, hasLength(18));
       expect(card.firstWhere((y) => y.holeNumber == 4).yards, 172);
       expect(
@@ -147,32 +155,57 @@ void main() {
       );
     });
 
-    test('does not reach into another set', () async {
+    test('does not reach into another tee set', () async {
       final courseId = await fx.insertCourse();
-      final blue = await fx.insertCourseSet(courseId, name: 'Blue');
-      final white = await fx.insertCourseSet(courseId, name: 'White');
-      await fx.insertCourseSetYards(blue, yards: 400);
-      await fx.insertCourseSetYards(white, yards: 360);
+      final blue = await fx.insertTeeSet(courseId, name: 'Blue');
+      final white = await fx.insertTeeSet(courseId, name: 'White');
+      await fx.insertCourseYards(blue, yards: 400);
+      await fx.insertCourseYards(white, yards: 360);
 
-      await repo.upsertCourseSetYard(yard(blue, 1, 999));
+      await repo.upsertCourseYard(yard(blue, 1, 999));
 
-      final other = await db.courseSetDao.getYardsForSet(white);
+      final other = await db.yardageDao.getCourseYards(white);
       expect(other.firstWhere((y) => y.holeNumber == 1).yards, 360);
     });
   });
 
-  group('replaceCourseCard', () {
-    test('writes par/SI and every supplied set in one call', () async {
+  group('upsertTeeToPinYard', () {
+    test('writes one yardage set\'s hole, leaving course yards alone',
+        () async {
       final courseId = await fx.insertCourse();
-      final blue = await fx.insertCourseSet(courseId, name: 'Blue');
-      final white = await fx.insertCourseSet(courseId, name: 'White');
+      final blue = await fx.insertTeeSet(courseId);
+      final sunday = await fx.insertPinSet(courseId);
+      await fx.insertCourseYards(blue, yards: 400);
+
+      await repo.upsertTeeToPinYard(toPin(blue, sunday, 4, 388));
+
+      final toPinCard = await db.yardageDao.getTeeToPinYards(blue, sunday);
+      expect(toPinCard.single.holeNumber, 4);
+      expect(toPinCard.single.yards, 388);
+      final courseYards = await db.yardageDao.getCourseYards(blue);
+      expect(courseYards.every((y) => y.yards == 400), isTrue);
+    });
+  });
+
+  group('replaceCourseCard', () {
+    test('writes par/SI, course yards and tee-to-pin yards in one call',
+        () async {
+      final courseId = await fx.insertCourse();
+      final blue = await fx.insertTeeSet(courseId, name: 'Blue');
+      final white = await fx.insertTeeSet(courseId, name: 'White');
+      final sunday = await fx.insertPinSet(courseId);
 
       await repo.replaceCourseCard(
         courseId,
         [for (var h = 1; h <= 18; h++) hole(courseId, h, par: 5, si: h)],
-        {
+        courseYardsByTeeSet: {
           blue: [for (var h = 1; h <= 18; h++) yard(blue, h, 500)],
           white: [for (var h = 1; h <= 18; h++) yard(white, h, 420)],
+        },
+        teeToPinByYardageSet: {
+          (blue, sunday): [
+            for (var h = 1; h <= 18; h++) toPin(blue, sunday, h, 490),
+          ],
         },
       );
 
@@ -181,54 +214,69 @@ void main() {
       expect(card.every((h) => h.par == 5), isTrue);
       expect(card.first.strokeIndex, 1);
       expect(
-        (await db.courseSetDao.getYardsForSet(blue)).every((y) => y.yards == 500),
+        (await db.yardageDao.getCourseYards(blue)).every((y) => y.yards == 500),
         isTrue,
       );
       expect(
-        (await db.courseSetDao.getYardsForSet(white))
+        (await db.yardageDao.getCourseYards(white))
             .every((y) => y.yards == 420),
+        isTrue,
+      );
+      expect(
+        (await db.yardageDao.getTeeToPinYards(blue, sunday))
+            .every((y) => y.yards == 490),
         isTrue,
       );
     });
 
-    test('a set left out of the map keeps its stored yardages', () async {
-      // The editor only passes sets it has actually loaded. A wholesale replace
-      // with a blank card would wipe a tee box the user never opened.
+    test('a card left out of the maps keeps its stored yards', () async {
+      // The editor only passes cards it has actually loaded. A wholesale
+      // replace with a blank card would wipe yards the user never opened.
       final courseId = await fx.insertCourse();
-      final blue = await fx.insertCourseSet(courseId, name: 'Blue');
-      final white = await fx.insertCourseSet(courseId, name: 'White');
-      await fx.insertCourseSetYards(blue, yards: 400);
-      await fx.insertCourseSetYards(white, yards: 360);
+      final blue = await fx.insertTeeSet(courseId, name: 'Blue');
+      final white = await fx.insertTeeSet(courseId, name: 'White');
+      final sunday = await fx.insertPinSet(courseId);
+      await fx.insertCourseYards(blue, yards: 400);
+      await fx.insertCourseYards(white, yards: 360);
+      await fx.insertTeeToPinYards(white, sunday, yards: 350);
 
       await repo.replaceCourseCard(
         courseId,
         [for (var h = 1; h <= 18; h++) hole(courseId, h)],
-        {
+        courseYardsByTeeSet: {
           blue: [for (var h = 1; h <= 18; h++) yard(blue, h, 410)],
         },
       );
 
-      final untouched = await db.courseSetDao.getYardsForSet(white);
+      final untouched = await db.yardageDao.getCourseYards(white);
       expect(untouched, hasLength(18));
       expect(untouched.every((y) => y.yards == 360), isTrue);
+      final untouchedToPin =
+          await db.yardageDao.getTeeToPinYards(white, sunday);
+      expect(untouchedToPin.every((y) => y.yards == 350), isTrue);
     });
 
     test('rolls the whole card back when a yardage write fails', () async {
-      // The reason this method exists: two separate replaces could leave the
+      // The reason this method exists: separate replaces could leave the
       // course half-saved while the editor reported everything as saved.
       final courseId = await fx.insertCourse();
-      final blue = await fx.insertCourseSet(courseId, name: 'Blue');
+      final otherCourse = await fx.insertCourse(name: 'Elsewhere');
+      final blue = await fx.insertTeeSet(courseId, name: 'Blue');
+      final foreignPins = await fx.insertPinSet(otherCourse);
       await fx.insertCourseHoles(courseId, par: 4);
-      await fx.insertCourseSetYards(blue, yards: 400);
+      await fx.insertCourseYards(blue, yards: 400);
 
-      const missingSetId = 9999; // violates course_set_yards' FK
+      // The pin set is another course's, so the tee-to-pin write — the last
+      // one — is refused.
       await expectLater(
         repo.replaceCourseCard(
           courseId,
           [for (var h = 1; h <= 18; h++) hole(courseId, h, par: 5)],
-          {
+          courseYardsByTeeSet: {
             blue: [for (var h = 1; h <= 18; h++) yard(blue, h, 500)],
-            missingSetId: [yard(missingSetId, 1, 300)],
+          },
+          teeToPinByYardageSet: {
+            (blue, foreignPins): [toPin(blue, foreignPins, 1, 300)],
           },
         ),
         throwsA(anything),
@@ -237,9 +285,9 @@ void main() {
       final card = await db.courseHoleDao.getForCourse(courseId);
       expect(card.every((h) => h.par == 4), isTrue,
           reason: 'the par write must have rolled back');
-      final yards = await db.courseSetDao.getYardsForSet(blue);
+      final yards = await db.yardageDao.getCourseYards(blue);
       expect(yards.every((y) => y.yards == 400), isTrue,
-          reason: 'the first set write must have rolled back too');
+          reason: 'the course-yards write must have rolled back too');
     });
   });
 }

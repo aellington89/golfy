@@ -11,8 +11,10 @@ import '../database.dart';
 const List<String> backupTableOrder = <String>[
   'courses',
   'course_holes',
-  'course_sets',
-  'course_set_yards',
+  'tee_sets',
+  'course_yards',
+  'pin_sets',
+  'tee_to_pin_yards',
   'events',
   'rounds',
   'hole_results',
@@ -56,8 +58,10 @@ class BackupPayload {
   const BackupPayload({
     required this.courses,
     required this.courseHoles,
-    required this.courseSets,
-    required this.courseSetYards,
+    required this.teeSets,
+    required this.courseYards,
+    required this.pinSets,
+    required this.teeToPinYards,
     required this.events,
     required this.rounds,
     required this.holeResults,
@@ -67,8 +71,10 @@ class BackupPayload {
   const BackupPayload.empty()
       : courses = const <Course>[],
         courseHoles = const <CourseHole>[],
-        courseSets = const <CourseSet>[],
-        courseSetYards = const <CourseSetYard>[],
+        teeSets = const <TeeSet>[],
+        courseYards = const <CourseYard>[],
+        pinSets = const <PinSet>[],
+        teeToPinYards = const <TeeToPinYard>[],
         events = const <Event>[],
         rounds = const <Round>[],
         holeResults = const <HoleResult>[],
@@ -76,8 +82,10 @@ class BackupPayload {
 
   final List<Course> courses;
   final List<CourseHole> courseHoles;
-  final List<CourseSet> courseSets;
-  final List<CourseSetYard> courseSetYards;
+  final List<TeeSet> teeSets;
+  final List<CourseYard> courseYards;
+  final List<PinSet> pinSets;
+  final List<TeeToPinYard> teeToPinYards;
   final List<Event> events;
   final List<Round> rounds;
   final List<HoleResult> holeResults;
@@ -86,13 +94,15 @@ class BackupPayload {
   /// Every table keyed by SQL table name, in [backupTableOrder].
   ///
   /// This is also what the table-coverage guard test reads: it compares these
-  /// keys against the live schema's `allTables`, so the day a ninth table is
-  /// added, the suite fails until it is backed up too.
+  /// keys against the live schema's `allTables`, so the day an eleventh table
+  /// is added, the suite fails until it is backed up too.
   Map<String, List<DataClass>> get tables => <String, List<DataClass>>{
         'courses': courses,
         'course_holes': courseHoles,
-        'course_sets': courseSets,
-        'course_set_yards': courseSetYards,
+        'tee_sets': teeSets,
+        'course_yards': courseYards,
+        'pin_sets': pinSets,
+        'tee_to_pin_yards': teeToPinYards,
         'events': events,
         'rounds': rounds,
         'hole_results': holeResults,
@@ -112,8 +122,10 @@ class BackupPayload {
   BackupPayload copyWith({
     List<Course>? courses,
     List<CourseHole>? courseHoles,
-    List<CourseSet>? courseSets,
-    List<CourseSetYard>? courseSetYards,
+    List<TeeSet>? teeSets,
+    List<CourseYard>? courseYards,
+    List<PinSet>? pinSets,
+    List<TeeToPinYard>? teeToPinYards,
     List<Event>? events,
     List<Round>? rounds,
     List<HoleResult>? holeResults,
@@ -122,8 +134,10 @@ class BackupPayload {
     return BackupPayload(
       courses: courses ?? this.courses,
       courseHoles: courseHoles ?? this.courseHoles,
-      courseSets: courseSets ?? this.courseSets,
-      courseSetYards: courseSetYards ?? this.courseSetYards,
+      teeSets: teeSets ?? this.teeSets,
+      courseYards: courseYards ?? this.courseYards,
+      pinSets: pinSets ?? this.pinSets,
+      teeToPinYards: teeToPinYards ?? this.teeToPinYards,
       events: events ?? this.events,
       rounds: rounds ?? this.rounds,
       holeResults: holeResults ?? this.holeResults,
@@ -139,34 +153,44 @@ class BackupPayload {
   ///
   /// Covers what cannot be checked one row at a time: ids present and unique,
   /// every foreign key resolvable *within the file*, no duplicated unique key,
-  /// and hole / shot numbering in range. Per-column CHECK constraints stay the
-  /// database's job.
+  /// hole / shot numbering in range, and every yardage set on one course. Per-
+  /// column CHECK constraints stay the database's job.
   List<BackupProblem> validate() {
     final problems = <BackupProblem>[];
 
-    // Every table's ids are checked; only the four that something references
-    // are kept, since the rest have nothing pointing at them.
+    // Every table's ids are checked; only the ones something references are
+    // kept, since the rest have nothing pointing at them.
     final courseIds = _ids(problems, 'courses', courses, (r) => r.id);
-    final courseSetIds = _ids(problems, 'course_sets', courseSets, (r) => r.id);
+    final teeSetIds = _ids(problems, 'tee_sets', teeSets, (r) => r.id);
+    final pinSetIds = _ids(problems, 'pin_sets', pinSets, (r) => r.id);
     final eventIds = _ids(problems, 'events', events, (r) => r.id);
     final roundIds = _ids(problems, 'rounds', rounds, (r) => r.id);
     final holeResultIds =
         _ids(problems, 'hole_results', holeResults, (r) => r.id);
     _ids(problems, 'course_holes', courseHoles, (r) => r.id);
-    _ids(problems, 'course_set_yards', courseSetYards, (r) => r.id);
+    _ids(problems, 'course_yards', courseYards, (r) => r.id);
+    _ids(problems, 'tee_to_pin_yards', teeToPinYards, (r) => r.id);
     _ids(problems, 'hole_shots', holeShots, (r) => r.id);
 
     // ── Foreign keys, resolvable inside the file ────────────────────────────
     _references(problems, 'course_holes', courseHoles, 'course_id',
         (r) => r.courseId, courseIds, 'courses');
-    _references(problems, 'course_sets', courseSets, 'course_id',
+    _references(problems, 'tee_sets', teeSets, 'course_id',
         (r) => r.courseId, courseIds, 'courses');
-    _references(problems, 'course_set_yards', courseSetYards, 'course_set_id',
-        (r) => r.courseSetId, courseSetIds, 'course_sets');
+    _references(problems, 'course_yards', courseYards, 'tee_set_id',
+        (r) => r.teeSetId, teeSetIds, 'tee_sets');
+    _references(problems, 'pin_sets', pinSets, 'course_id',
+        (r) => r.courseId, courseIds, 'courses');
+    _references(problems, 'tee_to_pin_yards', teeToPinYards, 'tee_set_id',
+        (r) => r.teeSetId, teeSetIds, 'tee_sets');
+    _references(problems, 'tee_to_pin_yards', teeToPinYards, 'pin_set_id',
+        (r) => r.pinSetId, pinSetIds, 'pin_sets');
     _references(problems, 'rounds', rounds, 'course_id', (r) => r.courseId,
         courseIds, 'courses');
-    _references(problems, 'rounds', rounds, 'course_set_id',
-        (r) => r.courseSetId, courseSetIds, 'course_sets');
+    _references(problems, 'rounds', rounds, 'tee_set_id',
+        (r) => r.teeSetId, teeSetIds, 'tee_sets');
+    _references(problems, 'rounds', rounds, 'pin_set_id',
+        (r) => r.pinSetId, pinSetIds, 'pin_sets');
     _references(problems, 'rounds', rounds, 'event_id', (r) => r.eventId,
         eventIds, 'events');
     _references(problems, 'hole_results', holeResults, 'round_id',
@@ -179,11 +203,15 @@ class BackupPayload {
         (r) => '${r.name}\u0000${r.gameTitle}');
     _unique(problems, 'course_holes', courseHoles, '(course_id, hole_number)',
         (r) => '${r.courseId}\u0000${r.holeNumber}');
-    _unique(problems, 'course_sets', courseSets, '(course_id, name)',
+    _unique(problems, 'tee_sets', teeSets, '(course_id, name)',
         (r) => '${r.courseId}\u0000${r.name}');
-    _unique(problems, 'course_set_yards', courseSetYards,
-        '(course_set_id, hole_number)',
-        (r) => '${r.courseSetId}\u0000${r.holeNumber}');
+    _unique(problems, 'course_yards', courseYards, '(tee_set_id, hole_number)',
+        (r) => '${r.teeSetId}\u0000${r.holeNumber}');
+    _unique(problems, 'pin_sets', pinSets, '(course_id, name)',
+        (r) => '${r.courseId}\u0000${r.name}');
+    _unique(problems, 'tee_to_pin_yards', teeToPinYards,
+        '(tee_set_id, pin_set_id, hole_number)',
+        (r) => '${r.teeSetId}\u0000${r.pinSetId}\u0000${r.holeNumber}');
     _unique(problems, 'events', events, '(name, season)',
         (r) => '${r.name}\u0000${r.season}');
     _unique(problems, 'rounds', rounds, '(date, course_id, round_number)',
@@ -195,14 +223,54 @@ class BackupPayload {
 
     // ── Numbering ──────────────────────────────────────────────────────────
     _holeNumbers(problems, 'course_holes', courseHoles, (r) => r.holeNumber);
+    _holeNumbers(problems, 'course_yards', courseYards, (r) => r.holeNumber);
     _holeNumbers(
-        problems, 'course_set_yards', courseSetYards, (r) => r.holeNumber);
+        problems, 'tee_to_pin_yards', teeToPinYards, (r) => r.holeNumber);
     _holeNumbers(problems, 'hole_results', holeResults, (r) => r.holeNumber);
     for (var i = 0; i < holeShots.length; i++) {
       if (holeShots[i].shotNumber < 1) {
         problems.add(BackupProblem(
           'hole_shots',
           'shot_number ${holeShots[i].shotNumber} is below 1',
+          rowIndex: i,
+        ));
+      }
+    }
+
+    // ── One course per yardage set ─────────────────────────────────────────
+    // A tee set and a pin set only pair up on the same course, and a round's
+    // sets are its own course's. SQL can't say either across parent tables,
+    // so the DAOs enforce it on write and this on restore.
+    final teeCourse = {for (final s in teeSets) s.id: s.courseId};
+    final pinCourse = {for (final s in pinSets) s.id: s.courseId};
+    for (var i = 0; i < teeToPinYards.length; i++) {
+      final row = teeToPinYards[i];
+      final tee = teeCourse[row.teeSetId];
+      final pin = pinCourse[row.pinSetId];
+      if (tee != null && pin != null && tee != pin) {
+        problems.add(BackupProblem(
+          'tee_to_pin_yards',
+          'tee_set_id ${row.teeSetId} and pin_set_id ${row.pinSetId} are on '
+          'different courses',
+          rowIndex: i,
+        ));
+      }
+    }
+    for (var i = 0; i < rounds.length; i++) {
+      final row = rounds[i];
+      final tee = teeCourse[row.teeSetId];
+      if (tee != null && tee != row.courseId) {
+        problems.add(BackupProblem(
+          'rounds',
+          'tee_set_id ${row.teeSetId} is not on course ${row.courseId}',
+          rowIndex: i,
+        ));
+      }
+      final pin = pinCourse[row.pinSetId];
+      if (pin != null && pin != row.courseId) {
+        problems.add(BackupProblem(
+          'rounds',
+          'pin_set_id ${row.pinSetId} is not on course ${row.courseId}',
           rowIndex: i,
         ));
       }

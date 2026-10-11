@@ -12,8 +12,9 @@
 //
 // And one pair frozen at each older schema version a backup can hold —
 // `golden/backup_v1_schema7_*.json`, written by v0.5.0 before putts had a
-// distance. These are never regenerated: they are files users already have, and
-// they prove the upgrade still reads them.
+// distance, and `golden/backup_v1_schema8_*.json`, written by v0.6.0 before
+// yardage split into tee sets and pin sets. These are never regenerated: they
+// are files users already have, and they prove the upgrade still reads them.
 //
 // To regenerate after a deliberate format change:
 //
@@ -122,9 +123,15 @@ void main() {
         payload.courses.map((c) => c.name),
         contains('Königsschloß — "the castle"'),
       );
-      expect(payload.rounds.where((r) => r.teeSet != null), hasLength(1));
       expect(payload.rounds.where((r) => r.migrationCanary != null),
           hasLength(1));
+      // A round on a whole yardage set, one from a tee set alone, one on none.
+      expect(payload.rounds.where((r) => r.pinSetId != null), hasLength(1));
+      expect(payload.rounds.where((r) => r.teeSetId == null), hasLength(1));
+      // Tee to pin from two tee sets to the same pins, one card half-filled.
+      expect(payload.teeToPinYards.map((y) => y.teeSetId).toSet(),
+          hasLength(2));
+      expect(payload.teeToPinYards, hasLength(27));
       expect(payload.rounds.where((r) => r.eventId == null), hasLength(1));
       expect(payload.holeResults.where((h) => h.fairwayHit == null),
           hasLength(2));
@@ -140,54 +147,108 @@ void main() {
       );
     });
   });
-  group('a backup written at schema 7', () {
-    Map<String, Object?> readTree(String name) =>
-        jsonDecode(File('$_goldenDir/$name').readAsStringSync())
-            as Map<String, Object?>;
-
-    test('the minimal file reads as today\'s sample', () {
-      final text =
-          File('$_goldenDir/backup_v1_schema7_minimal.json').readAsStringSync();
-
-      final bundle = BackupCodec.decode(text);
-
-      expect(bundle.manifest.schemaVersion, 7);
-      expect(bundle.payload, samplePayload());
-      expect(bundle.payload.validate(), isEmpty);
-    });
-
-    test('the full file reads back whole, every shot without a putt distance',
-        () {
-      final name = 'backup_v1_schema7_full.json';
-      final file = readTree(name);
-      final data = file['data']! as Map<String, Object?>;
-
-      final bundle =
-          BackupCodec.decode(File('$_goldenDir/$name').readAsStringSync());
-
-      expect(bundle.payload.validate(), isEmpty);
-      expect(bundle.payload.holeShots, isNotEmpty);
-      expect(
-        bundle.payload.holeShots.map((s) => s.distanceFeet),
-        everyElement(isNull),
-      );
-      // Every row the file holds comes through unchanged: the upgrade adds the
-      // new column to hole_shots and touches nothing else.
-      final tables = bundle.payload.tables;
-      for (final table in backupTableOrder) {
-        final expected = [
+  /// What a pre-v9 file's rows become once upgraded, table by table, in v9's
+  /// table names: the v8 -> v9 split of yardage sets into tee sets (and no pin
+  /// sets), plus — for a v7 file — the v7 -> v8 putt column, which these
+  /// fixtures hold no putt distances to convert.
+  Map<String, List<Map<String, Object?>>> upgradedRows(
+    Map<String, Object?> data, {
+    required int fromVersion,
+  }) {
+    List<Map<String, Object?>> rows(String table) => [
           for (final row in data[table]! as List<Object?>)
-            {
-              ...row! as Map<String, Object?>,
-              if (table == 'hole_shots') 'distance_feet': null,
-            },
+            Map<String, Object?>.of(row! as Map<String, Object?>),
         ];
-        expect(
-          [for (final row in tables[table]!) row.toJson()],
-          expected,
-          reason: table,
-        );
-      }
+    final setCourse = {
+      for (final s in rows('course_sets')) s['id']: s['course_id'],
+    };
+    return {
+      'courses': rows('courses'),
+      'course_holes': rows('course_holes'),
+      'tee_sets': rows('course_sets'),
+      'course_yards': [
+        for (final y in rows('course_set_yards'))
+          {
+            'id': y['id'],
+            'tee_set_id': y['course_set_id'],
+            'hole_number': y['hole_number'],
+            'yards': y['yards'],
+          },
+      ],
+      'pin_sets': const [],
+      'tee_to_pin_yards': const [],
+      'events': rows('events'),
+      'rounds': [
+        for (final r in rows('rounds'))
+          {
+            ...r..remove('tee_set'),
+            'tee_set_id': setCourse[r['course_set_id']] == r['course_id']
+                ? r['course_set_id']
+                : null,
+            'pin_set_id': null,
+          }..remove('course_set_id'),
+      ],
+      'hole_results': rows('hole_results'),
+      'hole_shots': [
+        for (final shot in rows('hole_shots'))
+          {...shot, if (fromVersion < 8) 'distance_feet': null},
+      ],
+    };
+  }
+
+  Map<String, Object?> readTree(String name) =>
+      jsonDecode(File('$_goldenDir/$name').readAsStringSync())
+          as Map<String, Object?>;
+
+  for (final version in [7, 8]) {
+    group('a backup written at schema $version', () {
+      test('the minimal file reads as today\'s sample, without pins', () {
+        final text = File('$_goldenDir/backup_v1_schema${version}_minimal.json')
+            .readAsStringSync();
+
+        final bundle = BackupCodec.decode(text);
+
+        expect(bundle.manifest.schemaVersion, version);
+        expect(bundle.payload, upgradedV8SamplePayload());
+        expect(bundle.payload.validate(), isEmpty);
+      });
+
+      test('the full file reads back whole, its sets as tee sets', () {
+        final name = 'backup_v1_schema${version}_full.json';
+        final data = readTree(name)['data']! as Map<String, Object?>;
+
+        final bundle =
+            BackupCodec.decode(File('$_goldenDir/$name').readAsStringSync());
+
+        expect(bundle.payload.validate(), isEmpty);
+        expect(bundle.payload.teeSets, isNotEmpty);
+        expect(bundle.payload.courseYards, isNotEmpty);
+        expect(bundle.payload.rounds.where((r) => r.teeSetId != null),
+            isNotEmpty);
+        // Every row the file holds comes through, reshaped only as the
+        // upgrade says — nothing else moves.
+        final expected = upgradedRows(data, fromVersion: version);
+        final tables = bundle.payload.tables;
+        for (final table in backupTableOrder) {
+          expect(
+            [for (final row in tables[table]!) row.toJson()],
+            expected[table],
+            reason: table,
+          );
+        }
+      });
     });
+  }
+
+  test('a schema 7 file\'s shots arrive without a putt distance', () {
+    final bundle = BackupCodec.decode(
+      File('$_goldenDir/backup_v1_schema7_full.json').readAsStringSync(),
+    );
+
+    expect(bundle.payload.holeShots, isNotEmpty);
+    expect(
+      bundle.payload.holeShots.map((s) => s.distanceFeet),
+      everyElement(isNull),
+    );
   });
 }

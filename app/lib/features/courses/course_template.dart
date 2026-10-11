@@ -27,7 +27,7 @@ int defaultParForHole(int holeNumber) {
 
 /// Shifts a yardage card by [offsetYards], clamped at zero.
 ///
-/// Used when a new yardage set is copied from an existing one: tee boxes on the
+/// Used when a new tee set is copied from an existing one: tee boxes on the
 /// same course are highly correlated, so "the blues, minus 20" beats retyping
 /// eighteen numbers. A flat offset is only ever an approximation — real tee
 /// boxes differ hole by hole — which is exactly why the result lands in the

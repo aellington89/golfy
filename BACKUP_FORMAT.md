@@ -25,7 +25,7 @@ without being taught.
 {
   "golfyBackup": {
     "formatVersion": 1,
-    "schemaVersion": 8,
+    "schemaVersion": 9,
     "appVersion": "0.4.0+38",
     "exportedAt": "2026-10-03T14:32:07.000Z",
     "platform": "android",
@@ -68,10 +68,10 @@ declaration this supports.
   }
 ```
 
-1. **All eight tables of schema v8**, every time: `courses`, `course_holes`,
-   `course_sets`, `course_set_yards`, `events`, `rounds`, `hole_results`,
-   `hole_shots`. A missing table is a malformed file, not an empty one — an
-   empty table is `[]`.
+1. **All ten tables of schema v9**, every time: `courses`, `course_holes`,
+   `tee_sets`, `course_yards`, `pin_sets`, `tee_to_pin_yards`, `events`,
+   `rounds`, `hole_results`, `hole_shots`. A missing table is a malformed file,
+   not an empty one — an empty table is `[]`.
 2. **Parents first**, in the order listed above, so the file reads top-down and
    a streaming importer could insert as it parses. **A reader must not depend on
    that order** — it uses its own, so a file assembled by hand or by another
@@ -81,18 +81,18 @@ declaration this supports.
    and therefore diffable.
 4. **Keys are SQL names.** Table keys are table names, row keys are column
    names (`game_title`, not `gameTitle`) — so a backup reads identically to
-   `app/drift_schemas/drift_schema_v8.json`, the schema's own description of
+   `app/drift_schemas/drift_schema_v9.json`, the schema's own description of
    itself. This comes from drift's `use_sql_column_name_as_json_key` option in
    [`app/build.yaml`](app/build.yaml).
-5. **Every column, explicitly**, including ones the app no longer writes
-   (`rounds.tee_set`, `rounds.migration_canary`). A null is written as `null`
+5. **Every column, explicitly**, including one the app no longer writes
+   (`rounds.migration_canary`). A null is written as `null`
    rather than omitted, so a **missing key is an error** — otherwise a mangled
    file would decode as a deliberate null and lose data quietly.
 6. **Booleans are `true` / `false`**, not 0 / 1. It is a file people are meant
    to be able to read.
 7. **Row ids are part of the data.** They are written as they are and restored
    unchanged: that is what preserves which hole belongs to which round, which
-   round to which course and set, which shot to which hole. Ids in a real
+   round to which course, tee set and pin set, which shot to which hole. Ids in a real
    database have gaps (re-saving a hole consumes an autoincrement id), which is
    exactly why the file carries them rather than renumbering. SQLite's
    autoincrement counter re-derives itself from the highest id inserted, so
@@ -126,7 +126,9 @@ catch.
 
 **3. Check the references.** `BackupPayload.validate()` is pure and returns a
 readable list: ids present and unique, every foreign key resolvable *within the
-file*, no duplicated unique key, hole and shot numbering in range. SQLite would
+file*, no duplicated unique key, hole and shot numbering in range, and every
+yardage set on one course — a `tee_to_pin_yards` row's tee set and pin set, and
+a round's, all on the same course. SQLite would
 catch all of it too, mid-restore, as a constraint error naming nothing a person
 could act on. Doing it first means a bad file is refused with a reason and an
 untouched database. Per-column CHECK constraints stay the database's job.
@@ -146,16 +148,22 @@ describe an impossible database, so the two stay separate steps.
 Upgraders rewrite an older file's rows **as JSON, before they are decoded**,
 into the shape of the next version. They have to: a decoded row already has
 today's columns, so checking an old row against them would refuse a file for
-being old rather than broken. Once upgraded, the rows are decoded and checked
-exactly like a current file's, and the row counts still mean what the file
-said — an upgrader adds or rewrites columns, never rows.
+being old rather than broken. Before upgrading, the file is checked for the
+tables *its own* version had, so an old file is refused in its own terms. Once
+upgraded, the rows are decoded and checked exactly like a current file's, and
+the row counts still mean what the file said — an upgrader adds, renames or
+rewrites columns and tables, never rows, and moves a renamed table's count with
+it.
 
 | From | To | What changed | The upgrade |
 |---|---|---|---|
 | 7 | 8 | Putts record their distance to the hole in feet: `hole_shots.distance_feet` | Every `hole_shots` row gains `"distance_feet": null`, then every putt saved with a distance in yards has it moved to `distance_feet`, times 3, leaving `distance_yards` null — exactly what the database migration does, by the same rule (`app/lib/data/upgrades/putts_in_feet.dart`). A hole's putts are the putt rows (a putter, or a shot from the green) its shots end on, as many as its `putts` and never its first shot; every other shot keeps its yards. A v7 row that already has `distance_feet` is refused — v7 had no such column, so the file was edited. |
+| 8 | 9 | Yardage splits by tee set and pin set: `course_sets` / `course_set_yards` become `tee_sets` / `course_yards`, new `pin_sets` and `tee_to_pin_yards`, and `rounds` swaps `course_set_id` and `tee_set` for `tee_set_id` + `pin_set_id` | v8's one kind of yardage set had one yardage per hole — a tee set and its course yards. So `course_sets` is renamed `tee_sets`, rows unchanged; `course_set_yards` is renamed `course_yards`, `course_set_id` becoming `tee_set_id`; `pin_sets` and `tee_to_pin_yards` arrive empty; and each round's `course_set_id` becomes its `tee_set_id`, with `pin_set_id` null and the never-written `tee_set` label dropped — exactly what the database migration does. A round whose set is another course's (possible in v8 by changing a round's course after choosing its set) has the link cleared, as the migration does; one naming a set the file lacks keeps it, for validation to refuse. `rowCounts` move with the renamed tables. A v8 file carrying a v9 table, or a v9 column on a renamed row, is refused. |
 
 Nothing older than v7 can be upgraded, and nothing needs to be: export did not
 exist before schema v7, so no Golfy build can have written an older backup.
+Files of v7 and v8 carry the eight tables of v8 — `course_sets` and
+`course_set_yards` where v9 has the tee and pin tables.
 A file that claims an older version is refused as one Golfy cannot upgrade.
 
 ## Restoring one
@@ -186,7 +194,8 @@ procedure is here because the format was designed around it.
 Because restore *replaces*, there is no id remapping and no conflict resolution
 to design. If merge is ever wanted, this format supports it: every row carries
 its natural key as well as its id (course name + game title, round date +
-course + number, event name + season, hole number within a round).
+course + number, event name + season, tee set or pin set name within a course,
+hole number within a round).
 
 ---
 
@@ -214,7 +223,10 @@ on" fails. Decide:
 - *Old backups can still be read* — register an upgrader in
   `BackupCodec._upgraders`, keyed by the version it upgrades **from**, that
   rewrites the raw rows of only the tables the migration touched (an added
-  nullable column is `_addNullColumn`). **Before** regenerating the goldens,
+  nullable column is `_addNullColumn`, a renamed one `_renameColumn`, a renamed
+  table `_renameTable`, which moves its row count too — and a file of an older
+  version is checked against that version's own table list first, as
+  `_tablesAt` does for v8). **Before** regenerating the goldens,
   copy the current pair to `backup_v1_schemaN_*.json` (N being the old version)
   and test that they still read — those copies are never regenerated, because
   they are files people already have. Then bump `supportedSchemaVersion` and

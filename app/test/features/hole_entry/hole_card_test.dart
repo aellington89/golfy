@@ -11,7 +11,7 @@ class _Harness extends StatefulWidget {
     required this.initial,
     this.savedDraft,
     this.onSave,
-    this.courseSetName,
+    this.yardageSetName,
     this.strokeIndex,
     this.onStrokeIndexChanged,
     this.strokeIndexClashWith,
@@ -20,7 +20,7 @@ class _Harness extends StatefulWidget {
   final HoleDraft initial;
   final HoleDraft? savedDraft;
   final VoidCallback? onSave;
-  final String? courseSetName;
+  final String? yardageSetName;
   final int? strokeIndex;
   final ValueChanged<int?>? onStrokeIndexChanged;
   final int? strokeIndexClashWith;
@@ -48,7 +48,7 @@ class _HarnessState extends State<_Harness> {
           holeNumber: 1,
           draft: _draft,
           savedDraft: widget.savedDraft,
-          courseSetName: widget.courseSetName,
+          yardageSetName: widget.yardageSetName,
           strokeIndex: widget.strokeIndex,
           onStrokeIndexChanged: widget.onStrokeIndexChanged,
           strokeIndexClashWith: widget.strokeIndexClashWith,
@@ -66,7 +66,7 @@ Future<_HarnessState> pumpCard(
   required HoleDraft initial,
   HoleDraft? savedDraft,
   VoidCallback? onSave,
-  String? courseSetName,
+  String? yardageSetName,
   int? strokeIndex,
   ValueChanged<int?>? onStrokeIndexChanged,
   int? strokeIndexClashWith,
@@ -81,7 +81,7 @@ Future<_HarnessState> pumpCard(
     initial: initial,
     savedDraft: savedDraft,
     onSave: onSave,
-    courseSetName: courseSetName,
+    yardageSetName: yardageSetName,
     strokeIndex: strokeIndex,
     onStrokeIndexChanged: onStrokeIndexChanged,
     strokeIndexClashWith: strokeIndexClashWith,
@@ -840,11 +840,11 @@ void main() {
       await pumpCard(
         tester,
         initial: HoleDraft.initial(par: 4, yards: 431),
-        courseSetName: 'Blue tees',
+        yardageSetName: 'Blue · Sunday pins',
       );
 
       // Naming it here puts it where the number it explains appears.
-      expect(find.text('Yards · Blue tees'), findsOneWidget);
+      expect(find.text('Yards · Blue · Sunday pins'), findsOneWidget);
     });
 
     testWidgets('explains a blank yardage when the round has no set',
