@@ -163,9 +163,9 @@ courses ──┬── course_holes (18 per course)   → shared par + stroke i
           ├── course_sets (named yardage sets) ── course_set_yards (18 per set)
           ▼
         rounds ──── hole_results (18 per round) ── hole_shots (per-shot list)
-          │         └─ par, score, yards, fairwayHit,    └─ club, distance,
-          └─ course_set_id  gir, putts, upDown…,            lie, result
-             (played set)   penalty, bunker, sandSave, …
+          │         └─ par, score, yards, fairwayHit,    └─ club, distance
+          └─ course_set_id  gir, putts, upDown…,            (yds, or ft for a
+             (played set)   penalty, bunker, sandSave, …     putt), lie, result
 ```
 
 A course optionally saves a **template**: a shared per-hole par + stroke index
@@ -175,8 +175,9 @@ played at different yardages. A round records which set it used
 (`rounds.course_set_id`); starting a round pre-fills each hole's par from the
 course and yardage from the chosen set, and the round keeps its own editable
 copy in `hole_results` — so a template edit never rewrites past rounds. Each hole
-optionally carries an ordered **shot list** (`hole_shots`) — club, distance, lie
-and result per shot — separate from the authoritative `score` / `putts`.
+optionally carries an ordered **shot list** (`hole_shots`) — club, distance (yards
+to the pin, or feet to the hole for a putt), lie and result per shot — separate
+from the authoritative `score` / `putts`.
 Round totals and lifetime aggregates are **derived** from `hole_results` at
 query time. The schema is enforced at the SQL level (FK RESTRICT on course
 delete, FK CASCADE on round / set / hole delete, UNIQUE on `(round_id,

@@ -28,10 +28,26 @@ HoleResult _saved({
       sandSave: false,
     );
 
+/// [n] putts with nothing entered about them.
+List<ShotDraft> _putts(int n) => List.filled(n, const ShotDraft.putt());
+
+/// A saved shot list as the form reads it back from `hole_shots`.
+List<ShotDraft> _asSaved(HoleDraft d) => [
+      for (final i in d.shotInputs())
+        ShotDraft(
+          club: i.club,
+          distanceYards: i.distanceYards,
+          lie: i.lie,
+          result: i.result,
+          distanceFeet: i.distanceFeet,
+        ),
+    ];
+
 void main() {
   group('HoleDraft.initial defaults', () {
     test('a fresh hole defaults to 1 putt (#52)', () {
       expect(HoleDraft.initial().putts, 1);
+      expect(HoleDraft.initial().puttShots, const [ShotDraft.putt()]);
     });
 
     test('saving an untouched hole records 1 putt', () {
@@ -102,33 +118,41 @@ void main() {
       expect(HoleDraft.initial().shots.single.distanceYards, isNull);
     });
 
-    test('shotInputs writes the shots, then a putter row per putt', () {
-      final draft = HoleDraft.initial().copyWith(putts: 2, shots: const [
-        ShotDraft(club: 'Driver', distanceYards: 268, lie: 'Tee'),
-        ShotDraft(club: '7 Iron', distanceYards: 150, lie: 'Fairway'),
-      ]);
+    test('shotInputs writes the shots, then the putts', () {
+      final draft = HoleDraft.initial().copyWith(
+        puttShots: const [ShotDraft.putt(distanceFeet: 24), ShotDraft.putt()],
+        shots: const [
+          ShotDraft(club: 'Driver', distanceYards: 268, lie: 'Tee'),
+          ShotDraft(club: '7 Iron', distanceYards: 150, lie: 'Fairway'),
+        ],
+      );
       final inputs = draft.shotInputs();
       expect(inputs, hasLength(4));
       expect(inputs.first.club, 'Driver');
       expect(inputs.first.distanceYards, 268);
       expect(inputs[1].club, '7 Iron');
       expect(inputs[1].result, isNull);
+      expect(inputs[1].distanceFeet, isNull);
       expect(inputs[2].club, 'Putter');
       expect(inputs[2].lie, 'Green');
       expect(inputs[2].distanceYards, isNull);
+      expect(inputs[2].distanceFeet, 24);
       expect(inputs[2].result, isNull);
       expect(inputs[3].club, 'Putter');
+      expect(inputs[3].distanceFeet, isNull);
+      expect(inputs[3].result, 'Holed');
     });
 
     test('shotInputs holes the last stroke — a putt, or the shot itself', () {
-      final putted = HoleDraft.initial().copyWith(putts: 1, shots: const [
+      final putted =
+          HoleDraft.initial().copyWith(puttShots: _putts(1), shots: const [
         ShotDraft(lie: 'Tee'),
         ShotDraft(lie: 'Fairway'),
       ]);
       expect(putted.shotInputs().last.result, 'Holed');
       expect(putted.shotInputs()[1].result, isNull);
 
-      final chippedIn = putted.copyWith(putts: 0);
+      final chippedIn = putted.copyWith(puttShots: const []);
       expect(chippedIn.shotInputs(), hasLength(2));
       expect(chippedIn.shotInputs().last.result, 'Holed');
     });
@@ -138,7 +162,8 @@ void main() {
       // renumber the putt to shot 2 and delete a row still being filled in —
       // which is exactly the row a par-3 tee shot that misses the green leaves
       // behind, since nothing says where it finished.
-      final draft = HoleDraft.initial(par: 3).copyWith(putts: 1, shots: const [
+      final draft = HoleDraft.initial(par: 3)
+          .copyWith(puttShots: _putts(1), shots: const [
         ShotDraft(club: '5 Iron', distanceYards: 165, lie: 'Tee'),
         ShotDraft(),
       ]);
@@ -153,6 +178,7 @@ void main() {
       expect(const ShotDraft().isBlank, isTrue);
       expect(const ShotDraft(lie: 'Fairway').isBlank, isFalse);
       expect(const ShotDraft(distanceYards: 0).isBlank, isFalse);
+      expect(const ShotDraft(distanceFeet: 0).isBlank, isFalse);
     });
 
     test('equality and hashCode track the shot list deeply', () {
@@ -167,9 +193,21 @@ void main() {
       expect(a == c, isFalse);
     });
 
+    test('equality and hashCode track the putts deeply', () {
+      final a = HoleDraft.initial()
+          .copyWith(puttShots: const [ShotDraft.putt(distanceFeet: 8)]);
+      final b = HoleDraft.initial()
+          .copyWith(puttShots: const [ShotDraft.putt(distanceFeet: 8)]);
+      final c = HoleDraft.initial()
+          .copyWith(puttShots: const [ShotDraft.putt(distanceFeet: 9)]);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a == c, isFalse);
+    });
+
     test('countedScore is shots + putts + penalties', () {
       final draft = HoleDraft.initial().copyWith(
-        putts: 2,
+        puttShots: _putts(2),
         penaltyStrokes: 1,
         shots: const [ShotDraft(lie: 'Tee'), ShotDraft(), ShotDraft()],
       );
@@ -182,6 +220,9 @@ void main() {
       const s = ShotDraft(club: 'Driver', lie: 'Tee');
       expect(s.copyWith(club: null).club, isNull);
       expect(s.copyWith(club: null).lie, 'Tee');
+      const putt = ShotDraft.putt(distanceFeet: 6);
+      expect(putt.copyWith(distanceFeet: null).distanceFeet, isNull);
+      expect(putt.copyWith(distanceFeet: null).club, 'Putter');
     });
   });
 
@@ -193,16 +234,70 @@ void main() {
       expect(draft.shots.single.distanceYards, 410);
     });
 
-    test('takes the putt rows off — putts counts them', () {
+    test('splits the putts off the shots, keeping their distances', () {
       final draft = HoleDraft.fromSaved(_saved(putts: 2), const [
         ShotDraft(club: 'Driver', lie: 'Tee'),
         ShotDraft(club: '8 Iron', lie: 'Fairway'),
-        ShotDraft(club: 'Putter', lie: 'Green'),
+        ShotDraft(club: 'Putter', lie: 'Green', distanceFeet: 22),
         ShotDraft(club: 'Putter', lie: 'Green', result: 'Holed'),
       ]);
       expect(draft.shots, hasLength(2));
       expect(draft.shots.last.club, '8 Iron');
       expect(draft.putts, 2);
+      expect(draft.puttShots, const [
+        ShotDraft.putt(distanceFeet: 22),
+        ShotDraft.putt(),
+      ]);
+    });
+
+    test('lays out the putts a hole was saved with but has no rows for', () {
+      // Anything saved before #22 has no shots at all, only its putts count.
+      final draft = HoleDraft.fromSaved(_saved(putts: 2));
+      expect(draft.puttShots, _putts(2));
+      expect(draft.countedScore, 3);
+    });
+
+    test('the putts count decides how many putt rows are putts', () {
+      // An older form could save more putter rows than putts; the count is
+      // what the stats read, so it wins and the extra row stays a shot (where
+      // the shot-from-green check offers to move it).
+      final draft = HoleDraft.fromSaved(_saved(score: 4, putts: 1), const [
+        ShotDraft(club: 'Driver', lie: 'Tee'),
+        ShotDraft(club: 'Putter', lie: 'Green'),
+        ShotDraft(club: 'Putter', lie: 'Green', result: 'Holed'),
+      ]);
+      expect(draft.shots, hasLength(2));
+      expect(draft.shots.last.lie, 'Green');
+      expect(draft.putts, 1);
+    });
+
+    test('a hole holed from off the green has no putts', () {
+      final draft = HoleDraft.fromSaved(_saved(score: 2, putts: 0), const [
+        ShotDraft(club: 'Driver', lie: 'Tee'),
+        ShotDraft(club: 'Putter', lie: 'Fringe', result: 'Holed'),
+      ]);
+      expect(draft.puttShots, isEmpty);
+      expect(draft.shots, hasLength(2));
+    });
+
+    test('a saved hole reads back as the draft that saved it', () {
+      final original = HoleDraft.initial(yards: 410).copyWith(
+        score: 5,
+        puttShots: const [
+          ShotDraft.putt(distanceFeet: 35),
+          ShotDraft.putt(distanceFeet: 4),
+        ],
+        shots: const [
+          ShotDraft(club: 'Driver', distanceYards: 410, lie: 'Tee'),
+          ShotDraft(club: '9 Iron', distanceYards: 130, lie: 'Fairway'),
+          ShotDraft(club: 'Lob Wedge', distanceYards: 20, lie: 'Light Rough'),
+        ],
+      );
+      final saved = _saved(score: 5, putts: 2, yards: 410);
+      expect(HoleDraft.fromSaved(saved, _asSaved(original)).puttShots,
+          original.puttShots);
+      expect(HoleDraft.fromSaved(saved, _asSaved(original)).shots,
+          original.shots);
     });
 
     test('takes a Holed result off — it is re-derived on save', () {

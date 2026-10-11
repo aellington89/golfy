@@ -3322,6 +3322,18 @@ class $HoleShotsTable extends HoleShots
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _distanceFeetMeta = const VerificationMeta(
+    'distanceFeet',
+  );
+  @override
+  late final GeneratedColumn<int> distanceFeet = GeneratedColumn<int>(
+    'distance_feet',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'CHECK (distance_feet >= 0)',
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3331,6 +3343,7 @@ class $HoleShotsTable extends HoleShots
     distanceYards,
     lie,
     result,
+    distanceFeet,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3393,6 +3406,15 @@ class $HoleShotsTable extends HoleShots
         result.isAcceptableOrUnknown(data['result']!, _resultMeta),
       );
     }
+    if (data.containsKey('distance_feet')) {
+      context.handle(
+        _distanceFeetMeta,
+        distanceFeet.isAcceptableOrUnknown(
+          data['distance_feet']!,
+          _distanceFeetMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3434,6 +3456,10 @@ class $HoleShotsTable extends HoleShots
         DriftSqlType.string,
         data['${effectivePrefix}result'],
       ),
+      distanceFeet: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}distance_feet'],
+      ),
     );
   }
 
@@ -3451,9 +3477,8 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
 
   /// Distance **remaining to the pin** when the shot was played — not how far
   /// the shot travelled. So a tee shot's distance is the hole's yardage, and the
-  /// figure shrinks as the hole is played out. Putts leave it null; a putt is
-  /// measured in feet on the green, and `putts` on [HoleResults] already counts
-  /// them.
+  /// figure shrinks as the hole is played out. Putts leave it null: a putt is
+  /// measured in feet on the green, and records [distanceFeet] instead.
   final int? distanceYards;
 
   /// Where the shot was played from — Tee / Fairway / Light Rough / Deep Rough
@@ -3464,6 +3489,15 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
   /// the *next* shot's [lie], so `result` is left null except for those two
   /// cases a next shot can't imply. Free-ish text (a small preset list).
   final String? result;
+
+  /// A putt's distance **remaining to the hole**, in feet — the unit golf, and
+  /// every golf game, measures a putt in (schema v8). Only putts
+  /// carry it; every other shot leaves it null and records [distanceYards].
+  /// `putts` on [HoleResults] stays the count the stats read.
+  ///
+  /// Declared last because it was added last: `ALTER TABLE ADD COLUMN` appends,
+  /// so this order is the one a migrated database has too.
+  final int? distanceFeet;
   const HoleShot({
     required this.id,
     required this.holeResultId,
@@ -3472,6 +3506,7 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
     this.distanceYards,
     this.lie,
     this.result,
+    this.distanceFeet,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3491,6 +3526,9 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
     if (!nullToAbsent || result != null) {
       map['result'] = Variable<String>(result);
     }
+    if (!nullToAbsent || distanceFeet != null) {
+      map['distance_feet'] = Variable<int>(distanceFeet);
+    }
     return map;
   }
 
@@ -3507,6 +3545,9 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
       result: result == null && nullToAbsent
           ? const Value.absent()
           : Value(result),
+      distanceFeet: distanceFeet == null && nullToAbsent
+          ? const Value.absent()
+          : Value(distanceFeet),
     );
   }
 
@@ -3523,6 +3564,7 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
       distanceYards: serializer.fromJson<int?>(json['distance_yards']),
       lie: serializer.fromJson<String?>(json['lie']),
       result: serializer.fromJson<String?>(json['result']),
+      distanceFeet: serializer.fromJson<int?>(json['distance_feet']),
     );
   }
   @override
@@ -3536,6 +3578,7 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
       'distance_yards': serializer.toJson<int?>(distanceYards),
       'lie': serializer.toJson<String?>(lie),
       'result': serializer.toJson<String?>(result),
+      'distance_feet': serializer.toJson<int?>(distanceFeet),
     };
   }
 
@@ -3547,6 +3590,7 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
     Value<int?> distanceYards = const Value.absent(),
     Value<String?> lie = const Value.absent(),
     Value<String?> result = const Value.absent(),
+    Value<int?> distanceFeet = const Value.absent(),
   }) => HoleShot(
     id: id ?? this.id,
     holeResultId: holeResultId ?? this.holeResultId,
@@ -3557,6 +3601,7 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
         : this.distanceYards,
     lie: lie.present ? lie.value : this.lie,
     result: result.present ? result.value : this.result,
+    distanceFeet: distanceFeet.present ? distanceFeet.value : this.distanceFeet,
   );
   HoleShot copyWithCompanion(HoleShotsCompanion data) {
     return HoleShot(
@@ -3573,6 +3618,9 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
           : this.distanceYards,
       lie: data.lie.present ? data.lie.value : this.lie,
       result: data.result.present ? data.result.value : this.result,
+      distanceFeet: data.distanceFeet.present
+          ? data.distanceFeet.value
+          : this.distanceFeet,
     );
   }
 
@@ -3585,7 +3633,8 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
           ..write('club: $club, ')
           ..write('distanceYards: $distanceYards, ')
           ..write('lie: $lie, ')
-          ..write('result: $result')
+          ..write('result: $result, ')
+          ..write('distanceFeet: $distanceFeet')
           ..write(')'))
         .toString();
   }
@@ -3599,6 +3648,7 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
     distanceYards,
     lie,
     result,
+    distanceFeet,
   );
   @override
   bool operator ==(Object other) =>
@@ -3610,7 +3660,8 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
           other.club == this.club &&
           other.distanceYards == this.distanceYards &&
           other.lie == this.lie &&
-          other.result == this.result);
+          other.result == this.result &&
+          other.distanceFeet == this.distanceFeet);
 }
 
 class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
@@ -3621,6 +3672,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
   final Value<int?> distanceYards;
   final Value<String?> lie;
   final Value<String?> result;
+  final Value<int?> distanceFeet;
   const HoleShotsCompanion({
     this.id = const Value.absent(),
     this.holeResultId = const Value.absent(),
@@ -3629,6 +3681,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
     this.distanceYards = const Value.absent(),
     this.lie = const Value.absent(),
     this.result = const Value.absent(),
+    this.distanceFeet = const Value.absent(),
   });
   HoleShotsCompanion.insert({
     this.id = const Value.absent(),
@@ -3638,6 +3691,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
     this.distanceYards = const Value.absent(),
     this.lie = const Value.absent(),
     this.result = const Value.absent(),
+    this.distanceFeet = const Value.absent(),
   }) : holeResultId = Value(holeResultId),
        shotNumber = Value(shotNumber);
   static Insertable<HoleShot> custom({
@@ -3648,6 +3702,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
     Expression<int>? distanceYards,
     Expression<String>? lie,
     Expression<String>? result,
+    Expression<int>? distanceFeet,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3657,6 +3712,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
       if (distanceYards != null) 'distance_yards': distanceYards,
       if (lie != null) 'lie': lie,
       if (result != null) 'result': result,
+      if (distanceFeet != null) 'distance_feet': distanceFeet,
     });
   }
 
@@ -3668,6 +3724,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
     Value<int?>? distanceYards,
     Value<String?>? lie,
     Value<String?>? result,
+    Value<int?>? distanceFeet,
   }) {
     return HoleShotsCompanion(
       id: id ?? this.id,
@@ -3677,6 +3734,7 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
       distanceYards: distanceYards ?? this.distanceYards,
       lie: lie ?? this.lie,
       result: result ?? this.result,
+      distanceFeet: distanceFeet ?? this.distanceFeet,
     );
   }
 
@@ -3704,6 +3762,9 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
     if (result.present) {
       map['result'] = Variable<String>(result.value);
     }
+    if (distanceFeet.present) {
+      map['distance_feet'] = Variable<int>(distanceFeet.value);
+    }
     return map;
   }
 
@@ -3716,7 +3777,8 @@ class HoleShotsCompanion extends UpdateCompanion<HoleShot> {
           ..write('club: $club, ')
           ..write('distanceYards: $distanceYards, ')
           ..write('lie: $lie, ')
-          ..write('result: $result')
+          ..write('result: $result, ')
+          ..write('distanceFeet: $distanceFeet')
           ..write(')'))
         .toString();
   }
@@ -7039,6 +7101,7 @@ typedef $$HoleShotsTableCreateCompanionBuilder =
       Value<int?> distanceYards,
       Value<String?> lie,
       Value<String?> result,
+      Value<int?> distanceFeet,
     });
 typedef $$HoleShotsTableUpdateCompanionBuilder =
     HoleShotsCompanion Function({
@@ -7049,6 +7112,7 @@ typedef $$HoleShotsTableUpdateCompanionBuilder =
       Value<int?> distanceYards,
       Value<String?> lie,
       Value<String?> result,
+      Value<int?> distanceFeet,
     });
 
 final class $$HoleShotsTableReferences
@@ -7110,6 +7174,11 @@ class $$HoleShotsTableFilterComposer
 
   ColumnFilters<String> get result => $composableBuilder(
     column: $table.result,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get distanceFeet => $composableBuilder(
+    column: $table.distanceFeet,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7176,6 +7245,11 @@ class $$HoleShotsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get distanceFeet => $composableBuilder(
+    column: $table.distanceFeet,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$HoleResultsTableOrderingComposer get holeResultId {
     final $$HoleResultsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7230,6 +7304,11 @@ class $$HoleShotsTableAnnotationComposer
 
   GeneratedColumn<String> get result =>
       $composableBuilder(column: $table.result, builder: (column) => column);
+
+  GeneratedColumn<int> get distanceFeet => $composableBuilder(
+    column: $table.distanceFeet,
+    builder: (column) => column,
+  );
 
   $$HoleResultsTableAnnotationComposer get holeResultId {
     final $$HoleResultsTableAnnotationComposer composer = $composerBuilder(
@@ -7290,6 +7369,7 @@ class $$HoleShotsTableTableManager
                 Value<int?> distanceYards = const Value.absent(),
                 Value<String?> lie = const Value.absent(),
                 Value<String?> result = const Value.absent(),
+                Value<int?> distanceFeet = const Value.absent(),
               }) => HoleShotsCompanion(
                 id: id,
                 holeResultId: holeResultId,
@@ -7298,6 +7378,7 @@ class $$HoleShotsTableTableManager
                 distanceYards: distanceYards,
                 lie: lie,
                 result: result,
+                distanceFeet: distanceFeet,
               ),
           createCompanionCallback:
               ({
@@ -7308,6 +7389,7 @@ class $$HoleShotsTableTableManager
                 Value<int?> distanceYards = const Value.absent(),
                 Value<String?> lie = const Value.absent(),
                 Value<String?> result = const Value.absent(),
+                Value<int?> distanceFeet = const Value.absent(),
               }) => HoleShotsCompanion.insert(
                 id: id,
                 holeResultId: holeResultId,
@@ -7316,6 +7398,7 @@ class $$HoleShotsTableTableManager
                 distanceYards: distanceYards,
                 lie: lie,
                 result: result,
+                distanceFeet: distanceFeet,
               ),
           withReferenceMapper: (p0) => p0
               .map(

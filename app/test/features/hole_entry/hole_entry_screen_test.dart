@@ -262,8 +262,11 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    // A second putt makes it a 4 — the score follows. Save again.
-    await tester.tap(find.byKey(const ValueKey('Putts_inc')));
+    // A second putt makes it a 4 — the score follows. The first putt was from
+    // 25 feet. Save again.
+    await tester.tap(find.byKey(const ValueKey('add_putt')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const ValueKey('putt_distance_0')), '25');
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
     await tester.runAsync(() async {
@@ -277,6 +280,17 @@ void main() {
     expect(rows!.single.score, 4);
     expect(rows.single.putts, 2);
     expect(find.text('Holes saved: 1 / 18'), findsOneWidget);
+
+    // The putts are shots 3 and 4, putters from the green, the first measured
+    // in feet and the last holed.
+    final shots = (await tester
+        .runAsync(() => db.holeShotDao.watchForRound(seed.roundId).first))![1]!;
+    expect([for (final s in shots) s.club], [null, null, 'Putter', 'Putter']);
+    expect([for (final s in shots) s.lie], ['Tee', 'Fairway', 'Green', 'Green']);
+    expect([for (final s in shots) s.distanceFeet], [null, null, 25, null]);
+    expect(shots.last.result, 'Holed');
+    // Read back, the hole is the one that was saved.
+    expect(find.text('Saved'), findsOneWidget);
   });
 
   testWidgets(
@@ -299,7 +313,8 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    // Hole 1's card shows its saved score (6) and putts (3), tagged "Saved".
+    // Hole 1's card shows its saved score (6) and its 3 putts, laid out as
+    // rows since it was saved without any, tagged "Saved".
     expect(
       find.descendant(
         of: find.descendant(
@@ -310,16 +325,18 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(
-      find.descendant(
-        of: find.descendant(
+    for (final (key, expected) in [
+      ('putt_row_2', findsOneWidget),
+      ('putt_row_3', findsNothing),
+    ]) {
+      expect(
+        find.descendant(
           of: find.byKey(const ValueKey('hole_card_1')),
-          matching: find.byKey(const ValueKey('putts')),
+          matching: find.byKey(ValueKey(key)),
         ),
-        matching: find.text('3'),
-      ),
-      findsOneWidget,
-    );
+        expected,
+      );
+    }
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('hole_card_1')),
@@ -375,7 +392,7 @@ void main() {
     expect(find.text('Saved'), findsOneWidget);
 
     // A third putt; the card flips to "Unsaved" until saved again.
-    await tester.tap(find.byKey(const ValueKey('Putts_inc')));
+    await tester.tap(find.byKey(const ValueKey('add_putt')));
     await tester.pump();
     expect(find.text('Unsaved'), findsOneWidget);
 

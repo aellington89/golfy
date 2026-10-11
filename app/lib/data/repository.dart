@@ -209,6 +209,7 @@ class GolfyRepository {
             distanceYards: Value(shots[i].distanceYards),
             lie: Value(shots[i].lie),
             result: Value(shots[i].result),
+            distanceFeet: Value(shots[i].distanceFeet),
           ),
       ]);
       return id;

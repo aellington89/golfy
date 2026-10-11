@@ -4,9 +4,9 @@ import 'hole_results.dart';
 
 /// One shot played on a hole (#22) — an ordered, optional per-hole detail list
 /// that supersedes the flat `teeClub` / `driveDistanceYards` /
-/// `approachDistanceYards` columns. Each row records the club, distance, lie
-/// (where the shot was played from) and result (where it finished), all
-/// optional. `score` / `putts` stay the authoritative scoring fields on
+/// `approachDistanceYards` columns. Each row records the club, distance (yards
+/// to the pin, or feet to the hole for a putt), lie (where the shot was played
+/// from) and result (where it finished), all optional. `score` / `putts` stay the authoritative scoring fields on
 /// [HoleResults]; shots need not sum to the score.
 ///
 /// Cascade-deletes with its hole_results row.
@@ -20,9 +20,8 @@ class HoleShots extends Table {
   TextColumn get club => text().nullable()();
   /// Distance **remaining to the pin** when the shot was played — not how far
   /// the shot travelled. So a tee shot's distance is the hole's yardage, and the
-  /// figure shrinks as the hole is played out. Putts leave it null; a putt is
-  /// measured in feet on the green, and `putts` on [HoleResults] already counts
-  /// them.
+  /// figure shrinks as the hole is played out. Putts leave it null: a putt is
+  /// measured in feet on the green, and records [distanceFeet] instead.
   IntColumn get distanceYards => integer()
       .nullable()
       .customConstraint('CHECK (distance_yards >= 0)')();
@@ -35,6 +34,19 @@ class HoleShots extends Table {
   /// the *next* shot's [lie], so `result` is left null except for those two
   /// cases a next shot can't imply. Free-ish text (a small preset list).
   TextColumn get result => text().nullable()();
+
+  /// A putt's distance **remaining to the hole**, in feet — the unit golf, and
+  /// every golf game, measures a putt in (schema v8). Only putts
+  /// carry it; every other shot leaves it null and records [distanceYards].
+  /// `putts` on [HoleResults] stays the count the stats read. Putts saved
+  /// before v8 with a distance had it in yards; the v7 -> v8 migration moved
+  /// it here, times 3.
+  ///
+  /// Declared last because it was added last: `ALTER TABLE ADD COLUMN` appends,
+  /// so this order is the one a migrated database has too.
+  IntColumn get distanceFeet => integer()
+      .nullable()
+      .customConstraint('CHECK (distance_feet >= 0)')();
 
   @override
   List<Set<Column>> get uniqueKeys => [

@@ -19,8 +19,9 @@ import 'shot_inference.dart';
 ///    and whether it found the fairway, or the green on a par 3. Required.
 ///  * **Approach & around the green** — every shot after the tee and before
 ///    the green, then GIR, bunker visited and up & down attempt.
-///  * **Putting** — putts (each one a stroke; no rows to fill in), then up &
-///    down success and sand save once they apply.
+///  * **Putting** — a row per putt with its distance to the hole in feet (the
+///    putts count is how many rows there are), then up & down success and sand
+///    save once they apply.
 ///  * **Score** — penalties and the score, which counts itself from the
 ///    strokes above; then what's left to fix, and Save.
 ///
@@ -302,12 +303,35 @@ class _HoleCardState extends State<HoleCard> {
                     _edit(applyEdit(d, d.copyWith(upDownAttempt: v))),
               ),
               const _SectionHeader('Putting'),
-              _StepperRow(
-                key: const ValueKey('putts'),
-                label: 'Putts',
-                value: d.putts,
-                min: 0,
-                onChanged: (v) => _edit(applyEdit(d, d.copyWith(putts: v))),
+              for (var i = 0; i < d.puttShots.length; i++)
+                _PuttCard(
+                  key: ValueKey('putt_row_$i'),
+                  index: i,
+                  shotNumber: d.shots.length + i + 1,
+                  putt: d.puttShots[i],
+                  holed: i == d.puttShots.length - 1,
+                  onChanged: (p) => _edit(updatePutt(d, i, p)),
+                  onDelete: () => _edit(removePutt(d, i)),
+                ),
+              if (d.puttShots.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    'No putts — holed from off the green.',
+                    key: const ValueKey('no_putts'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('add_putt'),
+                  onPressed: () => _edit(addPutt(d)),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add putt'),
+                ),
               ),
               // The outcomes the putts decide, right under them, and only once
               // there is something to decide.
@@ -991,6 +1015,145 @@ class _ShotCardState extends State<_ShotCard> {
                 ),
                 const SizedBox(width: 8),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One putt's card: its distance to the hole, in feet, and a delete action.
+/// Club and lie aren't asked — every putt is a putter from the green. The last
+/// putt carries a "Holed" badge, which the form sets itself.
+///
+/// The distance field is controller-backed and synced in [didUpdateWidget], as
+/// on [_ShotCard], so removing an earlier putt — which shifts this card's data
+/// up — refreshes it without clobbering active typing.
+class _PuttCard extends StatefulWidget {
+  const _PuttCard({
+    super.key,
+    required this.index,
+    required this.shotNumber,
+    required this.putt,
+    required this.holed,
+    required this.onChanged,
+    required this.onDelete,
+  });
+
+  /// Which putt this is, from 0.
+  final int index;
+
+  /// Its place among all the hole's strokes, from 1 — what "Shot N" means
+  /// everywhere else on the card.
+  final int shotNumber;
+  final ShotDraft putt;
+  final bool holed;
+  final ValueChanged<ShotDraft> onChanged;
+  final VoidCallback onDelete;
+
+  @override
+  State<_PuttCard> createState() => _PuttCardState();
+}
+
+class _PuttCardState extends State<_PuttCard> {
+  late final TextEditingController _distance;
+
+  @override
+  void initState() {
+    super.initState();
+    _distance = TextEditingController(
+      text: widget.putt.distanceFeet?.toString() ?? '',
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _PuttCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.putt.distanceFeet != int.tryParse(_distance.text)) {
+      _distance.text = widget.putt.distanceFeet?.toString() ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _distance.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final i = widget.index;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 4, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                // The one part of the row that can give way on a narrow
+                // screen or at a large text size.
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                        text: 'Putt ${i + 1}',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      TextSpan(
+                        text: '  ·  Shot ${widget.shotNumber}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (widget.holed)
+                  Chip(
+                    key: ValueKey('putt_holed_$i'),
+                    avatar: const Icon(Icons.flag, size: 16),
+                    label: const Text('Holed'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                IconButton(
+                  key: ValueKey('putt_delete_$i'),
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Remove putt',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: widget.onDelete,
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                width: 140,
+                child: TextField(
+                  key: ValueKey('putt_distance_$i'),
+                  controller: _distance,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'To hole',
+                    isDense: true,
+                    suffixText: 'ft',
+                  ),
+                  onChanged: (v) {
+                    final text = v.trim();
+                    final feet = text.isEmpty
+                        ? null
+                        : (int.tryParse(text) ?? 0).clamp(0, 100000);
+                    widget.onChanged(
+                      widget.putt.copyWith(distanceFeet: feet),
+                    );
+                  },
+                ),
+              ),
             ),
           ],
         ),

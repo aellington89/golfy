@@ -32,13 +32,16 @@ void main() {
 
       await repo.saveHole(fx.holeCompanion(rid, 1), const [
         HoleShotInput(club: 'Driver', distanceYards: 420, lie: 'Tee'),
-        HoleShotInput(club: 'Putter', lie: 'Green', result: 'Holed'),
+        HoleShotInput(
+            club: 'Putter', lie: 'Green', result: 'Holed', distanceFeet: 9),
       ]);
 
       final shots = await repo.watchHoleShots(rid).first;
       expect(shots[1], hasLength(2));
       expect(shots[1]!.first.shotNumber, 1);
+      expect(shots[1]!.first.distanceFeet, isNull);
       expect(shots[1]!.last.result, 'Holed');
+      expect(shots[1]!.last.distanceFeet, 9);
     });
 
     test('re-saving a hole keeps its shots on that hole', () async {

@@ -109,10 +109,6 @@ class BackupPayload {
   bool get isEmpty => totalRows == 0;
 
   /// The same payload with some tables replaced.
-  ///
-  /// Here for the payload upgraders a future schema bump will need (see
-  /// `BackupCodec`): an upgrader rewrites the one or two tables its migration
-  /// touched and leaves the rest alone.
   BackupPayload copyWith({
     List<Course>? courses,
     List<CourseHole>? courseHoles,

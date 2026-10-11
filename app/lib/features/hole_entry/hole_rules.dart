@@ -58,9 +58,9 @@ HoleDraft withTeeShot(HoleDraft d) =>
 /// [after] — an edit of [before] — with every field derived from what the edit
 /// changed brought back into line.
 ///
-/// The plain fields (putts, penalties, the switches, score) are edited with
-/// `copyWith` and passed through here; edits with side effects of their own
-/// have functions below, which end here too.
+/// The plain fields (penalties, the switches, score) are edited with
+/// `copyWith` and passed through here; edits with side effects of their own —
+/// shots and putts among them — have functions below, which end here too.
 HoleDraft applyEdit(HoleDraft before, HoleDraft after) {
   var d = after;
 
@@ -252,6 +252,28 @@ HoleDraft removeShot(HoleDraft d, int index) {
   return applyEdit(d, next);
 }
 
+/// Appends a putt. Nothing is known about it until its distance is entered.
+HoleDraft addPutt(HoleDraft d) => applyEdit(
+      d,
+      d.copyWith(puttShots: [...d.puttShots, const ShotDraft.putt()]),
+    );
+
+/// Replaces the putt at [index] with [putt].
+HoleDraft updatePutt(HoleDraft d, int index, ShotDraft putt) => applyEdit(
+      d,
+      d.copyWith(puttShots: [...d.puttShots]..[index] = putt),
+    );
+
+/// Removes the putt at [index]. Removing the only one leaves a hole finished
+/// from off the green.
+HoleDraft removePutt(HoleDraft d, int index) {
+  if (index < 0 || index >= d.puttShots.length) return d;
+  return applyEdit(
+    d,
+    d.copyWith(puttShots: [...d.puttShots]..removeAt(index)),
+  );
+}
+
 /// Fix: lays out as many shots as the score is ahead of the strokes recorded.
 /// The fast way to enter a hole from its score alone — and to bring a hole
 /// saved before shots were counted into line.
@@ -271,15 +293,20 @@ HoleDraft matchScoreToShots(HoleDraft d) =>
 HoleDraft countPenaltyShots(HoleDraft d) =>
     applyEdit(d, d.copyWith(penaltyStrokes: penaltyShotCount(d)));
 
-/// Fix: turns a last shot played from the green into the putt it was. The
-/// score doesn't move — the stroke just changes column.
+/// Fix: turns a last shot played from the green into the putt it was — the
+/// first putt, carrying its distance to the pin over in feet. The score doesn't
+/// move: the stroke just changes section.
 HoleDraft countLastShotAsPutt(HoleDraft d) {
   if (d.shots.length < 2) return d;
+  final yards = d.shots.last.distanceYards;
   return applyEdit(
     d,
     d.copyWith(
       shots: d.shots.sublist(0, d.shots.length - 1),
-      putts: d.putts + 1,
+      puttShots: [
+        ShotDraft.putt(distanceFeet: yards == null ? null : yards * 3),
+        ...d.puttShots,
+      ],
     ),
   );
 }
