@@ -1,4 +1,4 @@
-// Drift schema migration tests (#24, extended for #35).
+// Drift schema migration tests (#24, extended for #35 and each bump since).
 //
 // These prove the step-based `onUpgrade` harness end to end against drift's
 // generated schema snapshots in `test/generated_migrations/`:
@@ -22,6 +22,7 @@ import 'generated_migrations/schema_v3.dart' as v3;
 import 'generated_migrations/schema_v4.dart' as v4;
 import 'generated_migrations/schema_v5.dart' as v5;
 import 'generated_migrations/schema_v6.dart' as v6;
+import 'generated_migrations/schema_v7.dart' as v7;
 
 void main() {
   late SchemaVerifier verifier;
@@ -399,7 +400,10 @@ void main() {
     final holeResultId = holes.single.id;
 
     // hole_shots is live and its FK to the (preserved) hole_results id holds.
-    expect(await db.holeShotDao.watchForRound(roundId).first, isEmpty);
+    // Read with a plain `select` — a `SELECT *` — because this database stops
+    // at v7, and the DAO's join names every column the app has today,
+    // including ones added after v7.
+    expect(await db.select(db.holeShots).get(), isEmpty);
     await db.holeShotDao.replaceForHole(holeResultId, [
       HoleShotsCompanion.insert(
         holeResultId: holeResultId,
@@ -410,10 +414,98 @@ void main() {
         result: const Value('Fairway'),
       ),
     ]);
-    final shots = await db.holeShotDao.watchForRound(roundId).first;
-    expect(shots[1], hasLength(1));
-    expect(shots[1]!.single.club, 'Driver');
-    expect(shots[1]!.single.distanceYards, 268);
+    final shots = await db.select(db.holeShots).get();
+    expect(shots, hasLength(1));
+    expect(shots.single.holeResultId, holeResultId);
+    expect(shots.single.club, 'Driver');
+    expect(shots.single.distanceYards, 268);
+  });
+
+  test('migrates the schema from v7 to v8', () async {
+    final connection = await verifier.startAt(7);
+    final db = GolfyDatabase.forTesting(connection);
+    addTearDown(db.close);
+
+    // Adds the nullable hole_shots.distance_feet column for putts; the
+    // resulting schema must match the v8 snapshot.
+    await verifier.migrateAndValidate(db, 8);
+  });
+
+  test('v7 -> v8 keeps every shot and leaves its putt distance unset',
+      () async {
+    final schema = await verifier.schemaAt(7);
+
+    // Seed a hole with a full shot list — putts included — through the
+    // v7-shaped database, which has no distance_feet column.
+    final oldDb = v7.DatabaseAtV7(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v7.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    final roundId = await oldDb.into(oldDb.rounds).insert(
+          v7.RoundsCompanion.insert(date: '2026-05-19', courseId: courseId),
+        );
+    final holeResultId = await oldDb.into(oldDb.holeResults).insert(
+          v7.HoleResultsCompanion.insert(
+            roundId: roundId,
+            holeNumber: 1,
+            par: 4,
+            score: 4,
+            yards: 400,
+            gir: 1,
+            putts: 2,
+            upDownAttempt: 0,
+            upDownSuccess: 0,
+            penaltyStrokes: 0,
+            bunkerVisited: 0,
+            sandSave: 0,
+          ),
+        );
+    for (final (n, club, lie, yards, result) in [
+      (1, 'Driver', 'Tee', 400, null),
+      (2, '8 Iron', 'Fairway', 140, null),
+      (3, 'Putter', 'Green', null, null),
+      (4, 'Putter', 'Green', null, 'Holed'),
+    ]) {
+      await oldDb.into(oldDb.holeShots).insert(
+            v7.HoleShotsCompanion.insert(
+              holeResultId: holeResultId,
+              shotNumber: n,
+              club: Value(club),
+              distanceYards: Value(yards),
+              lie: Value(lie),
+              result: Value(result),
+            ),
+          );
+    }
+    await oldDb.close();
+
+    // Migrate the same underlying database with the real app schema (v8).
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 8);
+
+    final shots = (await db.holeShotDao.watchForRound(roundId).first)[1]!;
+    expect([for (final s in shots) s.club],
+        ['Driver', '8 Iron', 'Putter', 'Putter']);
+    expect([for (final s in shots) s.distanceYards], [400, 140, null, null]);
+    expect(shots.last.result, 'Holed');
+    expect([for (final s in shots) s.distanceFeet], everyElement(isNull));
+
+    // The new column is live: a putt can be saved with its distance.
+    await db.holeShotDao.replaceForHole(holeResultId, [
+      HoleShotsCompanion.insert(
+        holeResultId: holeResultId,
+        shotNumber: 1,
+        club: const Value('Putter'),
+        lie: const Value('Green'),
+        distanceFeet: const Value(12),
+      ),
+    ]);
+    final putt = (await db.holeShotDao.watchForRound(roundId).first)[1]!;
+    expect(putt.single.distanceFeet, 12);
   });
 
   test('a freshly created database matches the generated schema', () async {

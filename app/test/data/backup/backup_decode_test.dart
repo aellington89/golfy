@@ -166,13 +166,54 @@ void main() {
       // schema v7 — but a hand-made file can claim anything, and the refusal
       // has to be the readable kind.
       final tree = sampleTree();
-      manifestOf(tree)['schemaVersion'] =
-          BackupCodec.supportedSchemaVersion - 1;
+      manifestOf(tree)['schemaVersion'] = 6;
 
       expect(
         () => BackupCodec.decode(reencode(tree)),
         throwsBackup(BackupFormatProblem.unsupportedSchemaVersion,
             mentioning: 'cannot upgrade'),
+      );
+    });
+
+    test('reads a schema-7 file, whose shots have no putt distance', () {
+      // A v7 file is the sample with no `distance_feet` on its shots: the
+      // column arrived in v8.
+      final tree = sampleTree();
+      manifestOf(tree)['schemaVersion'] = 7;
+      for (final row in tableOf(tree, 'hole_shots')) {
+        (row! as Map<String, Object?>).remove('distance_feet');
+      }
+
+      final bundle = BackupCodec.decode(reencode(tree));
+
+      expect(bundle.manifest.schemaVersion, 7);
+      expect(bundle.payload, samplePayload());
+      expect(bundle.payload.holeShots.single.distanceFeet, isNull);
+    });
+
+    test('refuses a schema-7 file whose shot claims a putt distance', () {
+      // v7 had no such column, so a v7 file carrying one has been edited — and
+      // silently keeping or dropping the value would both be guesses.
+      final tree = sampleTree();
+      manifestOf(tree)['schemaVersion'] = 7;
+      rowOf(tree, 'hole_shots')['distance_feet'] = 12;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'distance_feet', table: 'hole_shots', rowIndex: 0),
+      );
+    });
+
+    test('an upgrade still refuses a row that is not an object', () {
+      final tree = sampleTree();
+      manifestOf(tree)['schemaVersion'] = 7;
+      tableOf(tree, 'hole_shots')[0] = 'not a row';
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            table: 'hole_shots', rowIndex: 0),
       );
     });
 
@@ -485,7 +526,7 @@ void main() {
 
       expect(
         manifest.toString(),
-        'BackupManifest(format 1, schema 7, 0.4.0+38, android, '
+        'BackupManifest(format 1, schema 8, 0.4.0+38, android, '
         '2026-10-03T14:32:07.000Z)',
       );
     });

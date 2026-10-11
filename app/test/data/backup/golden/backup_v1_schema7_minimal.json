@@ -1,0 +1,115 @@
+{
+  "golfyBackup": {
+    "formatVersion": 1,
+    "schemaVersion": 7,
+    "appVersion": "0.4.0+38",
+    "exportedAt": "2026-10-03T14:32:07.000Z",
+    "platform": "android",
+    "rowCounts": {
+      "courses": 1,
+      "course_holes": 2,
+      "course_sets": 1,
+      "course_set_yards": 1,
+      "events": 1,
+      "rounds": 1,
+      "hole_results": 1,
+      "hole_shots": 1
+    }
+  },
+  "data": {
+    "courses": [
+      {
+        "id": 1,
+        "name": "Pebble Beach",
+        "game_title": "PGA Tour 2K25"
+      }
+    ],
+    "course_holes": [
+      {
+        "id": 1,
+        "course_id": 1,
+        "hole_number": 1,
+        "par": 4,
+        "stroke_index": 7
+      },
+      {
+        "id": 2,
+        "course_id": 1,
+        "hole_number": 2,
+        "par": 3,
+        "stroke_index": null
+      }
+    ],
+    "course_sets": [
+      {
+        "id": 1,
+        "course_id": 1,
+        "name": "Blue tees"
+      }
+    ],
+    "course_set_yards": [
+      {
+        "id": 1,
+        "course_set_id": 1,
+        "hole_number": 1,
+        "yards": 412
+      }
+    ],
+    "events": [
+      {
+        "id": 1,
+        "name": "Club Championship",
+        "season": 1,
+        "finish_position": 3,
+        "tied": true,
+        "missed_cut": false
+      }
+    ],
+    "rounds": [
+      {
+        "id": 1,
+        "date": "2026-05-19",
+        "course_id": 1,
+        "round_number": 1,
+        "tee_set": null,
+        "course_set_id": 1,
+        "weather": null,
+        "wind_speed_mph": null,
+        "difficulty": null,
+        "notes": "Said \"nice shot\" — then this:\nthree-putt. ⛳",
+        "migration_canary": null,
+        "event_id": 1
+      }
+    ],
+    "hole_results": [
+      {
+        "id": 1,
+        "round_id": 1,
+        "hole_number": 1,
+        "par": 4,
+        "score": 5,
+        "yards": 412,
+        "fairway_hit": false,
+        "gir": false,
+        "putts": 2,
+        "up_down_attempt": true,
+        "up_down_success": false,
+        "penalty_strokes": 0,
+        "bunker_visited": true,
+        "sand_save": false,
+        "notes": null
+      }
+    ],
+    "hole_shots": [
+      {
+        "id": 1,
+        "hole_result_id": 1,
+        "shot_number": 1,
+        "club": "Driver",
+        "distance_yards": 412,
+        "lie": "Tee",
+        "result": null
+      }
+    ]
+  }
+}

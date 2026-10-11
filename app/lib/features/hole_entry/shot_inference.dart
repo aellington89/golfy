@@ -84,7 +84,7 @@ ShotDraft suggestNextShot(HoleDraft draft) {
 /// stored.
 ///
 /// Deliberately omits the putter: a putt's distance is measured in feet on the
-/// green, and putting is driven by the hole's `putts` count instead.
+/// green, and putts are entered as rows of their own in the Putting section.
 ///
 /// These are one generic player's numbers, so they will be wrong for somebody —
 /// which is why [suggestClub] takes the bag as a parameter: the app already

@@ -82,6 +82,7 @@ void main() {
         'distance_yards',
         'lie',
         'result',
+        'distance_feet',
       ]);
     });
 
@@ -134,7 +135,7 @@ void main() {
       expect(manifest['formatVersion'], BackupManifest.currentFormatVersion);
       expect(manifest['schemaVersion'], BackupCodec.supportedSchemaVersion);
       expect(manifest['formatVersion'], 1);
-      expect(manifest['schemaVersion'], 7);
+      expect(manifest['schemaVersion'], 8);
     });
 
     test('states when it was made, in UTC', () {

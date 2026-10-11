@@ -34,16 +34,55 @@ class BackupCodec {
   /// `test/data/backup/backup_guards_test.dart` fails the day the two
   /// disagree, which is the prompt to decide whether old files can still be
   /// read and to register an upgrader below.
-  static const int supportedSchemaVersion = 7;
+  static const int supportedSchemaVersion = 8;
 
-  /// Payload upgraders, keyed by the schema version they upgrade **from**.
+  /// Upgraders for an older file's rows, keyed by the schema version they
+  /// upgrade **from**. Each one rewrites the raw `data` section into the shape
+  /// of the next version.
   ///
-  /// Empty, and not an oversight: export did not exist before schema v7, so no
-  /// Golfy build can ever have written an older backup. The registry is here so
-  /// that the first schema bump after this one has an obvious home, and the
-  /// guard test makes sure it is not forgotten.
-  static const Map<int, BackupPayload Function(BackupPayload)> _upgraders =
-      <int, BackupPayload Function(BackupPayload)>{};
+  /// They run on the rows as JSON, before decoding, because a decoded row
+  /// already has today's columns: checking a v7 row against them is exactly
+  /// what refuses a file for being old rather than broken. Upgraded, the rows
+  /// are decoded and checked like any current file's.
+  ///
+  /// Nothing below v7 is here, and never will be: export did not exist before
+  /// schema v7, so no Golfy build can have written an older backup.
+  static const Map<int, void Function(Map<String, Object?> data)> _upgraders =
+      <int, void Function(Map<String, Object?> data)>{
+    // v7 -> v8: putts record their distance in feet. No shot in a v7 file
+    // has one.
+    7: _upgradeFrom7,
+  };
+
+  static void _upgradeFrom7(Map<String, Object?> data) =>
+      _addNullColumn(data, 'hole_shots', 'distance_feet', fromVersion: 7);
+
+  /// Gives every row of [table] a null [column] — the upgrade for a nullable
+  /// column added by a migration. Rows that aren't objects are left for
+  /// decoding to refuse, with the reason it gives; a row that already has the
+  /// column is refused here, since a file of [fromVersion] cannot.
+  static void _addNullColumn(
+    Map<String, Object?> data,
+    String table,
+    String column, {
+    required int fromVersion,
+  }) {
+    final rows = data[table];
+    if (rows is! List) return;
+    for (var index = 0; index < rows.length; index++) {
+      final row = rows[index];
+      if (row is! Map<String, Object?>) continue;
+      if (row.containsKey(column)) {
+        throw BackupFormatException(
+          BackupFormatProblem.badRow,
+          'row has `$column`, which data version $fromVersion does not have',
+          table: table,
+          rowIndex: index,
+        );
+      }
+      row[column] = null;
+    }
+  }
 
   static const JsonEncoder _encoder = JsonEncoder.withIndent('  ');
 
@@ -147,7 +186,16 @@ class BackupCodec {
       }
     }
 
-    var payload = BackupPayload(
+    // Bring an older file's rows up to this version before reading them.
+    // Upgraders add or rewrite columns, never rows, so the counts checked
+    // below are still the ones the file said.
+    for (var version = manifest.schemaVersion;
+        version < supportedSchemaVersion;
+        version++) {
+      _upgraders[version]!(data);
+    }
+
+    final payload = BackupPayload(
       courses: _rows(data, 'courses', Course.fromJson),
       courseHoles: _rows(data, 'course_holes', CourseHole.fromJson),
       courseSets: _rows(data, 'course_sets', CourseSet.fromJson),
@@ -159,8 +207,7 @@ class BackupCodec {
       holeShots: _rows(data, 'hole_shots', HoleShot.fromJson),
     );
 
-    // The counts are checked against what the file *said*, before any
-    // upgrader rewrites the payload.
+    // The counts are checked against what the file *said*.
     final counts = payload.rowCounts;
     for (final table in backupTableOrder) {
       final claimed = manifest.rowCounts[table];
@@ -179,12 +226,6 @@ class BackupCodec {
           table: table,
         );
       }
-    }
-
-    for (var version = manifest.schemaVersion;
-        version < supportedSchemaVersion;
-        version++) {
-      payload = _upgraders[version]!(payload);
     }
 
     return BackupBundle(manifest, payload);

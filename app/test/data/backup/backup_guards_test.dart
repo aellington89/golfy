@@ -72,9 +72,9 @@ void main() {
       BackupCodec.supportedSchemaVersion,
       db.schemaVersion,
       reason: 'the schema moved. Decide what happens to backups written at '
-          'version ${BackupCodec.supportedSchemaVersion}: either register a '
-          'payload upgrader in BackupCodec and capture a golden file at the '
-          'old version, or declare the break with a `- **BREAKING:**` '
+          'version ${BackupCodec.supportedSchemaVersion}: either register an '
+          'upgrader in BackupCodec and freeze a copy of the golden files '
+          'at the old version, or declare the break with a `- **BREAKING:**` '
           'changelog entry (RELEASING.md). Then bump '
           'supportedSchemaVersion.',
     );

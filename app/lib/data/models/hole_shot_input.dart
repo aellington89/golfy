@@ -8,10 +8,14 @@ class HoleShotInput {
     this.distanceYards,
     this.lie,
     this.result,
+    this.distanceFeet,
   });
 
   final String? club;
   final int? distanceYards;
   final String? lie;
   final String? result;
+
+  /// A putt's distance to the hole, in feet. Null for every other shot.
+  final int? distanceFeet;
 }

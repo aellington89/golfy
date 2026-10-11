@@ -1,7 +1,7 @@
 {
   "golfyBackup": {
     "formatVersion": 1,
-    "schemaVersion": 7,
+    "schemaVersion": 8,
     "appVersion": "0.4.0+38",
     "exportedAt": "2026-10-03T14:32:07.000Z",
     "platform": "android",
@@ -108,7 +108,8 @@
         "club": "Driver",
         "distance_yards": 412,
         "lie": "Tee",
-        "result": null
+        "result": null,
+        "distance_feet": null
       }
     ]
   }

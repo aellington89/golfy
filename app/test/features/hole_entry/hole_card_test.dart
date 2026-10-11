@@ -133,6 +133,14 @@ String distanceShown(WidgetTester tester, int index) => tester
     .controller!
     .text;
 
+String puttDistanceShown(WidgetTester tester, int index) => tester
+    .widget<TextField>(find.byKey(ValueKey('putt_distance_$index')))
+    .controller!
+    .text;
+
+/// [n] putts with nothing entered about them.
+List<ShotDraft> putts(int n) => List.filled(n, const ShotDraft.putt());
+
 SwitchListTile switchTile(WidgetTester tester, String label) =>
     tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, label));
 
@@ -227,7 +235,8 @@ void main() {
       final shot2 = dy(tester, find.byKey(const ValueKey('shot_row_1')));
       final gir = dy(tester, find.text('GIR'));
       final putting = dy(tester, find.text('Putting'));
-      final putts = dy(tester, find.byKey(const ValueKey('putts')));
+      final putt = dy(tester, find.byKey(const ValueKey('putt_row_0')));
+      final addPutt = dy(tester, find.byKey(const ValueKey('add_putt')));
       // "Score" labels both the section header and the score stepper.
       final scoreHeader = dy(tester, find.text('Score').first);
       final penalty = dy(tester, find.byKey(const ValueKey('penalty')));
@@ -240,8 +249,9 @@ void main() {
       expect(approach, lessThan(shot2));
       expect(shot2, lessThan(gir));
       expect(gir, lessThan(putting));
-      expect(putting, lessThan(putts));
-      expect(putts, lessThan(scoreHeader));
+      expect(putting, lessThan(putt));
+      expect(putt, lessThan(addPutt));
+      expect(addPutt, lessThan(scoreHeader));
       expect(scoreHeader, lessThan(penalty));
       // Score is the last scoring input — below every other stat.
       expect(penalty, lessThan(score));
@@ -379,9 +389,116 @@ void main() {
       await pumpCard(tester, initial: answeredPar4());
       expect(find.byKey(const ValueKey('shot_holed_1')), findsNothing);
 
-      await tapKey(tester, 'Putts_dec');
+      await tapKey(tester, 'putt_delete_0');
 
       expect(find.byKey(const ValueKey('shot_holed_1')), findsOneWidget);
+    });
+  });
+
+  group('HoleCard — putts are rows', () {
+    testWidgets('a fresh hole lays out one putt, holed, numbered after the shots',
+        (tester) async {
+      await pumpCard(tester, initial: answeredPar4());
+
+      final row = find.byKey(const ValueKey('putt_row_0'));
+      expect(row, findsOneWidget);
+      expect(
+        find.descendant(of: row, matching: find.text('Putt 1  ·  Shot 3')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('putt_holed_0')), findsOneWidget);
+      expect(puttDistanceShown(tester, 0), isEmpty);
+      expect(find.byKey(const ValueKey('putt_row_1')), findsNothing);
+    });
+
+    testWidgets('a putt asks only for its distance to the hole, in feet',
+        (tester) async {
+      await pumpCard(tester, initial: answeredPar4());
+
+      final row = find.byKey(const ValueKey('putt_row_0'));
+      expect(find.descendant(of: row, matching: find.text('ft')),
+          findsOneWidget);
+      expect(find.descendant(of: row, matching: find.text('To hole')),
+          findsOneWidget);
+      expect(
+        find.descendant(
+            of: row, matching: find.byType(DropdownButton<String?>)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('Add putt adds a row and a stroke; only the last is Holed',
+        (tester) async {
+      final state = await pumpCard(tester, initial: answeredPar4());
+
+      await tapKey(tester, 'add_putt');
+
+      expect(state.draft.putts, 2);
+      expect(state.draft.score, 4);
+      expect(find.byKey(const ValueKey('putt_row_1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('putt_holed_0')), findsNothing);
+      expect(find.byKey(const ValueKey('putt_holed_1')), findsOneWidget);
+      expect(find.text('Putt 2  ·  Shot 4'), findsOneWidget);
+    });
+
+    testWidgets('typing a distance records it in feet, and clearing unsets it',
+        (tester) async {
+      final state = await pumpCard(tester, initial: answeredPar4());
+
+      await tester.enterText(
+          find.byKey(const ValueKey('putt_distance_0')), '14');
+      await tester.pumpAndSettle();
+      expect(state.draft.puttShots.single.distanceFeet, 14);
+      expect(state.draft.puttShots.single.distanceYards, isNull);
+      expect(state.draft.score, 3, reason: 'a distance is not a stroke');
+
+      await tester.enterText(find.byKey(const ValueKey('putt_distance_0')), '');
+      await tester.pumpAndSettle();
+      expect(state.draft.puttShots.single.distanceFeet, isNull);
+    });
+
+    testWidgets('removing a putt refreshes the rows that shift up',
+        (tester) async {
+      final state = await pumpCard(
+        tester,
+        initial: answeredPar4().copyWith(score: 4, puttShots: const [
+          ShotDraft.putt(distanceFeet: 30),
+          ShotDraft.putt(distanceFeet: 3),
+        ]),
+      );
+      expect(puttDistanceShown(tester, 0), '30');
+
+      await tapKey(tester, 'putt_delete_0');
+
+      expect(state.draft.puttShots, const [ShotDraft.putt(distanceFeet: 3)]);
+      expect(state.draft.score, 3);
+      expect(puttDistanceShown(tester, 0), '3');
+      expect(find.byKey(const ValueKey('putt_row_1')), findsNothing);
+    });
+
+    testWidgets('a holed putt fits a phone-width card', (tester) async {
+      // The header carries the label, the Holed badge and the remove button;
+      // at a phone's width the label is what gives way, not the row.
+      await pumpCard(tester, initial: answeredPar4());
+      tester.view.physicalSize = const Size(360, 3000);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('putt_holed_0')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('with no putts the section says so, and a putt can come back',
+        (tester) async {
+      final state = await pumpCard(tester, initial: answeredPar4());
+      expect(find.byKey(const ValueKey('no_putts')), findsNothing);
+
+      await tapKey(tester, 'putt_delete_0');
+      expect(state.draft.putts, 0);
+      expect(find.byKey(const ValueKey('no_putts')), findsOneWidget);
+
+      await tapKey(tester, 'add_putt');
+      expect(state.draft.putts, 1);
+      expect(find.byKey(const ValueKey('no_putts')), findsNothing);
     });
   });
 
@@ -418,7 +535,7 @@ void main() {
       expect(find.text('Up/Down success'), findsOneWidget);
       // It sits with the putts that decide it.
       expect(
-        dy(tester, find.byKey(const ValueKey('putts'))),
+        dy(tester, find.byKey(const ValueKey('putt_row_0'))),
         lessThan(dy(tester, find.text('Up/Down success'))),
       );
     });
@@ -445,7 +562,7 @@ void main() {
       );
       expect(state.draft.upDownSuccess, isTrue);
 
-      await tapKey(tester, 'Putts_inc');
+      await tapKey(tester, 'add_putt');
 
       expect(state.draft.putts, 2);
       expect(state.draft.upDownSuccess, isFalse);
@@ -453,7 +570,7 @@ void main() {
       expect(find.text('N/A — 2+ putts'), findsOneWidget);
 
       // And back down to one putt selects it again.
-      await tapKey(tester, 'Putts_dec');
+      await tapKey(tester, 'putt_delete_1');
       expect(state.draft.upDownSuccess, isTrue);
     });
 
@@ -518,7 +635,7 @@ void main() {
       final state = await pumpCard(tester, initial: answeredPar4());
       expect(find.text('2 shots + 1 putt'), findsOneWidget);
 
-      await tapKey(tester, 'Putts_inc');
+      await tapKey(tester, 'add_putt');
       await tapKey(tester, 'Penalty strokes_inc');
 
       expect(state.draft.score, 5);
@@ -589,6 +706,7 @@ void main() {
 
       expect(state.draft.shots, hasLength(2));
       expect(state.draft.putts, 2);
+      expect(find.byKey(const ValueKey('putt_row_1')), findsOneWidget);
       expect(find.byKey(const ValueKey('hole_warnings')), findsNothing);
     });
   });
@@ -598,7 +716,8 @@ void main() {
         (tester) async {
       await pumpCard(
         tester,
-        initial: HoleDraft.initial(par: 4).copyWith(score: 3, putts: 2),
+        initial:
+            HoleDraft.initial(par: 4).copyWith(score: 3, puttShots: putts(2)),
       );
       final btn =
           tester.widget<IconButton>(find.byKey(const ValueKey('Score_dec')));
@@ -608,18 +727,9 @@ void main() {
     testWidgets('score decrement is disabled at score == 1', (tester) async {
       await pumpCard(
         tester,
-        initial: HoleDraft.initial().copyWith(score: 1, putts: 0),
+        initial: HoleDraft.initial().copyWith(score: 1, puttShots: const []),
       );
       final btn = tester.widget<IconButton>(find.byKey(const ValueKey('Score_dec')));
-      expect(btn.onPressed, isNull);
-    });
-
-    testWidgets('putts decrement is disabled at putts == 0', (tester) async {
-      await pumpCard(
-        tester,
-        initial: HoleDraft.initial().copyWith(putts: 0),
-      );
-      final btn = tester.widget<IconButton>(find.byKey(const ValueKey('Putts_dec')));
       expect(btn.onPressed, isNull);
     });
 

@@ -153,11 +153,12 @@ app/test/
   course-play order (Hole → Tee shot → Approach & around the green → Putting →
   Score), and each shot is entered in the section whose stats it decides: the
   tee shot with "Fairway hit?" / "Green hit?", the approach shots with GIR and
-  the bunker and up & down switches, the putts as a count. Par and yardage
-  pre-fill from the round's course template and chosen yardage set (#36),
-  editable per hole; the shots — club / distance / lie / result (#22) — persist
-  to `hole_shots` alongside the hole via `GolfyRepository.saveHole`, one row per
-  stroke with the putts written out from the count.
+  the bunker and up & down switches, and a row per putt under Putting with its
+  distance to the hole in feet (the putts count is how many there are). Par and
+  yardage pre-fill from the round's course template and chosen yardage set
+  (#36), editable per hole; the shots — club / distance / lie / result (#22),
+  plus a putt's distance in feet — persist to `hole_shots` alongside the hole
+  via `GolfyRepository.saveHole`, one row per stroke, putts included.
 - **Hole rules are pure and decide everything.**
   [`hole_rules.dart`](lib/features/hole_entry/hole_rules.dart) re-derives what
   follows from an edit — the score from the strokes, GIR from the strokes to the

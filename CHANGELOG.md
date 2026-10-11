@@ -8,6 +8,38 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+
+- **Each putt is a shot again, entered under Putting, with its distance in
+  feet.** v0.5.0 reduced the putts to a bare Putts count. Now every putt has
+  its own row in the **Putting** section — "Putt 1 · Shot 3" — asking for its
+  distance to the hole in feet, the unit golf games show on the green. **Add
+  putt** and each row's remove button replace the Putts stepper, so the putts
+  count is simply how many rows there are; the last putt is badged Holed, and
+  with no putts the section says the hole was finished from off the green. The
+  score, up & down success and sand save follow the putts as before. "Count it
+  as a putt", offered for a shot played from the green, now moves that shot to
+  the first putt row and carries its distance across in feet. Holes saved
+  before this keep their putts, each laid out as a row with no distance, and
+  still read "Saved".
+
+- **The schema moves to v8**: putt distances are stored in a new
+  `hole_shots.distance_feet` column, and a migration adds it on upgrade —
+  every shot already saved simply has no putt distance. Backups move with it:
+  new ones carry `distance_feet` on every shot, and a backup made by v0.4.0 or
+  v0.5.0 (schema v7) still reads, each of its shots without a putt distance
+  ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).
+
+### Internal
+
+- **Backup upgraders run on the file's raw rows**, before they are decoded:
+  a decoded row already has today's columns, so checking a v7 row against them
+  refused the file for being old rather than broken. The v7 → v8 upgrader gives
+  every shot a null `distance_feet` and refuses a v7 file that already has one.
+  The v0.5.0 golden files are frozen as `backup_v1_schema7_*.json` and tested
+  to still read; the current goldens now include a putt measured in feet.
+  Tests 729 → 755.
+
 ## [0.5.0] - 2026-10-10
 
 A release about the one screen you use on every hole. Entering a hole used to

@@ -51,7 +51,7 @@ class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -131,6 +131,12 @@ class GolfyDatabase extends _$GolfyDatabase {
             // Recreates hole_results without the flat shot columns; the
             // TableMigration also re-creates the table's own idx_holes_round.
             await m.alterTable(TableMigration(schema.holeResults));
+          },
+          // v7 -> v8: putts record their distance to the hole in feet
+          // (`hole_shots.distance_feet`). Plain additive change — every shot
+          // saved before it simply has no putt distance.
+          from7To8: (m, schema) async {
+            await m.addColumn(schema.holeShots, schema.holeShots.distanceFeet);
           },
         ),
         beforeOpen: (details) async {

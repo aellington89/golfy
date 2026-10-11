@@ -14,6 +14,17 @@ void main() {
   HoleIssue issue(HoleDraft d, HoleIssueKind kind) =>
       holeIssues(d).firstWhere((i) => i.kind == kind);
 
+  // Sets the putt count the way the form does: a putt row at a time.
+  HoleDraft setPutts(HoleDraft d, int n) {
+    while (d.putts < n) {
+      d = addPutt(d);
+    }
+    while (d.putts > n) {
+      d = removePutt(d, d.putts - 1);
+    }
+    return d;
+  }
+
   group('the tee shot result', () {
     test('a fresh hole cannot be saved until it is answered', () {
       final d = par4();
@@ -117,7 +128,7 @@ void main() {
     test('follows every stroke added or taken away', () {
       var d = answerTeeShot(par4(), true); // tee, fairway, 1 putt
       expect(d.score, 3);
-      d = applyEdit(d, d.copyWith(putts: 2));
+      d = setPutts(d, 2);
       expect(d.score, 4);
       d = addShot(d);
       expect(d.score, 5);
@@ -137,7 +148,7 @@ void main() {
       // Recording the missing strokes closes the gap without moving the score.
       d = addShot(d);
       expect(d.score, 5);
-      d = applyEdit(d, d.copyWith(putts: 2));
+      d = setPutts(d, 2);
       expect(d.score, 5);
       expect(canSave(d), isTrue);
     });
@@ -165,7 +176,7 @@ void main() {
 
     test('a score below the strokes can only be matched, not filled', () {
       var d = answerTeeShot(par4(), true);
-      d = applyEdit(d, d.copyWith(putts: 2));
+      d = setPutts(d, 2);
       d = applyEdit(d, d.copyWith(score: 3));
       final fixes = issue(d, HoleIssueKind.scoreMismatch).fixes;
       expect([for (final f in fixes) f.id], ['match_score']);
@@ -228,10 +239,68 @@ void main() {
     });
   });
 
+  group('putts are rows', () {
+    test('a fresh hole has one putt, holed, with no distance yet', () {
+      final d = par4();
+      expect(d.puttShots, const [ShotDraft.putt()]);
+      expect(d.putts, 1);
+      expect(d.shotInputs().last.result, holedResult);
+      expect(d.shotInputs().last.distanceFeet, isNull);
+    });
+
+    test('adding a putt counts its stroke and lays out a blank one', () {
+      var d = answerTeeShot(par4(), true);
+      d = addPutt(d);
+      expect(d.putts, 2);
+      expect(d.score, 4);
+      expect(d.puttShots.last, const ShotDraft.putt());
+    });
+
+    test('a putt is a putter from the green', () {
+      final putt = addPutt(par4()).puttShots.last;
+      expect(putt.club, putterClub);
+      expect(putt.lie, greenLie);
+      expect(putt.isPutt, isTrue);
+    });
+
+    test('a putt\'s distance is in feet and moves nothing else', () {
+      final d = answerTeeShot(par4(), true);
+      final measured = updatePutt(
+          d, 0, d.puttShots[0].copyWith(distanceFeet: 12));
+      expect(measured.puttShots.single.distanceFeet, 12);
+      expect(measured.puttShots.single.distanceYards, isNull);
+      expect(measured.copyWith(puttShots: d.puttShots), d);
+    });
+
+    test('removing a putt takes its stroke away and keeps the others', () {
+      var d = setPutts(answerTeeShot(par4(), true), 2);
+      d = updatePutt(d, 0, d.puttShots[0].copyWith(distanceFeet: 30));
+      d = updatePutt(d, 1, d.puttShots[1].copyWith(distanceFeet: 3));
+      d = removePutt(d, 0);
+      expect(d.putts, 1);
+      expect(d.score, 3);
+      expect(d.puttShots.single.distanceFeet, 3);
+    });
+
+    test('removing the only putt leaves the hole finished off the green', () {
+      final d = removePutt(answerTeeShot(par4(), true), 0);
+      expect(d.putts, 0);
+      expect(d.score, 2);
+      expect(d.shotInputs().last.lie, 'Fairway');
+      expect(d.shotInputs().last.result, holedResult);
+    });
+
+    test('removing a putt that isn\'t there changes nothing', () {
+      final d = answerTeeShot(par4(), true);
+      expect(removePutt(d, 1), d);
+      expect(removePutt(d, -1), d);
+    });
+  });
+
   group('up & down success follows the putts', () {
     HoleDraft attempted({int putts = 1}) {
       final d = answerTeeShot(par4(), false);
-      final withPutts = applyEdit(d, d.copyWith(putts: putts));
+      final withPutts = setPutts(d, putts);
       return applyEdit(withPutts, withPutts.copyWith(upDownAttempt: true));
     }
 
@@ -249,13 +318,13 @@ void main() {
 
     test('dropping to one putt after the attempt selects it', () {
       var d = attempted(putts: 2);
-      d = applyEdit(d, d.copyWith(putts: 1));
+      d = setPutts(d, 1);
       expect(d.upDownSuccess, isTrue);
     });
 
     test('a second putt clears it', () {
       var d = attempted(putts: 1);
-      d = applyEdit(d, d.copyWith(putts: 2));
+      d = setPutts(d, 2);
       expect(d.upDownSuccess, isFalse);
     });
 
@@ -292,7 +361,7 @@ void main() {
     HoleDraft inBunker({int putts = 1}) {
       var d = answerTeeShot(par4(), false);
       d = updateShot(d, 1, d.shots[1].copyWith(lie: 'Bunker'));
-      return applyEdit(d, d.copyWith(putts: putts));
+      return setPutts(d, putts);
     }
 
     test('a bunker lie turns bunker visited on, and removing it turns it off',
@@ -327,7 +396,7 @@ void main() {
       d = applyEdit(d, d.copyWith(bunkerVisited: true));
       d = applyEdit(d, d.copyWith(sandSave: true));
       expect(d.sandSave, isTrue);
-      d = applyEdit(d, d.copyWith(putts: 2));
+      d = setPutts(d, 2);
       expect(d.sandSave, isFalse, reason: 'two putts is never a save');
     });
   });
@@ -372,7 +441,7 @@ void main() {
 
     test('with no putts the last shot cannot be a penalty', () {
       var d = answerTeeShot(par4(), false);
-      d = applyEdit(d, d.copyWith(putts: 0));
+      d = setPutts(d, 0);
       d = updateShot(d, 1, d.shots[1].copyWith(result: penaltyResult));
       expect(kinds(d), contains(HoleIssueKind.unholedFinish));
     });
@@ -390,6 +459,17 @@ void main() {
       expect(fixed.putts, 2);
       expect(fixed.score, d.score);
       expect(kinds(fixed), isEmpty);
+    });
+
+    test('the moved shot becomes the first putt, its distance in feet', () {
+      var d = addShot(answerTeeShot(par4(), true));
+      d = updateShot(
+          d, 2, d.shots[2].copyWith(lie: 'Green', distanceYards: 4));
+      d = updatePutt(d, 0, d.puttShots[0].copyWith(distanceFeet: 2));
+
+      final fixed = issue(d, HoleIssueKind.shotFromGreen).fixes.single.apply(d);
+      expect([for (final p in fixed.puttShots) p.distanceFeet], [12, 2]);
+      expect(fixed.puttShots.first.isPutt, isTrue);
     });
   });
 
@@ -428,7 +508,8 @@ void main() {
     test('lists shots, putts and any penalties', () {
       var d = answerTeeShot(par4(), true);
       expect(strokeTally(d), '2 shots + 1 putt');
-      d = applyEdit(d, d.copyWith(putts: 2, penaltyStrokes: 1));
+      d = setPutts(d, 2);
+      d = applyEdit(d, d.copyWith(penaltyStrokes: 1));
       expect(strokeTally(d), '2 shots + 2 putts + 1 penalty');
     });
   });

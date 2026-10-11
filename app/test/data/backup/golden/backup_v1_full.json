@@ -1,7 +1,7 @@
 {
   "golfyBackup": {
     "formatVersion": 1,
-    "schemaVersion": 7,
+    "schemaVersion": 8,
     "appVersion": "0.4.0+38",
     "exportedAt": "2026-10-03T14:32:07.000Z",
     "platform": "android",
@@ -13,7 +13,7 @@
       "events": 4,
       "rounds": 3,
       "hole_results": 26,
-      "hole_shots": 5
+      "hole_shots": 6
     }
   },
   "data": {
@@ -917,7 +917,8 @@
         "club": "Driver",
         "distance_yards": 401,
         "lie": "Tee",
-        "result": null
+        "result": null,
+        "distance_feet": null
       },
       {
         "id": 2,
@@ -926,7 +927,8 @@
         "club": "7 iron",
         "distance_yards": 160,
         "lie": "Light Rough",
-        "result": "Penalty"
+        "result": "Penalty",
+        "distance_feet": null
       },
       {
         "id": 3,
@@ -935,25 +937,38 @@
         "club": null,
         "distance_yards": null,
         "lie": null,
-        "result": null
+        "result": null,
+        "distance_feet": null
       },
       {
         "id": 4,
+        "hole_result_id": 2,
+        "shot_number": 4,
+        "club": "Putter",
+        "distance_yards": null,
+        "lie": "Green",
+        "result": null,
+        "distance_feet": 18
+      },
+      {
+        "id": 5,
         "hole_result_id": 27,
         "shot_number": 1,
         "club": "Driver",
         "distance_yards": 454,
         "lie": "Tee",
-        "result": null
+        "result": null,
+        "distance_feet": null
       },
       {
-        "id": 5,
+        "id": 6,
         "hole_result_id": 27,
         "shot_number": 2,
         "club": "3 wood",
         "distance_yards": 210,
         "lie": "Fairway",
-        "result": "Holed"
+        "result": "Holed",
+        "distance_feet": null
       }
     ]
   }

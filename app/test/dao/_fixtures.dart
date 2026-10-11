@@ -261,6 +261,14 @@ class TestFixtures {
       // Everything optional left null — a shot the user started and never
       // filled in still has to survive a backup.
       HoleShotsCompanion.insert(holeResultId: partialHole1, shotNumber: 3),
+      // A putt, measured in feet.
+      HoleShotsCompanion.insert(
+        holeResultId: partialHole1,
+        shotNumber: 4,
+        club: const Value('Putter'),
+        lie: const Value('Green'),
+        distanceFeet: const Value(18),
+      ),
     ]);
 
     for (var h = 1; h <= 18; h++) {
@@ -316,7 +324,7 @@ class TestFixtures {
       'events': 4,
       'rounds': 3,
       'hole_results': 26, // 1 casual + 7 partial + 18 complete
-      'hole_shots': 5,
+      'hole_shots': 6,
     };
   }
 

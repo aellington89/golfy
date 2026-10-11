@@ -25,7 +25,7 @@ without being taught.
 {
   "golfyBackup": {
     "formatVersion": 1,
-    "schemaVersion": 7,
+    "schemaVersion": 8,
     "appVersion": "0.4.0+38",
     "exportedAt": "2026-10-03T14:32:07.000Z",
     "platform": "android",
@@ -68,7 +68,7 @@ declaration this supports.
   }
 ```
 
-1. **All eight tables of schema v7**, every time: `courses`, `course_holes`,
+1. **All eight tables of schema v8**, every time: `courses`, `course_holes`,
    `course_sets`, `course_set_yards`, `events`, `rounds`, `hole_results`,
    `hole_shots`. A missing table is a malformed file, not an empty one — an
    empty table is `[]`.
@@ -81,7 +81,7 @@ declaration this supports.
    and therefore diffable.
 4. **Keys are SQL names.** Table keys are table names, row keys are column
    names (`game_title`, not `gameTitle`) — so a backup reads identically to
-   `app/drift_schemas/drift_schema_v7.json`, the schema's own description of
+   `app/drift_schemas/drift_schema_v8.json`, the schema's own description of
    itself. This comes from drift's `use_sql_column_name_as_json_key` option in
    [`app/build.yaml`](app/build.yaml).
 5. **Every column, explicitly**, including ones the app no longer writes
@@ -140,13 +140,23 @@ describe an impossible database, so the two stay separate steps.
 |---|---|
 | `schemaVersion` **equal** to the app's | Read it |
 | `schemaVersion` **greater** | Refuse: "this backup was made by a newer version of Golfy" |
-| `schemaVersion` **lower** | Run the registered payload upgraders, in order, then read it |
+| `schemaVersion` **lower** | Run the registered upgraders, in order, then read it |
 | `formatVersion` anything but 1 | Refuse |
 
-The upgrader registry is **empty**, and that is not an oversight: export did
-not exist before schema v7, so no Golfy build can ever have written an older
-backup. The registry exists so the first schema bump after this one has an
-obvious home, and a guard test makes sure it is not forgotten.
+Upgraders rewrite an older file's rows **as JSON, before they are decoded**,
+into the shape of the next version. They have to: a decoded row already has
+today's columns, so checking an old row against them would refuse a file for
+being old rather than broken. Once upgraded, the rows are decoded and checked
+exactly like a current file's, and the row counts still mean what the file
+said — an upgrader adds or rewrites columns, never rows.
+
+| From | To | What changed | The upgrade |
+|---|---|---|---|
+| 7 | 8 | Putts record their distance to the hole in feet: `hole_shots.distance_feet` | Every `hole_shots` row gains `"distance_feet": null`. A v7 row that already has the key is refused — v7 had no such column, so the file was edited. |
+
+Nothing older than v7 can be upgraded, and nothing needs to be: export did not
+exist before schema v7, so no Golfy build can have written an older backup.
+A file that claims an older version is refused as one Golfy cannot upgrade.
 
 ## Restoring one
 
@@ -203,9 +213,12 @@ on" fails. Decide:
 
 - *Old backups can still be read* — register an upgrader in
   `BackupCodec._upgraders`, keyed by the version it upgrades **from**, that
-  rewrites only the tables the migration touched (`BackupPayload.copyWith`
-  exists for this). Capture a golden file at the old version so the upgrade
-  stays tested. Then bump `supportedSchemaVersion`.
+  rewrites the raw rows of only the tables the migration touched (an added
+  nullable column is `_addNullColumn`). **Before** regenerating the goldens,
+  copy the current pair to `backup_v1_schemaN_*.json` (N being the old version)
+  and test that they still read — those copies are never regenerated, because
+  they are files people already have. Then bump `supportedSchemaVersion` and
+  add a row to the upgrade table above.
 - *They cannot* — bump `supportedSchemaVersion` and declare the break with a
   `- **BREAKING:**` changelog entry, which
   [`RELEASING.md`](RELEASING.md#declaring-a-breaking-change) treats as a major

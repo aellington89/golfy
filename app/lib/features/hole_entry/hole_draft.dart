@@ -17,7 +17,20 @@ const String penaltyResult = 'Penalty';
 /// One shot's editable fields in the Hole Entry form (#22). Value type; its
 /// `shotNumber` is assigned from position in [HoleDraft.shotInputs] on save.
 class ShotDraft {
-  const ShotDraft({this.club, this.distanceYards, this.lie, this.result});
+  const ShotDraft({
+    this.club,
+    this.distanceYards,
+    this.lie,
+    this.result,
+    this.distanceFeet,
+  });
+
+  /// A putt: a putter from the green, measured in feet to the hole.
+  const ShotDraft.putt({this.distanceFeet})
+      : club = putterClub,
+        distanceYards = null,
+        lie = greenLie,
+        result = null;
 
   /// A hole's tee shot before anything about it is entered. It is the only shot
   /// whose distance is known in advance: the whole hole is in front of it.
@@ -31,11 +44,16 @@ class ShotDraft {
   final String? lie;
   final String? result;
 
+  /// A putt's distance to the hole, in feet. Null for every other shot, whose
+  /// distance is [distanceYards].
+  final int? distanceFeet;
+
   factory ShotDraft.fromHoleShot(HoleShot s) => ShotDraft(
         club: s.club,
         distanceYards: s.distanceYards,
         lie: s.lie,
         result: s.result,
+        distanceFeet: s.distanceFeet,
       );
 
   HoleShotInput toInput() => HoleShotInput(
@@ -43,18 +61,24 @@ class ShotDraft {
         distanceYards: distanceYards,
         lie: lie,
         result: result,
+        distanceFeet: distanceFeet,
       );
 
   /// Nothing about this shot has been entered yet. Such a row is a placeholder
   /// the form laid out — an "Add shot" tap, or a suggestion the hole's own
   /// fields couldn't fill in — rather than a shot the player recorded.
   bool get isBlank =>
-      club == null && distanceYards == null && lie == null && result == null;
+      club == null &&
+      distanceYards == null &&
+      lie == null &&
+      result == null &&
+      distanceFeet == null;
 
   bool get isPenalty => result == penaltyResult;
 
-  /// A row a saved shot list carries for a putt. Putts are not rows in a
-  /// [HoleDraft] — `putts` counts them — so these are stripped on load.
+  /// Whether a row of a saved shot list is a putt. A [HoleDraft] keeps its
+  /// putts apart from the shots before them ([HoleDraft.puttShots]), so this is
+  /// how a saved list is split on load.
   bool get isPutt => club == putterClub || lie == greenLie;
 
   ShotDraft copyWith({
@@ -62,6 +86,7 @@ class ShotDraft {
     Object? distanceYards = _sentinel,
     Object? lie = _sentinel,
     Object? result = _sentinel,
+    Object? distanceFeet = _sentinel,
   }) {
     return ShotDraft(
       club: identical(club, _sentinel) ? this.club : club as String?,
@@ -70,6 +95,9 @@ class ShotDraft {
           : distanceYards as int?,
       lie: identical(lie, _sentinel) ? this.lie : lie as String?,
       result: identical(result, _sentinel) ? this.result : result as String?,
+      distanceFeet: identical(distanceFeet, _sentinel)
+          ? this.distanceFeet
+          : distanceFeet as int?,
     );
   }
 
@@ -81,10 +109,12 @@ class ShotDraft {
           club == other.club &&
           distanceYards == other.distanceYards &&
           lie == other.lie &&
-          result == other.result;
+          result == other.result &&
+          distanceFeet == other.distanceFeet;
 
   @override
-  int get hashCode => Object.hash(club, distanceYards, lie, result);
+  int get hashCode =>
+      Object.hash(club, distanceYards, lie, result, distanceFeet);
 }
 
 /// Mutable in-memory state for a single hole's entry form. Lives in the
@@ -92,14 +122,14 @@ class ShotDraft {
 /// in the PageView without losing un-saved edits.
 ///
 /// Holds the hole-level fields, `yards` (auto-filled from the round's yardage
-/// set, editable per round — #36), and the strokes played before putting as an
-/// ordered [shots] list (#22): the tee shot first, then every approach and
-/// around-the-green shot. Putts are counted by [putts] rather than listed, and
-/// become rows of their own only when the hole is saved ([shotInputs]), so the
-/// two can never disagree. `score` stays the authoritative scoring field; the
-/// form keeps it in step with [countedScore] and won't save a hole where they
-/// differ (see `hole_rules.dart`). Shots persist to the separate `hole_shots`
-/// table via [GolfyRepository.saveHole].
+/// set, editable per round — #36), and every stroke as two ordered lists (#22):
+/// [shots], the strokes played before putting — the tee shot first, then every
+/// approach and around-the-green shot — and [puttShots], the putts. [putts] is
+/// simply how many putt rows there are, so the count and the rows can never
+/// disagree. `score` stays the authoritative scoring field; the form keeps it in
+/// step with [countedScore] and won't save a hole where they differ (see
+/// `hole_rules.dart`). Shots persist to the separate `hole_shots` table via
+/// [GolfyRepository.saveHole].
 class HoleDraft {
   const HoleDraft({
     required this.par,
@@ -107,7 +137,7 @@ class HoleDraft {
     required this.score,
     required this.fairwayHit,
     required this.gir,
-    required this.putts,
+    required this.puttShots,
     required this.upDownAttempt,
     required this.upDownSuccess,
     required this.bunkerVisited,
@@ -124,14 +154,14 @@ class HoleDraft {
   /// and the form won't save until the tee shot's result is recorded.
   factory HoleDraft.initial({int par = 4, int yards = 0}) {
     final shots = [ShotDraft.tee(yards)];
-    const putts = 1;
+    const puttShots = [ShotDraft.putt()];
     return HoleDraft(
       par: par,
       yards: yards,
-      score: shots.length + putts,
+      score: shots.length + puttShots.length,
       fairwayHit: null,
       gir: null,
-      putts: putts,
+      puttShots: puttShots,
       upDownAttempt: false,
       upDownSuccess: false,
       bunkerVisited: false,
@@ -145,50 +175,54 @@ class HoleDraft {
   /// Seed a draft from a previously-saved hole_results row and the hole's saved
   /// [shots] (`hole_shots`, stored separately).
   ///
-  /// The saved list is brought into the shape the form edits: trailing putt
-  /// rows come off (they are re-made from `putts` on save), a `Holed` result
-  /// comes off (it always belongs to the last stroke, so it is re-derived too),
-  /// and a hole saved with no shots at all — anything entered before #22 — gets
-  /// its tee shot laid out. Both the live draft and the saved snapshot it is
-  /// compared against are built here, so a hole that has only been opened still
-  /// reads "Saved".
+  /// The saved list is split where putting starts and brought into the shape
+  /// the form edits. The putts are the putt rows the list ends on — as many as
+  /// the row's `putts` count, which is what the stats read — and a hole saved
+  /// with fewer putt rows than that (anything entered before #22, or before
+  /// putts had rows of their own) gets the rest laid out, blank. A `Holed`
+  /// result comes off (it always belongs to the last stroke, so it is
+  /// re-derived on save), and a hole saved with no shots at all gets its tee
+  /// shot laid out. Both the live draft and the saved snapshot it is compared
+  /// against are built here, so a hole that has only been opened still reads
+  /// "Saved".
   factory HoleDraft.fromSaved(HoleResult h, [List<ShotDraft> shots = const []]) {
+    final rows = [
+      for (final s in shots)
+        s.result == holedResult ? s.copyWith(result: null) : s,
+    ];
+    // The first row is the tee shot whatever it holds, so it is never taken
+    // for a putt.
+    var start = rows.length;
+    while (start > 1 &&
+        rows.length - start < h.putts &&
+        rows[start - 1].isPutt) {
+      start--;
+    }
+    final before = rows.sublist(0, start);
+    if (before.isEmpty) {
+      before.add(ShotDraft.tee(h.yards));
+    } else if (before.first.lie == null) {
+      before[0] = before.first.copyWith(lie: teeLie);
+    }
     return HoleDraft(
       par: h.par,
       yards: h.yards,
       score: h.score,
       fairwayHit: h.fairwayHit,
       gir: h.gir,
-      putts: h.putts,
+      puttShots: [
+        ...rows.sublist(start),
+        for (var i = rows.length - start; i < h.putts; i++)
+          const ShotDraft.putt(),
+      ],
       upDownAttempt: h.upDownAttempt,
       upDownSuccess: h.upDownSuccess,
       bunkerVisited: h.bunkerVisited,
       sandSave: h.sandSave,
       penaltyStrokes: h.penaltyStrokes,
-      shots: _strokesBeforePutting(shots, h.yards),
+      shots: before,
       notes: h.notes ?? '',
     );
-  }
-
-  static List<ShotDraft> _strokesBeforePutting(
-    List<ShotDraft> saved,
-    int yards,
-  ) {
-    if (saved.isEmpty) return [ShotDraft.tee(yards)];
-    // The first row is the tee shot whatever it holds, so it is never taken
-    // for a putt.
-    var end = saved.length;
-    while (end > 1 && saved[end - 1].isPutt) {
-      end--;
-    }
-    final rows = [
-      for (var i = 0; i < end; i++)
-        saved[i].result == holedResult
-            ? saved[i].copyWith(result: null)
-            : saved[i],
-    ];
-    if (rows.first.lie == null) rows[0] = rows.first.copyWith(lie: teeLie);
-    return rows;
   }
 
   final int par;
@@ -201,7 +235,11 @@ class HoleDraft {
   /// derived from the strokes it took to reach the green once the tee shot is
   /// in. Saved as `false` if it somehow never was.
   final bool? gir;
-  final int putts;
+
+  /// The putts, in order: each a putter from the green, with its distance to
+  /// the hole in feet. Empty when the hole was finished from off the green.
+  final List<ShotDraft> puttShots;
+
   final bool upDownAttempt;
   final bool upDownSuccess;
   final bool bunkerVisited;
@@ -209,10 +247,13 @@ class HoleDraft {
   final int penaltyStrokes;
 
   /// The strokes played before putting, in order (#22): the tee shot first,
-  /// then the approach and around-the-green shots. Putts are not listed here.
+  /// then the approach and around-the-green shots. Putts are [puttShots].
   final List<ShotDraft> shots;
 
   final String notes;
+
+  /// How many putts the hole took — the `putts` the stats read.
+  int get putts => puttShots.length;
 
   /// Strokes played before the first putt — at least the tee shot, even for a
   /// draft whose list is empty.
@@ -228,7 +269,7 @@ class HoleDraft {
     int? score,
     Object? fairwayHit = _sentinel,
     Object? gir = _sentinel,
-    int? putts,
+    List<ShotDraft>? puttShots,
     bool? upDownAttempt,
     bool? upDownSuccess,
     bool? bunkerVisited,
@@ -245,7 +286,7 @@ class HoleDraft {
           ? this.fairwayHit
           : fairwayHit as bool?,
       gir: identical(gir, _sentinel) ? this.gir : gir as bool?,
-      putts: putts ?? this.putts,
+      puttShots: puttShots ?? this.puttShots,
       upDownAttempt: upDownAttempt ?? this.upDownAttempt,
       upDownSuccess: upDownSuccess ?? this.upDownSuccess,
       bunkerVisited: bunkerVisited ?? this.bunkerVisited,
@@ -283,8 +324,8 @@ class HoleDraft {
   }
 
   /// Every stroke of the hole as repository inputs (order preserved → shot
-  /// numbers), for [GolfyRepository.saveHole]: [shots], then one putter row
-  /// from the green per putt, with the final stroke holed.
+  /// numbers), for [GolfyRepository.saveHole]: [shots], then [puttShots], with
+  /// the final stroke holed.
   ///
   /// A blank row is kept wherever it sits. Each row is a stroke the score
   /// counts, and a shot's number is its place in the hole's chronology, so
@@ -293,11 +334,7 @@ class HoleDraft {
   /// that misses the green leaves behind, since nothing says where it finished
   /// until the lie is picked.
   List<HoleShotInput> shotInputs() {
-    final strokes = <ShotDraft>[
-      ...shots,
-      for (var i = 0; i < putts; i++)
-        const ShotDraft(club: putterClub, lie: greenLie),
-    ];
+    final strokes = <ShotDraft>[...shots, ...puttShots];
     // A stroke that cost a penalty wasn't the one that went in, so it is left
     // as it is; the form won't save a hole that ends that way anyway.
     if (strokes.isNotEmpty && strokes.last.result == null) {
@@ -316,7 +353,7 @@ class HoleDraft {
           score == other.score &&
           fairwayHit == other.fairwayHit &&
           gir == other.gir &&
-          putts == other.putts &&
+          listEquals(puttShots, other.puttShots) &&
           upDownAttempt == other.upDownAttempt &&
           upDownSuccess == other.upDownSuccess &&
           bunkerVisited == other.bunkerVisited &&
@@ -332,7 +369,7 @@ class HoleDraft {
         score,
         fairwayHit,
         gir,
-        putts,
+        Object.hashAll(puttShots),
         upDownAttempt,
         upDownSuccess,
         bunkerVisited,
