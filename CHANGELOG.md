@@ -8,6 +8,31 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-11
+
+A release about the yardage on a course ([#127]). Until now a course had
+"yardage sets" with one number per hole, and nothing said whether a set was a
+tee box or a set of pins, so the scorecard yardage and the distance to the pin
+were one field. They are different numbers. A tee set's **course yards** depend
+on the tee box alone. How far a hole plays to the pin depends on the tee set
+and the pin set together, so **tee-to-pin** yards are kept for each tee set and
+pin set. A round now records both, and each hole pre-fills from that pair. Par
+and stroke index stay one per hole.
+
+Your yardage sets come across as what they were. Each one was named "Tee Set -
+Pin Set" and held that pair's distances to the pin. So "Blue - Sunday pins"
+becomes the tee set Blue and the pin set Sunday pins, and its yards become
+Blue's tee-to-pin yards to Sunday pins. A round played on it is now played on
+that pair. Course yards start empty, because nothing recorded them before. A
+set whose name has no " - " becomes a tee set on its own, and its yards become
+that tee set's course yards.
+
+The schema **moves**, v8 → v9, and a migration runs on every device that
+installs this. It runs in a single step that either finishes or leaves the
+database as it was. Backups made by v0.4.0 to v0.6.0 still read, converted the
+same way. The release is a **minor**, both for the `### Changed` entries below
+and because the schema rose.
+
 ### Changed
 
 - **Yardage is split into tee sets and pin sets.** A course used to have just
@@ -912,7 +937,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/aellington89/golfy/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/aellington89/golfy/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/aellington89/golfy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/aellington89/golfy/compare/v0.3.3...v0.4.0
@@ -976,3 +1002,4 @@ Phase 1 — data layer and navigation shell.
 [#118]: https://github.com/aellington89/golfy/pull/118
 [#120]: https://github.com/aellington89/golfy/pull/120
 [#125]: https://github.com/aellington89/golfy/pull/125
+[#127]: https://github.com/aellington89/golfy/pull/127
