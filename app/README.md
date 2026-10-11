@@ -60,7 +60,8 @@ app/lib/
 │   ├── models/                    # RoundWithCourse (+ its event), HoleShotInput,
 │   │                              #   DashboardStats / EventStats value classes
 │   └── upgrades/                  # frozen data conversions a migration and the
-│                                  #   matching backup upgrader share (v8 putts)
+│                                  #   matching backup upgrader share (v8 putts,
+│                                  #   v9 yardage split)
 ├── features/
 │   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
 │   │                              #   one-screen course setup (par + stroke index +
@@ -92,7 +93,7 @@ app/test/
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
 ├── data/backup/                  # format: codec (write), decode (read), guards,
 │   │                              #   golden files — the backup contract (#69)
-├── data/upgrades/                # the frozen v7 -> v8 putt conversion rule
+├── data/upgrades/                # the frozen v7 -> v8 putt and v8 -> v9 yardage rules
 ├── dao/
 │   ├── _fixtures.dart             # shared in-memory DB fixtures (incl. the
 │   │                              #   full multi-round backup fixture)
@@ -298,13 +299,16 @@ The `drift_schemas/*.json` snapshots, `lib/data/schema_versions.dart`, and
 > `drive_distance_yards`, `approach_distance_yards`) by rebuilding `hole_results`
 > with a `TableMigration`, preserving every existing hole's scoring data. The
 > v8 migration adds `hole_shots.distance_feet` and converts putts saved in
-> yards. The v9 migration splits yardage by tee set and pin set: each
-> `course_sets` row becomes a `tee_sets` row (ids kept) and its yardages that
-> tee set's `course_yards`; `pin_sets` and `tee_to_pin_yards` (per tee set ×
-> pin set) start empty; and `rounds` is rebuilt with a `TableMigration` swapping
-> `course_set_id` and the never-written `tee_set` label for `tee_set_id` +
-> `pin_set_id` (`SET NULL` on delete) — a round's set becomes its tee set,
-> cleared if the set was another course's.
+> yards. The v9 migration splits yardage by tee set and pin set. Each v8
+> `course_sets` row was one pair, named "Tee Set - Pin Set": its name splits
+> into a `tee_sets` row and a `pin_sets` row (shared by sets naming the same
+> one), and its yardages become the pair's `tee_to_pin_yards` (a set named
+> without a pin set is a tee set alone, its yardages `course_yards`).
+> `rounds` is rebuilt with a `TableMigration` swapping `course_set_id` and the
+> never-written `tee_set` label for `tee_set_id` + `pin_set_id` (`SET NULL` on
+> delete): a round's set becomes its pair, cleared if the set was another
+> course's. The split is `lib/data/upgrades/split_yardage_sets.dart`, shared
+> with the v8 backup upgrader.
 
 ## Data backup (export)
 

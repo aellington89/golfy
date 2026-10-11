@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:golfy_app/data/backup/backup_codec.dart';
 import 'package:golfy_app/data/backup/backup_manifest.dart';
 import 'package:golfy_app/data/backup/backup_payload.dart';
@@ -86,19 +85,11 @@ BackupPayload samplePayload() {
   );
 }
 
-/// [samplePayload] as a file written before schema v9 reads once upgraded: its
-/// one yardage set a tee set with course yards, and no pin sets — so no
-/// tee-to-pin yards, and a round played from the tee set alone.
-BackupPayload upgradedV8SamplePayload() {
-  final sample = samplePayload();
-  return sample.copyWith(
-    pinSets: const [],
-    teeToPinYards: const [],
-    rounds: [
-      for (final r in sample.rounds) r.copyWith(pinSetId: const Value(null)),
-    ],
-  );
-}
+/// [samplePayload] as [preV9SampleTree] reads once upgraded: its one yardage
+/// set, "Blue tees - Sunday pins", back to that tee set, pin set and their
+/// tee-to-pin yards. Course yards don't come back: v8 never had them.
+BackupPayload upgradedV8SamplePayload() =>
+    samplePayload().copyWith(courseYards: const []);
 
 /// A manifest whose counts match [payload], fixed in time so encodings are
 /// reproducible.
@@ -123,12 +114,13 @@ String encodeSample([BackupPayload? payload]) {
 Map<String, Object?> sampleTree() =>
     jsonDecode(encodeSample()) as Map<String, Object?>;
 
-/// The sample file as Golfy wrote it before schema v9 split yardage sets into
-/// tee sets and pin sets, claiming [schemaVersion]: its tee set a
-/// `course_sets` row, its course yards `course_set_yards` keyed by
-/// `course_set_id`, no pin tables, and rounds carrying `course_set_id` and the
-/// legacy `tee_set` label. Everything else — `distance_feet` included — is left
-/// as today's, for the test to shape further.
+/// The sample file as Golfy wrote it before schema v9, claiming
+/// [schemaVersion]: its one yardage set a `course_sets` row named "Blue tees -
+/// Sunday pins" — the tee set and pin set it was — holding their tee-to-pin
+/// yards in `course_set_yards`, no course yards (v8 had none), and rounds
+/// carrying `course_set_id` and the legacy `tee_set` label. Everything else —
+/// `distance_feet` included — is left as today's, for the test to shape
+/// further.
 Map<String, Object?> preV9SampleTree(int schemaVersion) {
   final tree = sampleTree();
   final manifest = manifestOf(tree);
@@ -136,28 +128,43 @@ Map<String, Object?> preV9SampleTree(int schemaVersion) {
   final counts = manifest['rowCounts']! as Map<String, Object?>;
   final data = dataOf(tree);
 
-  data['course_sets'] = data.remove('tee_sets');
+  final tee = rowOf(tree, 'tee_sets');
+  final pin = rowOf(tree, 'pin_sets');
+  data['course_sets'] = [
+    {
+      'id': 1,
+      'course_id': tee['course_id'],
+      'name': '${tee['name']} - ${pin['name']}',
+    },
+  ];
   data['course_set_yards'] = [
-    for (final row in data.remove('course_yards')! as List<Object?>)
+    for (final row
+        in tableOf(tree, 'tee_to_pin_yards').cast<Map<String, Object?>>())
       {
-        for (final MapEntry(:key, :value)
-            in (row! as Map<String, Object?>).entries)
-          key == 'tee_set_id' ? 'course_set_id' : key: value,
+        'id': row['id'],
+        'course_set_id': 1,
+        'hole_number': row['hole_number'],
+        'yards': row['yards'],
       },
   ];
-  data.remove('pin_sets');
-  data.remove('tee_to_pin_yards');
+  for (final table in const [
+    'tee_sets',
+    'course_yards',
+    'pin_sets',
+    'tee_to_pin_yards',
+  ]) {
+    data.remove(table);
+    counts.remove(table);
+  }
+  counts['course_sets'] = 1;
+  counts['course_set_yards'] = tableOf(tree, 'course_set_yards').length;
   for (final row in tableOf(tree, 'rounds')) {
     final round = row! as Map<String, Object?>;
     round['tee_set'] = null;
-    round['course_set_id'] = round.remove('tee_set_id');
+    round['course_set_id'] = round['tee_set_id'] == null ? null : 1;
+    round.remove('tee_set_id');
     round.remove('pin_set_id');
   }
-
-  counts['course_sets'] = counts.remove('tee_sets');
-  counts['course_set_yards'] = counts.remove('course_yards');
-  counts.remove('pin_sets');
-  counts.remove('tee_to_pin_yards');
   return tree;
 }
 

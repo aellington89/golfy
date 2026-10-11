@@ -30,15 +30,22 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   another still copies its course yards with an offset. A pin set has no
   yards of its own, so there is nothing to copy.
 
-- **The schema moves to v9, and your yardage sets become tee sets.** The old
-  sets had one yardage per hole and no pins, which is exactly a tee set and its
-  course yards. So the migration turns each one into a tee set with the same
-  name and the same yards, and a round played on a set is now played from that
-  tee set, with no pin set. There are no pin sets until you add some. Rounds,
-  holes and shots are untouched. A round that you moved to another course
-  after choosing its set used to keep the old course's set. Its tee set is now
-  cleared, and editing a round's course clears its tee set and pin set from
-  now on. The migration runs in one step that either finishes or leaves the
+- **The schema moves to v9, and each yardage set becomes the tee set and pin
+  set it named.** An old set was one tee set and pin set together, named "Tee
+  Set - Pin Set", and its yards were the tee-to-pin yards for that pair. The
+  migration splits each name at the " - ": "Blue - Sunday pins" becomes the
+  tee set Blue and the pin set Sunday pins, and its yards become Blue's
+  tee-to-pin yards to Sunday pins. Sets that name the same tee set or pin set
+  on a course share one; "Blue - Sunday pins" and "Blue - Monday pins" give one
+  Blue tee set with a card for each set of pins. A round played on a set is now
+  played on that tee set and pin set. Course yards start empty, since the old
+  sets never recorded them; fill them in from the course editor. A set whose
+  name has no " - " can't be split. It becomes a tee set on its own, and its
+  yards become that tee set's course yards, which is what a round with no pin
+  set uses. Rounds, holes and shots are untouched. A round that you moved to
+  another course after choosing its set used to keep the old course's set. That
+  link is now cleared, and editing a round's course clears its tee set and pin
+  set from now on. The migration runs in one step that either finishes or leaves the
   database as it was. Backups move with it: new ones carry `tee_sets`,
   `course_yards`, `pin_sets` and `tee_to_pin_yards` in place of `course_sets`
   and `course_set_yards`. A backup made by v0.4.0 to v0.6.0 (schema v7 or v8)
@@ -53,11 +60,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   `YardageDao`. A tee set and a pin set can only pair on one course, and a
   round's sets must be on the round's course. SQL can't express either rule
   across parent tables, so the DAOs refuse a mismatch with an `ArgumentError`
-  and a backup's `validate()` reports one. Backup upgraders can now rename
-  tables, moving each table's row count with it, and an old file is checked
-  against its own version's table list before it is upgraded. The v0.6.0
-  golden files are frozen as `backup_v1_schema8_*.json` and tested to still
-  read. Tests 770 → 811.
+  and a backup's `validate()` reports one. Splitting the old sets is one
+  frozen function that the migration and the v8 backup upgrader both call
+  (`lib/data/upgrades/split_yardage_sets.dart`), so a restored v8 backup and
+  an upgraded v8 database hold the same rows. An old backup is checked against
+  its own version's table list before it is upgraded. The tables the upgrade
+  rebuilds are read strictly, with their counts checked before the split. The
+  v0.6.0 golden files are frozen as `backup_v1_schema8_*.json` and tested to
+  still read. Tests 770 → 829.
 
 ## [0.6.0] - 2026-10-11
 

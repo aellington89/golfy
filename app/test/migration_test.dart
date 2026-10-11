@@ -597,13 +597,15 @@ void main() {
     await verifier.migrateAndValidate(db, 9);
   });
 
-  test('v8 -> v9 carries each yardage set across as a tee set', () async {
+  test('v8 -> v9 splits each "Tee Set - Pin Set" yardage set into its pair',
+      () async {
     final schema = await verifier.schemaAt(8);
 
-    // A v8 database the way v0.6.0 could leave one: two sets on one course,
-    // rounds on a set and on none, holes and shots under the rounds — and one
-    // round whose set is another course's, which editing a round's course
-    // after picking its set could produce.
+    // A v8 database the way v0.6.0 left one: yardage sets named "Tee Set - Pin
+    // Set" holding that pair's tee-to-pin yards, one hand-named set with no
+    // pin set in its name, rounds on a set and on none, holes and shots under
+    // the rounds — and one round whose set is another course's, which editing
+    // a round's course after picking its set could produce.
     final oldDb = v8.DatabaseAtV8(schema.newConnection());
     final pebble = await oldDb.into(oldDb.courses).insert(
           v8.CoursesCompanion.insert(
@@ -614,54 +616,54 @@ void main() {
     final augusta = await oldDb.into(oldDb.courses).insert(
           v8.CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
         );
-    // Ids with a gap, so the migration has to keep them rather than renumber.
-    final blue = await oldDb.into(oldDb.courseSets).insert(
-          v8.CourseSetsCompanion.insert(
-            id: const Value(3),
-            courseId: pebble,
-            name: 'Blue tees',
-          ),
-        );
-    final gold = await oldDb.into(oldDb.courseSets).insert(
-          v8.CourseSetsCompanion.insert(courseId: pebble, name: 'Gold tees'),
-        );
-    for (var h = 1; h <= 18; h++) {
-      await oldDb.into(oldDb.courseSetYards).insert(
-            v8.CourseSetYardsCompanion.insert(
-              courseSetId: blue,
-              holeNumber: h,
-              yards: 400 + h,
-            ),
+    Future<int> oldSet(String name, int yards) async {
+      final id = await oldDb.into(oldDb.courseSets).insert(
+            v8.CourseSetsCompanion.insert(courseId: pebble, name: name),
           );
+      for (var h = 1; h <= 18; h++) {
+        await oldDb.into(oldDb.courseSetYards).insert(
+              v8.CourseSetYardsCompanion.insert(
+                courseSetId: id,
+                holeNumber: h,
+                yards: yards + h,
+              ),
+            );
+      }
+      return id;
     }
-    await oldDb.into(oldDb.courseSetYards).insert(
-          v8.CourseSetYardsCompanion.insert(
-            courseSetId: gold,
-            holeNumber: 1,
-            yards: 455,
-          ),
-        );
-    final onBlue = await oldDb.into(oldDb.rounds).insert(
+
+    final blueSunday = await oldSet('Blue - Sunday pins', 400);
+    await oldSet('Blue - Monday pins', 380);
+    await oldSet('White - Sunday pins', 350);
+    final gold = await oldSet('Gold', 450);
+    final onBlueSunday = await oldDb.into(oldDb.rounds).insert(
           v8.RoundsCompanion.insert(
             date: '2026-05-19',
             courseId: pebble,
-            courseSetId: Value(blue),
+            courseSetId: Value(blueSunday),
             notes: const Value('windy'),
           ),
         );
+    final onGold = await oldDb.into(oldDb.rounds).insert(
+          v8.RoundsCompanion.insert(
+            date: '2026-05-20',
+            courseId: pebble,
+            courseSetId: Value(gold),
+          ),
+        );
     final onNone = await oldDb.into(oldDb.rounds).insert(
-          v8.RoundsCompanion.insert(date: '2026-05-20', courseId: pebble),
+          v8.RoundsCompanion.insert(date: '2026-05-21', courseId: pebble),
         );
     final mismatched = await oldDb.into(oldDb.rounds).insert(
           v8.RoundsCompanion.insert(
-            date: '2026-05-21',
+            date: '2026-05-22',
             courseId: augusta,
-            courseSetId: Value(gold),
+            courseSetId: Value(blueSunday),
           ),
         );
     final holeId = await oldDb.into(oldDb.holeResults).insert(
           v8.HoleResultsCompanion.insert(
-            roundId: onBlue,
+            roundId: onBlueSunday,
             holeNumber: 1,
             par: 4,
             score: 4,
@@ -689,37 +691,67 @@ void main() {
     addTearDown(db.close);
     await verifier.migrateAndValidate(db, 9);
 
-    // Each set is a tee set now, ids and names kept, and its yardages are that
-    // tee set's course yards.
-    final tees = await db.select(db.teeSets).get();
+    // Each name splits into a tee set and a pin set, shared where sets named
+    // the same one; a name with no pin set is a tee set alone.
+    final tees = {
+      for (final t in await db.select(db.teeSets).get()) t.name: t.id,
+    };
+    final pins = {
+      for (final p in await db.select(db.pinSets).get()) p.name: p.id,
+    };
+    expect(tees.keys, ['Blue', 'White', 'Gold']);
+    expect(pins.keys, ['Sunday pins', 'Monday pins']);
     expect(
-      [for (final t in tees) (t.id, t.courseId, t.name)],
-      [(blue, pebble, 'Blue tees'), (gold, pebble, 'Gold tees')],
+      (await db.select(db.teeSets).get()).map((t) => t.courseId).toSet(),
+      {pebble},
     );
-    final blueYards = await db.yardageDao.getCourseYards(blue);
-    expect([for (final y in blueYards) y.yards],
-        [for (var h = 1; h <= 18; h++) 400 + h]);
-    expect((await db.yardageDao.getCourseYards(gold)).single.yards, 455);
-    // v8 had no pins, so nothing is invented for them.
-    expect(await db.select(db.pinSets).get(), isEmpty);
-    expect(await db.select(db.teeToPinYards).get(), isEmpty);
 
-    // A round on a set is played from that tee set, with no pin set; the
-    // mismatched link is cleared rather than carried into v9.
+    // Each set's yards are its pair's tee-to-pin yards: the same pins a
+    // different distance from each tee set.
+    Future<List<int>> toPin(String tee, String pin) async => [
+          for (final y in await db.yardageDao
+              .getTeeToPinYards(tees[tee]!, pins[pin]!))
+            y.yards,
+        ];
+    expect(await toPin('Blue', 'Sunday pins'),
+        [for (var h = 1; h <= 18; h++) 400 + h]);
+    expect(await toPin('Blue', 'Monday pins'),
+        [for (var h = 1; h <= 18; h++) 380 + h]);
+    expect(await toPin('White', 'Sunday pins'),
+        [for (var h = 1; h <= 18; h++) 350 + h]);
+    expect(await toPin('White', 'Monday pins'), isEmpty);
+    // Tee to pin isn't course yards; only the set with no pin set in its name
+    // had nowhere else to go.
+    expect(await db.yardageDao.getCourseYards(tees['Blue']!), isEmpty);
+    expect(
+      [for (final y in await db.yardageDao.getCourseYards(tees['Gold']!)) y.yards],
+      [for (var h = 1; h <= 18; h++) 450 + h],
+    );
+
+    // A round on a set is played on its pair; the mismatched link is cleared
+    // rather than carried into v9.
     final rounds = {
       for (final r in await db.select(db.rounds).get()) r.id: r,
     };
-    expect(rounds[onBlue]!.teeSetId, blue);
-    expect(rounds[onBlue]!.pinSetId, isNull);
-    expect(rounds[onBlue]!.notes, 'windy');
+    expect(rounds[onBlueSunday]!.teeSetId, tees['Blue']);
+    expect(rounds[onBlueSunday]!.pinSetId, pins['Sunday pins']);
+    expect(rounds[onBlueSunday]!.notes, 'windy');
+    expect(rounds[onGold]!.teeSetId, tees['Gold']);
+    expect(rounds[onGold]!.pinSetId, isNull);
     expect(rounds[onNone]!.teeSetId, isNull);
     expect(rounds[mismatched]!.teeSetId, isNull);
+    expect(rounds[mismatched]!.pinSetId, isNull);
     expect(rounds[mismatched]!.courseId, augusta);
+    final labelled = await db.roundDao.watchAllWithCourse().first;
+    expect(
+      labelled.firstWhere((r) => r.round.id == onBlueSunday).yardageSetLabel,
+      'Blue · Sunday pins',
+    );
 
     // The rebuilt rounds table keeps its holes and their shots attached.
-    final holes = await db.holeResultDao.watchForRound(onBlue).first;
+    final holes = await db.holeResultDao.watchForRound(onBlueSunday).first;
     expect(holes.single.id, holeId);
-    final shots = (await db.holeShotDao.watchForRound(onBlue).first)[1]!;
+    final shots = (await db.holeShotDao.watchForRound(onBlueSunday).first)[1]!;
     expect(shots.single.club, 'Driver');
     final fkProblems =
         await db.customSelect('PRAGMA foreign_key_check').get();
@@ -732,30 +764,23 @@ void main() {
         .get();
     expect(leftovers, isEmpty);
 
-    // And the new ones are live: a pin set and its tee-to-pin yards, a round
-    // on the whole yardage set, and a new tee set that doesn't reuse an id.
-    final sunday = await db.yardageDao.insertPinSet(
-      PinSetsCompanion.insert(courseId: pebble, name: 'Sunday pins'),
-    );
-    await db.yardageDao.upsertTeeToPinYard(TeeToPinYardsCompanion.insert(
-      teeSetId: blue,
-      pinSetId: sunday,
+    // And the new ones are live: course yards for a tee set, and new sets
+    // that don't reuse an id.
+    await db.yardageDao.upsertCourseYard(CourseYardsCompanion.insert(
+      teeSetId: tees['Blue']!,
       holeNumber: 1,
-      yards: 388,
+      yards: 415,
     ));
-    await db.roundDao.updateById(
-      onBlue,
-      RoundsCompanion(pinSetId: Value(sunday)),
+    expect((await db.yardageDao.getCourseYards(tees['Blue']!)).single.yards,
+        415);
+    final red = await db.yardageDao.insertTeeSet(
+      TeeSetsCompanion.insert(courseId: pebble, name: 'Red'),
     );
-    final labelled = await db.roundDao.watchAllWithCourse().first;
-    expect(
-      labelled.firstWhere((r) => r.round.id == onBlue).yardageSetLabel,
-      'Blue tees · Sunday pins',
+    expect(red, greaterThan(tees.values.reduce((a, b) => a > b ? a : b)));
+    final friday = await db.yardageDao.insertPinSet(
+      PinSetsCompanion.insert(courseId: pebble, name: 'Friday pins'),
     );
-    final white = await db.yardageDao.insertTeeSet(
-      TeeSetsCompanion.insert(courseId: pebble, name: 'White tees'),
-    );
-    expect(white, greaterThan(gold));
+    expect(friday, greaterThan(pins.values.reduce((a, b) => a > b ? a : b)));
   });
 
   test('a freshly created database matches the generated schema', () async {

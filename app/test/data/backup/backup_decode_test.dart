@@ -296,14 +296,53 @@ void main() {
       );
     });
 
-    test('reads a schema-8 file, its yardage set as a tee set', () {
-      // v8's one kind of set had one yardage per hole: a tee set and its
-      // course yards. It had no pins, so the round has a tee set alone.
-      final bundle = BackupCodec.decode(reencode(preV9SampleTree(8)));
+    test('reads a schema-8 file, its "Tee Set - Pin Set" set as that pair',
+        () {
+      // A v8 set was one tee set and pin set, holding their tee-to-pin yards.
+      final tree = preV9SampleTree(8);
+      expect(rowOf(tree, 'course_sets')['name'], 'Blue tees - Sunday pins');
+
+      final bundle = BackupCodec.decode(reencode(tree));
 
       expect(bundle.manifest.schemaVersion, 8);
       expect(bundle.payload, upgradedV8SamplePayload());
       expect(bundle.payload.validate(), isEmpty);
+    });
+
+    test('a schema-8 set with no pin set in its name keeps its yards as '
+        'course yards', () {
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'course_sets')['name'] = 'Blue tees';
+
+      final payload = BackupCodec.decode(reencode(tree)).payload;
+
+      expect(payload.teeSets.single.name, 'Blue tees');
+      expect(payload.pinSets, isEmpty);
+      expect(payload.teeToPinYards, isEmpty);
+      expect(payload.courseYards.single.yards, 398);
+      expect(payload.rounds.single.teeSetId, 1);
+      expect(payload.rounds.single.pinSetId, isNull);
+      expect(payload.validate(), isEmpty);
+    });
+
+    test('counts the rows the split produced', () {
+      // Two sets naming the same tee set: the file said two sets, and they
+      // arrive as one tee set and two pin sets.
+      final tree = preV9SampleTree(8);
+      tableOf(tree, 'course_sets').add({
+        ...rowOf(tree, 'course_sets'),
+        'id': 2,
+        'name': 'Blue tees - Monday pins',
+      });
+      final counts = manifestOf(tree)['rowCounts']! as Map<String, Object?>;
+      counts['course_sets'] = 2;
+
+      final payload = BackupCodec.decode(reencode(tree)).payload;
+
+      expect(payload.teeSets.map((t) => t.name), ['Blue tees']);
+      expect(payload.pinSets.map((p) => p.name),
+          ['Sunday pins', 'Monday pins']);
+      expect(payload.validate(), isEmpty);
     });
 
     test('a schema-8 round on another course\'s set arrives without one', () {
@@ -322,24 +361,53 @@ void main() {
       final payload = BackupCodec.decode(reencode(tree)).payload;
 
       expect(payload.rounds.single.teeSetId, isNull);
+      expect(payload.rounds.single.pinSetId, isNull);
       expect(payload.validate(), isEmpty);
     });
 
-    test('a schema-8 round on a set the file lacks is left for validation',
-        () {
+    test('refuses a schema-8 round on a set the file lacks', () {
+      // There is no name to split, so nothing to point the round at — and
+      // keeping the old id could land on an unrelated new tee set.
       final tree = preV9SampleTree(8);
       rowOf(tree, 'rounds')['course_set_id'] = 99;
 
-      final payload = BackupCodec.decode(reencode(tree)).payload;
-
-      expect(payload.rounds.single.teeSetId, 99);
       expect(
-        payload.validate(),
-        contains(const BackupProblem(
-          'rounds',
-          'tee_set_id 99 is not in tee_sets',
-          rowIndex: 0,
-        )),
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'course_set_id 99 is not in course_sets',
+            table: 'rounds',
+            rowIndex: 0),
+      );
+    });
+
+    test('refuses a schema-8 yardage row on a set the file lacks', () {
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'course_set_yards')['course_set_id'] = 99;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'course_set_id 99 is not in course_sets',
+            table: 'course_set_yards',
+            rowIndex: 0),
+      );
+    });
+
+    test('refuses a schema-8 file repeating a set id', () {
+      final tree = preV9SampleTree(8);
+      tableOf(tree, 'course_sets').add({
+        ...rowOf(tree, 'course_sets'),
+        'name': 'White - Sunday pins',
+      });
+      ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))[
+          'course_sets'] = 2;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'id 1 appears twice',
+            table: 'course_sets',
+            rowIndex: 1),
       );
     });
 
@@ -363,18 +431,32 @@ void main() {
       );
     });
 
-    test('refuses a schema-8 yardage row that already has a v9 column', () {
+    test('refuses a schema-8 yardage row with a column v8 did not have', () {
+      // Its rows are rebuilt, not carried, so an extra value would be lost.
       final tree = preV9SampleTree(8);
       rowOf(tree, 'course_set_yards')['tee_set_id'] = 1;
 
       expect(
         () => BackupCodec.decode(reencode(tree)),
         throwsBackup(BackupFormatProblem.badRow,
-            mentioning: 'tee_set_id', table: 'course_yards', rowIndex: 0),
+            mentioning: 'unexpected tee_set_id',
+            table: 'course_set_yards',
+            rowIndex: 0),
       );
     });
 
-    test('checks a schema-8 file\'s row counts under their new names', () {
+    test('refuses a schema-8 round that already has a v9 column', () {
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'rounds')['pin_set_id'] = null;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'pin_set_id', table: 'rounds', rowIndex: 0),
+      );
+    });
+
+    test('checks a schema-8 file\'s yardage counts before splitting', () {
       final tree = preV9SampleTree(8);
       ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))[
           'course_set_yards'] = 5;
@@ -382,7 +464,7 @@ void main() {
       expect(
         () => BackupCodec.decode(reencode(tree)),
         throwsBackup(BackupFormatProblem.rowCountMismatch,
-            table: 'course_yards'),
+            table: 'course_set_yards'),
       );
     });
 

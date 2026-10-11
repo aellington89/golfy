@@ -147,10 +147,13 @@ void main() {
       );
     });
   });
-  /// What a pre-v9 file's rows become once upgraded, table by table, in v9's
-  /// table names: the v8 -> v9 split of yardage sets into tee sets (and no pin
-  /// sets), plus — for a v7 file — the v7 -> v8 putt column, which these
-  /// fixtures hold no putt distances to convert.
+  /// What a frozen pre-v9 file's rows become once upgraded, table by table, in
+  /// v9's table names. Those fixtures name their sets "Blue tees" and "Gold
+  /// tees" — no "Tee Set - Pin Set" to split — so each set is a tee set alone,
+  /// keeping its id, whose yards are its course yards; the split of a named
+  /// pair is covered by the decode suite and the split rule's own tests. Plus,
+  /// for a v7 file, the v7 -> v8 putt column, which these fixtures hold no
+  /// putt distances to convert.
   Map<String, List<Map<String, Object?>>> upgradedRows(
     Map<String, Object?> data, {
     required int fromVersion,
@@ -162,6 +165,11 @@ void main() {
     final setCourse = {
       for (final s in rows('course_sets')) s['id']: s['course_id'],
     };
+    expect(
+      rows('course_sets').map((s) => s['name']),
+      everyElement(isNot(contains(' - '))),
+      reason: 'this expectation is for sets with no pin set in their names',
+    );
     return {
       'courses': rows('courses'),
       'course_holes': rows('course_holes'),
@@ -202,41 +210,33 @@ void main() {
 
   for (final version in [7, 8]) {
     group('a backup written at schema $version', () {
-      test('the minimal file reads as today\'s sample, without pins', () {
-        final text = File('$_goldenDir/backup_v1_schema${version}_minimal.json')
-            .readAsStringSync();
+      for (final size in ['minimal', 'full']) {
+        test('the $size file reads back whole, its sets as tee sets', () {
+          final name = 'backup_v1_schema${version}_$size.json';
+          final data = readTree(name)['data']! as Map<String, Object?>;
 
-        final bundle = BackupCodec.decode(text);
+          final bundle =
+              BackupCodec.decode(File('$_goldenDir/$name').readAsStringSync());
 
-        expect(bundle.manifest.schemaVersion, version);
-        expect(bundle.payload, upgradedV8SamplePayload());
-        expect(bundle.payload.validate(), isEmpty);
-      });
-
-      test('the full file reads back whole, its sets as tee sets', () {
-        final name = 'backup_v1_schema${version}_full.json';
-        final data = readTree(name)['data']! as Map<String, Object?>;
-
-        final bundle =
-            BackupCodec.decode(File('$_goldenDir/$name').readAsStringSync());
-
-        expect(bundle.payload.validate(), isEmpty);
-        expect(bundle.payload.teeSets, isNotEmpty);
-        expect(bundle.payload.courseYards, isNotEmpty);
-        expect(bundle.payload.rounds.where((r) => r.teeSetId != null),
-            isNotEmpty);
-        // Every row the file holds comes through, reshaped only as the
-        // upgrade says — nothing else moves.
-        final expected = upgradedRows(data, fromVersion: version);
-        final tables = bundle.payload.tables;
-        for (final table in backupTableOrder) {
-          expect(
-            [for (final row in tables[table]!) row.toJson()],
-            expected[table],
-            reason: table,
-          );
-        }
-      });
+          expect(bundle.manifest.schemaVersion, version);
+          expect(bundle.payload.validate(), isEmpty);
+          expect(bundle.payload.teeSets, isNotEmpty);
+          expect(bundle.payload.courseYards, isNotEmpty);
+          expect(bundle.payload.rounds.where((r) => r.teeSetId != null),
+              isNotEmpty);
+          // Every row the file holds comes through, reshaped only as the
+          // upgrade says — nothing else moves.
+          final expected = upgradedRows(data, fromVersion: version);
+          final tables = bundle.payload.tables;
+          for (final table in backupTableOrder) {
+            expect(
+              [for (final row in tables[table]!) row.toJson()],
+              expected[table],
+              reason: table,
+            );
+          }
+        });
+      }
     });
   }
 

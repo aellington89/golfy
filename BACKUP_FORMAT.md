@@ -151,14 +151,15 @@ today's columns, so checking an old row against them would refuse a file for
 being old rather than broken. Before upgrading, the file is checked for the
 tables *its own* version had, so an old file is refused in its own terms. Once
 upgraded, the rows are decoded and checked exactly like a current file's, and
-the row counts still mean what the file said — an upgrader adds, renames or
-rewrites columns and tables, never rows, and moves a renamed table's count with
-it.
+the row counts still mean what the file said. An upgrader that only adds or
+rewrites columns leaves the counts alone; one that replaces tables checks the
+file's counts for the old ones first, then counts what it wrote, so every
+count checked afterwards was vouched for by the file.
 
 | From | To | What changed | The upgrade |
 |---|---|---|---|
 | 7 | 8 | Putts record their distance to the hole in feet: `hole_shots.distance_feet` | Every `hole_shots` row gains `"distance_feet": null`, then every putt saved with a distance in yards has it moved to `distance_feet`, times 3, leaving `distance_yards` null — exactly what the database migration does, by the same rule (`app/lib/data/upgrades/putts_in_feet.dart`). A hole's putts are the putt rows (a putter, or a shot from the green) its shots end on, as many as its `putts` and never its first shot; every other shot keeps its yards. A v7 row that already has `distance_feet` is refused — v7 had no such column, so the file was edited. |
-| 8 | 9 | Yardage splits by tee set and pin set: `course_sets` / `course_set_yards` become `tee_sets` / `course_yards`, new `pin_sets` and `tee_to_pin_yards`, and `rounds` swaps `course_set_id` and `tee_set` for `tee_set_id` + `pin_set_id` | v8's one kind of yardage set had one yardage per hole — a tee set and its course yards. So `course_sets` is renamed `tee_sets`, rows unchanged; `course_set_yards` is renamed `course_yards`, `course_set_id` becoming `tee_set_id`; `pin_sets` and `tee_to_pin_yards` arrive empty; and each round's `course_set_id` becomes its `tee_set_id`, with `pin_set_id` null and the never-written `tee_set` label dropped — exactly what the database migration does. A round whose set is another course's (possible in v8 by changing a round's course after choosing its set) has the link cleared, as the migration does; one naming a set the file lacks keeps it, for validation to refuse. `rowCounts` move with the renamed tables. A v8 file carrying a v9 table, or a v9 column on a renamed row, is refused. |
+| 8 | 9 | Yardage splits by tee set and pin set: `course_sets` / `course_set_yards` become `tee_sets`, `pin_sets`, `tee_to_pin_yards` and `course_yards`, and `rounds` swaps `course_set_id` and `tee_set` for `tee_set_id` + `pin_set_id` | Each v8 yardage set was one tee set and pin set, named "Tee Set - Pin Set" and holding that pair's tee-to-pin yards — exactly what the database migration converts, by the same rule (`app/lib/data/upgrades/split_yardage_sets.dart`). A name splits at its first hyphen (or en/em dash) with spaces either side; sets on one course naming the same tee set or pin set, ignoring case, share it, and new ids count up in the order the sets were created. A set's yards become the pair's tee-to-pin yards, keeping their ids; a set whose name has no separator is a tee set alone, and its yards become that tee set's course yards. Each round's set becomes its `tee_set_id` + `pin_set_id`, with the never-written `tee_set` label dropped; a round whose set is another course's (possible in v8 by changing a round's course after choosing its set) has both cleared, as the migration does. The two old tables are rebuilt rather than carried, so they are read strictly: a missing or unexpected column, a repeated set id, a yard or round naming a set the file lacks, or a count the file got wrong is refused, naming the old table. A v8 file carrying a v9 table, or a round already carrying `tee_set_id` / `pin_set_id`, is refused. |
 
 Nothing older than v7 can be upgraded, and nothing needs to be: export did not
 exist before schema v7, so no Golfy build can have written an older backup.
@@ -223,10 +224,13 @@ on" fails. Decide:
 - *Old backups can still be read* — register an upgrader in
   `BackupCodec._upgraders`, keyed by the version it upgrades **from**, that
   rewrites the raw rows of only the tables the migration touched (an added
-  nullable column is `_addNullColumn`, a renamed one `_renameColumn`, a renamed
-  table `_renameTable`, which moves its row count too — and a file of an older
-  version is checked against that version's own table list first, as
-  `_tablesAt` does for v8). **Before** regenerating the goldens,
+  nullable column is `_addNullColumn`; tables the upgrade rebuilds are read
+  strictly and their counts checked first, as `_v8Rows` does; and a file of an
+  older version is checked against that version's own table list, as
+  `_tablesAt` does for v8). A conversion the migration also runs belongs in
+  `app/lib/data/upgrades/`, called by both, so a backup and a database come
+  out of the upgrade holding the same rows. **Before** regenerating the
+  goldens,
   copy the current pair to `backup_v1_schemaN_*.json` (N being the old version)
   and test that they still read — those copies are never regenerated, because
   they are files people already have. Then bump `supportedSchemaVersion` and
