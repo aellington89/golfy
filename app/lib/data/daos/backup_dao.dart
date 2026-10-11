@@ -3,13 +3,15 @@ import 'package:drift/drift.dart';
 import '../backup/backup_payload.dart';
 import '../database.dart';
 import '../tables/course_holes.dart';
-import '../tables/course_set_yards.dart';
-import '../tables/course_sets.dart';
+import '../tables/course_yards.dart';
 import '../tables/courses.dart';
 import '../tables/events.dart';
 import '../tables/hole_results.dart';
 import '../tables/hole_shots.dart';
+import '../tables/pin_sets.dart';
 import '../tables/rounds.dart';
+import '../tables/tee_sets.dart';
+import '../tables/tee_to_pin_yards.dart';
 
 part 'backup_dao.g.dart';
 
@@ -24,8 +26,10 @@ part 'backup_dao.g.dart';
   tables: [
     Courses,
     CourseHoles,
-    CourseSets,
-    CourseSetYards,
+    TeeSets,
+    CourseYards,
+    PinSets,
+    TeeToPinYards,
     Events,
     Rounds,
     HoleResults,
@@ -48,8 +52,10 @@ class BackupDao extends DatabaseAccessor<GolfyDatabase> with _$BackupDaoMixin {
       return BackupPayload(
         courses: await _allById(courses),
         courseHoles: await _allById(courseHoles),
-        courseSets: await _allById(courseSets),
-        courseSetYards: await _allById(courseSetYards),
+        teeSets: await _allById(teeSets),
+        courseYards: await _allById(courseYards),
+        pinSets: await _allById(pinSets),
+        teeToPinYards: await _allById(teeToPinYards),
         events: await _allById(events),
         rounds: await _allById(rounds),
         holeResults: await _allById(holeResults),
@@ -61,7 +67,7 @@ class BackupDao extends DatabaseAccessor<GolfyDatabase> with _$BackupDaoMixin {
   /// Every row of [table], ordered by its `id` column.
   ///
   /// Keyed by column *name* rather than a typed getter so one helper covers
-  /// all eight tables; every table in this schema has an autoincrement `id`.
+  /// all ten tables; every table in this schema has an autoincrement `id`.
   Future<List<D>> _allById<T extends Table, D>(TableInfo<T, D> table) {
     final query = select(table)
       ..orderBy([(_) => OrderingTerm.asc(table.columnsByName['id']!)]);

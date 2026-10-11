@@ -250,12 +250,11 @@ class CoursesCompanion extends UpdateCompanion<Course> {
   }
 }
 
-class $CourseSetsTable extends CourseSets
-    with TableInfo<$CourseSetsTable, CourseSet> {
+class $TeeSetsTable extends TeeSets with TableInfo<$TeeSetsTable, TeeSet> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CourseSetsTable(this.attachedDatabase, [this._alias]);
+  $TeeSetsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -298,10 +297,10 @@ class $CourseSetsTable extends CourseSets
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'course_sets';
+  static const String $name = 'tee_sets';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CourseSet> instance, {
+    Insertable<TeeSet> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -335,9 +334,9 @@ class $CourseSetsTable extends CourseSets
     {courseId, name},
   ];
   @override
-  CourseSet map(Map<String, dynamic> data, {String? tablePrefix}) {
+  TeeSet map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CourseSet(
+    return TeeSet(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
@@ -354,20 +353,16 @@ class $CourseSetsTable extends CourseSets
   }
 
   @override
-  $CourseSetsTable createAlias(String alias) {
-    return $CourseSetsTable(attachedDatabase, alias);
+  $TeeSetsTable createAlias(String alias) {
+    return $TeeSetsTable(attachedDatabase, alias);
   }
 }
 
-class CourseSet extends DataClass implements Insertable<CourseSet> {
+class TeeSet extends DataClass implements Insertable<TeeSet> {
   final int id;
   final int courseId;
   final String name;
-  const CourseSet({
-    required this.id,
-    required this.courseId,
-    required this.name,
-  });
+  const TeeSet({required this.id, required this.courseId, required this.name});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -377,20 +372,20 @@ class CourseSet extends DataClass implements Insertable<CourseSet> {
     return map;
   }
 
-  CourseSetsCompanion toCompanion(bool nullToAbsent) {
-    return CourseSetsCompanion(
+  TeeSetsCompanion toCompanion(bool nullToAbsent) {
+    return TeeSetsCompanion(
       id: Value(id),
       courseId: Value(courseId),
       name: Value(name),
     );
   }
 
-  factory CourseSet.fromJson(
+  factory TeeSet.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CourseSet(
+    return TeeSet(
       id: serializer.fromJson<int>(json['id']),
       courseId: serializer.fromJson<int>(json['course_id']),
       name: serializer.fromJson<String>(json['name']),
@@ -406,13 +401,13 @@ class CourseSet extends DataClass implements Insertable<CourseSet> {
     };
   }
 
-  CourseSet copyWith({int? id, int? courseId, String? name}) => CourseSet(
+  TeeSet copyWith({int? id, int? courseId, String? name}) => TeeSet(
     id: id ?? this.id,
     courseId: courseId ?? this.courseId,
     name: name ?? this.name,
   );
-  CourseSet copyWithCompanion(CourseSetsCompanion data) {
-    return CourseSet(
+  TeeSet copyWithCompanion(TeeSetsCompanion data) {
+    return TeeSet(
       id: data.id.present ? data.id.value : this.id,
       courseId: data.courseId.present ? data.courseId.value : this.courseId,
       name: data.name.present ? data.name.value : this.name,
@@ -421,7 +416,7 @@ class CourseSet extends DataClass implements Insertable<CourseSet> {
 
   @override
   String toString() {
-    return (StringBuffer('CourseSet(')
+    return (StringBuffer('TeeSet(')
           ..write('id: $id, ')
           ..write('courseId: $courseId, ')
           ..write('name: $name')
@@ -434,28 +429,28 @@ class CourseSet extends DataClass implements Insertable<CourseSet> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CourseSet &&
+      (other is TeeSet &&
           other.id == this.id &&
           other.courseId == this.courseId &&
           other.name == this.name);
 }
 
-class CourseSetsCompanion extends UpdateCompanion<CourseSet> {
+class TeeSetsCompanion extends UpdateCompanion<TeeSet> {
   final Value<int> id;
   final Value<int> courseId;
   final Value<String> name;
-  const CourseSetsCompanion({
+  const TeeSetsCompanion({
     this.id = const Value.absent(),
     this.courseId = const Value.absent(),
     this.name = const Value.absent(),
   });
-  CourseSetsCompanion.insert({
+  TeeSetsCompanion.insert({
     this.id = const Value.absent(),
     required int courseId,
     required String name,
   }) : courseId = Value(courseId),
        name = Value(name);
-  static Insertable<CourseSet> custom({
+  static Insertable<TeeSet> custom({
     Expression<int>? id,
     Expression<int>? courseId,
     Expression<String>? name,
@@ -467,12 +462,12 @@ class CourseSetsCompanion extends UpdateCompanion<CourseSet> {
     });
   }
 
-  CourseSetsCompanion copyWith({
+  TeeSetsCompanion copyWith({
     Value<int>? id,
     Value<int>? courseId,
     Value<String>? name,
   }) {
-    return CourseSetsCompanion(
+    return TeeSetsCompanion(
       id: id ?? this.id,
       courseId: courseId ?? this.courseId,
       name: name ?? this.name,
@@ -496,7 +491,257 @@ class CourseSetsCompanion extends UpdateCompanion<CourseSet> {
 
   @override
   String toString() {
-    return (StringBuffer('CourseSetsCompanion(')
+    return (StringBuffer('TeeSetsCompanion(')
+          ..write('id: $id, ')
+          ..write('courseId: $courseId, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PinSetsTable extends PinSets with TableInfo<$PinSetsTable, PinSet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PinSetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _courseIdMeta = const VerificationMeta(
+    'courseId',
+  );
+  @override
+  late final GeneratedColumn<int> courseId = GeneratedColumn<int>(
+    'course_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES courses (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, courseId, name];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pin_sets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PinSet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('course_id')) {
+      context.handle(
+        _courseIdMeta,
+        courseId.isAcceptableOrUnknown(data['course_id']!, _courseIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_courseIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {courseId, name},
+  ];
+  @override
+  PinSet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PinSet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      courseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}course_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+    );
+  }
+
+  @override
+  $PinSetsTable createAlias(String alias) {
+    return $PinSetsTable(attachedDatabase, alias);
+  }
+}
+
+class PinSet extends DataClass implements Insertable<PinSet> {
+  final int id;
+  final int courseId;
+  final String name;
+  const PinSet({required this.id, required this.courseId, required this.name});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['course_id'] = Variable<int>(courseId);
+    map['name'] = Variable<String>(name);
+    return map;
+  }
+
+  PinSetsCompanion toCompanion(bool nullToAbsent) {
+    return PinSetsCompanion(
+      id: Value(id),
+      courseId: Value(courseId),
+      name: Value(name),
+    );
+  }
+
+  factory PinSet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PinSet(
+      id: serializer.fromJson<int>(json['id']),
+      courseId: serializer.fromJson<int>(json['course_id']),
+      name: serializer.fromJson<String>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'course_id': serializer.toJson<int>(courseId),
+      'name': serializer.toJson<String>(name),
+    };
+  }
+
+  PinSet copyWith({int? id, int? courseId, String? name}) => PinSet(
+    id: id ?? this.id,
+    courseId: courseId ?? this.courseId,
+    name: name ?? this.name,
+  );
+  PinSet copyWithCompanion(PinSetsCompanion data) {
+    return PinSet(
+      id: data.id.present ? data.id.value : this.id,
+      courseId: data.courseId.present ? data.courseId.value : this.courseId,
+      name: data.name.present ? data.name.value : this.name,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PinSet(')
+          ..write('id: $id, ')
+          ..write('courseId: $courseId, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, courseId, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PinSet &&
+          other.id == this.id &&
+          other.courseId == this.courseId &&
+          other.name == this.name);
+}
+
+class PinSetsCompanion extends UpdateCompanion<PinSet> {
+  final Value<int> id;
+  final Value<int> courseId;
+  final Value<String> name;
+  const PinSetsCompanion({
+    this.id = const Value.absent(),
+    this.courseId = const Value.absent(),
+    this.name = const Value.absent(),
+  });
+  PinSetsCompanion.insert({
+    this.id = const Value.absent(),
+    required int courseId,
+    required String name,
+  }) : courseId = Value(courseId),
+       name = Value(name);
+  static Insertable<PinSet> custom({
+    Expression<int>? id,
+    Expression<int>? courseId,
+    Expression<String>? name,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (courseId != null) 'course_id': courseId,
+      if (name != null) 'name': name,
+    });
+  }
+
+  PinSetsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? courseId,
+    Value<String>? name,
+  }) {
+    return PinSetsCompanion(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      name: name ?? this.name,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (courseId.present) {
+      map['course_id'] = Variable<int>(courseId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PinSetsCompanion(')
           ..write('id: $id, ')
           ..write('courseId: $courseId, ')
           ..write('name: $name')
@@ -974,27 +1219,32 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
-  static const VerificationMeta _teeSetMeta = const VerificationMeta('teeSet');
-  @override
-  late final GeneratedColumn<String> teeSet = GeneratedColumn<String>(
-    'tee_set',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _courseSetIdMeta = const VerificationMeta(
-    'courseSetId',
+  static const VerificationMeta _teeSetIdMeta = const VerificationMeta(
+    'teeSetId',
   );
   @override
-  late final GeneratedColumn<int> courseSetId = GeneratedColumn<int>(
-    'course_set_id',
+  late final GeneratedColumn<int> teeSetId = GeneratedColumn<int>(
+    'tee_set_id',
     aliasedName,
     true,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES course_sets (id) ON DELETE SET NULL',
+      'REFERENCES tee_sets (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _pinSetIdMeta = const VerificationMeta(
+    'pinSetId',
+  );
+  @override
+  late final GeneratedColumn<int> pinSetId = GeneratedColumn<int>(
+    'pin_set_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pin_sets (id) ON DELETE SET NULL',
     ),
   );
   static const VerificationMeta _weatherMeta = const VerificationMeta(
@@ -1070,8 +1320,8 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
     date,
     courseId,
     roundNumber,
-    teeSet,
-    courseSetId,
+    teeSetId,
+    pinSetId,
     weather,
     windSpeedMph,
     difficulty,
@@ -1119,19 +1369,16 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
         ),
       );
     }
-    if (data.containsKey('tee_set')) {
+    if (data.containsKey('tee_set_id')) {
       context.handle(
-        _teeSetMeta,
-        teeSet.isAcceptableOrUnknown(data['tee_set']!, _teeSetMeta),
+        _teeSetIdMeta,
+        teeSetId.isAcceptableOrUnknown(data['tee_set_id']!, _teeSetIdMeta),
       );
     }
-    if (data.containsKey('course_set_id')) {
+    if (data.containsKey('pin_set_id')) {
       context.handle(
-        _courseSetIdMeta,
-        courseSetId.isAcceptableOrUnknown(
-          data['course_set_id']!,
-          _courseSetIdMeta,
-        ),
+        _pinSetIdMeta,
+        pinSetId.isAcceptableOrUnknown(data['pin_set_id']!, _pinSetIdMeta),
       );
     }
     if (data.containsKey('weather')) {
@@ -1205,13 +1452,13 @@ class $RoundsTable extends Rounds with TableInfo<$RoundsTable, Round> {
         DriftSqlType.int,
         data['${effectivePrefix}round_number'],
       )!,
-      teeSet: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}tee_set'],
-      ),
-      courseSetId: attachedDatabase.typeMapping.read(
+      teeSetId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}course_set_id'],
+        data['${effectivePrefix}tee_set_id'],
+      ),
+      pinSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pin_set_id'],
       ),
       weather: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1252,16 +1499,19 @@ class Round extends DataClass implements Insertable<Round> {
   final int courseId;
   final int roundNumber;
 
-  /// Legacy free-text tee-set label from the original schema. Never written by
-  /// the app; superseded by [courseSetId] (#36) and left in place only so the
-  /// v6 migration stays additive. Safe to drop in a later tidy.
-  final String? teeSet;
+  /// The [TeeSets] tee box this round was played from, or null when none was
+  /// chosen. With [pinSetId] it is the round's **yardage set**: Hole Entry
+  /// pre-fills each hole with that pair's tee-to-pin yards, or with this tee
+  /// set's course yards when the round has no pin set.
+  ///
+  /// `SET NULL` on delete, so removing a tee set detaches its rounds rather
+  /// than destroying them. Must belong to [courseId] — `RoundDao` checks.
+  final int? teeSetId;
 
-  /// The [CourseSets] yardage set this round was played on (#36), or null for a
-  /// round with no set chosen. `SET NULL` on delete so removing a set detaches
-  /// its rounds rather than destroying them; Hole Entry pulls the round's
-  /// yardages from this set.
-  final int? courseSetId;
+  /// The [PinSets] pin positions this round was played to, or null when none
+  /// was chosen. The other half of the round's yardage set, beside
+  /// [teeSetId]. `SET NULL` on delete; must belong to [courseId].
+  final int? pinSetId;
   final String? weather;
   final int? windSpeedMph;
   final String? difficulty;
@@ -1282,8 +1532,8 @@ class Round extends DataClass implements Insertable<Round> {
     required this.date,
     required this.courseId,
     required this.roundNumber,
-    this.teeSet,
-    this.courseSetId,
+    this.teeSetId,
+    this.pinSetId,
     this.weather,
     this.windSpeedMph,
     this.difficulty,
@@ -1298,11 +1548,11 @@ class Round extends DataClass implements Insertable<Round> {
     map['date'] = Variable<String>(date);
     map['course_id'] = Variable<int>(courseId);
     map['round_number'] = Variable<int>(roundNumber);
-    if (!nullToAbsent || teeSet != null) {
-      map['tee_set'] = Variable<String>(teeSet);
+    if (!nullToAbsent || teeSetId != null) {
+      map['tee_set_id'] = Variable<int>(teeSetId);
     }
-    if (!nullToAbsent || courseSetId != null) {
-      map['course_set_id'] = Variable<int>(courseSetId);
+    if (!nullToAbsent || pinSetId != null) {
+      map['pin_set_id'] = Variable<int>(pinSetId);
     }
     if (!nullToAbsent || weather != null) {
       map['weather'] = Variable<String>(weather);
@@ -1331,12 +1581,12 @@ class Round extends DataClass implements Insertable<Round> {
       date: Value(date),
       courseId: Value(courseId),
       roundNumber: Value(roundNumber),
-      teeSet: teeSet == null && nullToAbsent
+      teeSetId: teeSetId == null && nullToAbsent
           ? const Value.absent()
-          : Value(teeSet),
-      courseSetId: courseSetId == null && nullToAbsent
+          : Value(teeSetId),
+      pinSetId: pinSetId == null && nullToAbsent
           ? const Value.absent()
-          : Value(courseSetId),
+          : Value(pinSetId),
       weather: weather == null && nullToAbsent
           ? const Value.absent()
           : Value(weather),
@@ -1368,8 +1618,8 @@ class Round extends DataClass implements Insertable<Round> {
       date: serializer.fromJson<String>(json['date']),
       courseId: serializer.fromJson<int>(json['course_id']),
       roundNumber: serializer.fromJson<int>(json['round_number']),
-      teeSet: serializer.fromJson<String?>(json['tee_set']),
-      courseSetId: serializer.fromJson<int?>(json['course_set_id']),
+      teeSetId: serializer.fromJson<int?>(json['tee_set_id']),
+      pinSetId: serializer.fromJson<int?>(json['pin_set_id']),
       weather: serializer.fromJson<String?>(json['weather']),
       windSpeedMph: serializer.fromJson<int?>(json['wind_speed_mph']),
       difficulty: serializer.fromJson<String?>(json['difficulty']),
@@ -1386,8 +1636,8 @@ class Round extends DataClass implements Insertable<Round> {
       'date': serializer.toJson<String>(date),
       'course_id': serializer.toJson<int>(courseId),
       'round_number': serializer.toJson<int>(roundNumber),
-      'tee_set': serializer.toJson<String?>(teeSet),
-      'course_set_id': serializer.toJson<int?>(courseSetId),
+      'tee_set_id': serializer.toJson<int?>(teeSetId),
+      'pin_set_id': serializer.toJson<int?>(pinSetId),
       'weather': serializer.toJson<String?>(weather),
       'wind_speed_mph': serializer.toJson<int?>(windSpeedMph),
       'difficulty': serializer.toJson<String?>(difficulty),
@@ -1402,8 +1652,8 @@ class Round extends DataClass implements Insertable<Round> {
     String? date,
     int? courseId,
     int? roundNumber,
-    Value<String?> teeSet = const Value.absent(),
-    Value<int?> courseSetId = const Value.absent(),
+    Value<int?> teeSetId = const Value.absent(),
+    Value<int?> pinSetId = const Value.absent(),
     Value<String?> weather = const Value.absent(),
     Value<int?> windSpeedMph = const Value.absent(),
     Value<String?> difficulty = const Value.absent(),
@@ -1415,8 +1665,8 @@ class Round extends DataClass implements Insertable<Round> {
     date: date ?? this.date,
     courseId: courseId ?? this.courseId,
     roundNumber: roundNumber ?? this.roundNumber,
-    teeSet: teeSet.present ? teeSet.value : this.teeSet,
-    courseSetId: courseSetId.present ? courseSetId.value : this.courseSetId,
+    teeSetId: teeSetId.present ? teeSetId.value : this.teeSetId,
+    pinSetId: pinSetId.present ? pinSetId.value : this.pinSetId,
     weather: weather.present ? weather.value : this.weather,
     windSpeedMph: windSpeedMph.present ? windSpeedMph.value : this.windSpeedMph,
     difficulty: difficulty.present ? difficulty.value : this.difficulty,
@@ -1434,10 +1684,8 @@ class Round extends DataClass implements Insertable<Round> {
       roundNumber: data.roundNumber.present
           ? data.roundNumber.value
           : this.roundNumber,
-      teeSet: data.teeSet.present ? data.teeSet.value : this.teeSet,
-      courseSetId: data.courseSetId.present
-          ? data.courseSetId.value
-          : this.courseSetId,
+      teeSetId: data.teeSetId.present ? data.teeSetId.value : this.teeSetId,
+      pinSetId: data.pinSetId.present ? data.pinSetId.value : this.pinSetId,
       weather: data.weather.present ? data.weather.value : this.weather,
       windSpeedMph: data.windSpeedMph.present
           ? data.windSpeedMph.value
@@ -1460,8 +1708,8 @@ class Round extends DataClass implements Insertable<Round> {
           ..write('date: $date, ')
           ..write('courseId: $courseId, ')
           ..write('roundNumber: $roundNumber, ')
-          ..write('teeSet: $teeSet, ')
-          ..write('courseSetId: $courseSetId, ')
+          ..write('teeSetId: $teeSetId, ')
+          ..write('pinSetId: $pinSetId, ')
           ..write('weather: $weather, ')
           ..write('windSpeedMph: $windSpeedMph, ')
           ..write('difficulty: $difficulty, ')
@@ -1478,8 +1726,8 @@ class Round extends DataClass implements Insertable<Round> {
     date,
     courseId,
     roundNumber,
-    teeSet,
-    courseSetId,
+    teeSetId,
+    pinSetId,
     weather,
     windSpeedMph,
     difficulty,
@@ -1495,8 +1743,8 @@ class Round extends DataClass implements Insertable<Round> {
           other.date == this.date &&
           other.courseId == this.courseId &&
           other.roundNumber == this.roundNumber &&
-          other.teeSet == this.teeSet &&
-          other.courseSetId == this.courseSetId &&
+          other.teeSetId == this.teeSetId &&
+          other.pinSetId == this.pinSetId &&
           other.weather == this.weather &&
           other.windSpeedMph == this.windSpeedMph &&
           other.difficulty == this.difficulty &&
@@ -1510,8 +1758,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
   final Value<String> date;
   final Value<int> courseId;
   final Value<int> roundNumber;
-  final Value<String?> teeSet;
-  final Value<int?> courseSetId;
+  final Value<int?> teeSetId;
+  final Value<int?> pinSetId;
   final Value<String?> weather;
   final Value<int?> windSpeedMph;
   final Value<String?> difficulty;
@@ -1523,8 +1771,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     this.date = const Value.absent(),
     this.courseId = const Value.absent(),
     this.roundNumber = const Value.absent(),
-    this.teeSet = const Value.absent(),
-    this.courseSetId = const Value.absent(),
+    this.teeSetId = const Value.absent(),
+    this.pinSetId = const Value.absent(),
     this.weather = const Value.absent(),
     this.windSpeedMph = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -1537,8 +1785,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     required String date,
     required int courseId,
     this.roundNumber = const Value.absent(),
-    this.teeSet = const Value.absent(),
-    this.courseSetId = const Value.absent(),
+    this.teeSetId = const Value.absent(),
+    this.pinSetId = const Value.absent(),
     this.weather = const Value.absent(),
     this.windSpeedMph = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -1552,8 +1800,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     Expression<String>? date,
     Expression<int>? courseId,
     Expression<int>? roundNumber,
-    Expression<String>? teeSet,
-    Expression<int>? courseSetId,
+    Expression<int>? teeSetId,
+    Expression<int>? pinSetId,
     Expression<String>? weather,
     Expression<int>? windSpeedMph,
     Expression<String>? difficulty,
@@ -1566,8 +1814,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
       if (date != null) 'date': date,
       if (courseId != null) 'course_id': courseId,
       if (roundNumber != null) 'round_number': roundNumber,
-      if (teeSet != null) 'tee_set': teeSet,
-      if (courseSetId != null) 'course_set_id': courseSetId,
+      if (teeSetId != null) 'tee_set_id': teeSetId,
+      if (pinSetId != null) 'pin_set_id': pinSetId,
       if (weather != null) 'weather': weather,
       if (windSpeedMph != null) 'wind_speed_mph': windSpeedMph,
       if (difficulty != null) 'difficulty': difficulty,
@@ -1582,8 +1830,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     Value<String>? date,
     Value<int>? courseId,
     Value<int>? roundNumber,
-    Value<String?>? teeSet,
-    Value<int?>? courseSetId,
+    Value<int?>? teeSetId,
+    Value<int?>? pinSetId,
     Value<String?>? weather,
     Value<int?>? windSpeedMph,
     Value<String?>? difficulty,
@@ -1596,8 +1844,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
       date: date ?? this.date,
       courseId: courseId ?? this.courseId,
       roundNumber: roundNumber ?? this.roundNumber,
-      teeSet: teeSet ?? this.teeSet,
-      courseSetId: courseSetId ?? this.courseSetId,
+      teeSetId: teeSetId ?? this.teeSetId,
+      pinSetId: pinSetId ?? this.pinSetId,
       weather: weather ?? this.weather,
       windSpeedMph: windSpeedMph ?? this.windSpeedMph,
       difficulty: difficulty ?? this.difficulty,
@@ -1622,11 +1870,11 @@ class RoundsCompanion extends UpdateCompanion<Round> {
     if (roundNumber.present) {
       map['round_number'] = Variable<int>(roundNumber.value);
     }
-    if (teeSet.present) {
-      map['tee_set'] = Variable<String>(teeSet.value);
+    if (teeSetId.present) {
+      map['tee_set_id'] = Variable<int>(teeSetId.value);
     }
-    if (courseSetId.present) {
-      map['course_set_id'] = Variable<int>(courseSetId.value);
+    if (pinSetId.present) {
+      map['pin_set_id'] = Variable<int>(pinSetId.value);
     }
     if (weather.present) {
       map['weather'] = Variable<String>(weather.value);
@@ -1656,8 +1904,8 @@ class RoundsCompanion extends UpdateCompanion<Round> {
           ..write('date: $date, ')
           ..write('courseId: $courseId, ')
           ..write('roundNumber: $roundNumber, ')
-          ..write('teeSet: $teeSet, ')
-          ..write('courseSetId: $courseSetId, ')
+          ..write('teeSetId: $teeSetId, ')
+          ..write('pinSetId: $pinSetId, ')
           ..write('weather: $weather, ')
           ..write('windSpeedMph: $windSpeedMph, ')
           ..write('difficulty: $difficulty, ')
@@ -2924,12 +3172,12 @@ class CourseHolesCompanion extends UpdateCompanion<CourseHole> {
   }
 }
 
-class $CourseSetYardsTable extends CourseSetYards
-    with TableInfo<$CourseSetYardsTable, CourseSetYard> {
+class $CourseYardsTable extends CourseYards
+    with TableInfo<$CourseYardsTable, CourseYard> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CourseSetYardsTable(this.attachedDatabase, [this._alias]);
+  $CourseYardsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -2943,18 +3191,18 @@ class $CourseSetYardsTable extends CourseSetYards
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
-  static const VerificationMeta _courseSetIdMeta = const VerificationMeta(
-    'courseSetId',
+  static const VerificationMeta _teeSetIdMeta = const VerificationMeta(
+    'teeSetId',
   );
   @override
-  late final GeneratedColumn<int> courseSetId = GeneratedColumn<int>(
-    'course_set_id',
+  late final GeneratedColumn<int> teeSetId = GeneratedColumn<int>(
+    'tee_set_id',
     aliasedName,
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES course_sets (id) ON DELETE CASCADE',
+      'REFERENCES tee_sets (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _holeNumberMeta = const VerificationMeta(
@@ -2980,15 +3228,15 @@ class $CourseSetYardsTable extends CourseSetYards
     $customConstraints: 'NOT NULL CHECK (yards >= 0)',
   );
   @override
-  List<GeneratedColumn> get $columns => [id, courseSetId, holeNumber, yards];
+  List<GeneratedColumn> get $columns => [id, teeSetId, holeNumber, yards];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'course_set_yards';
+  static const String $name = 'course_yards';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CourseSetYard> instance, {
+    Insertable<CourseYard> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -2996,16 +3244,13 @@ class $CourseSetYardsTable extends CourseSetYards
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    if (data.containsKey('course_set_id')) {
+    if (data.containsKey('tee_set_id')) {
       context.handle(
-        _courseSetIdMeta,
-        courseSetId.isAcceptableOrUnknown(
-          data['course_set_id']!,
-          _courseSetIdMeta,
-        ),
+        _teeSetIdMeta,
+        teeSetId.isAcceptableOrUnknown(data['tee_set_id']!, _teeSetIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_courseSetIdMeta);
+      context.missing(_teeSetIdMeta);
     }
     if (data.containsKey('hole_number')) {
       context.handle(
@@ -3030,19 +3275,19 @@ class $CourseSetYardsTable extends CourseSetYards
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {courseSetId, holeNumber},
+    {teeSetId, holeNumber},
   ];
   @override
-  CourseSetYard map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CourseYard map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CourseSetYard(
+    return CourseYard(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      courseSetId: attachedDatabase.typeMapping.read(
+      teeSetId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}course_set_id'],
+        data['${effectivePrefix}tee_set_id'],
       )!,
       holeNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3056,19 +3301,19 @@ class $CourseSetYardsTable extends CourseSetYards
   }
 
   @override
-  $CourseSetYardsTable createAlias(String alias) {
-    return $CourseSetYardsTable(attachedDatabase, alias);
+  $CourseYardsTable createAlias(String alias) {
+    return $CourseYardsTable(attachedDatabase, alias);
   }
 }
 
-class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
+class CourseYard extends DataClass implements Insertable<CourseYard> {
   final int id;
-  final int courseSetId;
+  final int teeSetId;
   final int holeNumber;
   final int yards;
-  const CourseSetYard({
+  const CourseYard({
     required this.id,
-    required this.courseSetId,
+    required this.teeSetId,
     required this.holeNumber,
     required this.yards,
   });
@@ -3076,29 +3321,29 @@ class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['course_set_id'] = Variable<int>(courseSetId);
+    map['tee_set_id'] = Variable<int>(teeSetId);
     map['hole_number'] = Variable<int>(holeNumber);
     map['yards'] = Variable<int>(yards);
     return map;
   }
 
-  CourseSetYardsCompanion toCompanion(bool nullToAbsent) {
-    return CourseSetYardsCompanion(
+  CourseYardsCompanion toCompanion(bool nullToAbsent) {
+    return CourseYardsCompanion(
       id: Value(id),
-      courseSetId: Value(courseSetId),
+      teeSetId: Value(teeSetId),
       holeNumber: Value(holeNumber),
       yards: Value(yards),
     );
   }
 
-  factory CourseSetYard.fromJson(
+  factory CourseYard.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CourseSetYard(
+    return CourseYard(
       id: serializer.fromJson<int>(json['id']),
-      courseSetId: serializer.fromJson<int>(json['course_set_id']),
+      teeSetId: serializer.fromJson<int>(json['tee_set_id']),
       holeNumber: serializer.fromJson<int>(json['hole_number']),
       yards: serializer.fromJson<int>(json['yards']),
     );
@@ -3108,29 +3353,23 @@ class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'course_set_id': serializer.toJson<int>(courseSetId),
+      'tee_set_id': serializer.toJson<int>(teeSetId),
       'hole_number': serializer.toJson<int>(holeNumber),
       'yards': serializer.toJson<int>(yards),
     };
   }
 
-  CourseSetYard copyWith({
-    int? id,
-    int? courseSetId,
-    int? holeNumber,
-    int? yards,
-  }) => CourseSetYard(
-    id: id ?? this.id,
-    courseSetId: courseSetId ?? this.courseSetId,
-    holeNumber: holeNumber ?? this.holeNumber,
-    yards: yards ?? this.yards,
-  );
-  CourseSetYard copyWithCompanion(CourseSetYardsCompanion data) {
-    return CourseSetYard(
+  CourseYard copyWith({int? id, int? teeSetId, int? holeNumber, int? yards}) =>
+      CourseYard(
+        id: id ?? this.id,
+        teeSetId: teeSetId ?? this.teeSetId,
+        holeNumber: holeNumber ?? this.holeNumber,
+        yards: yards ?? this.yards,
+      );
+  CourseYard copyWithCompanion(CourseYardsCompanion data) {
+    return CourseYard(
       id: data.id.present ? data.id.value : this.id,
-      courseSetId: data.courseSetId.present
-          ? data.courseSetId.value
-          : this.courseSetId,
+      teeSetId: data.teeSetId.present ? data.teeSetId.value : this.teeSetId,
       holeNumber: data.holeNumber.present
           ? data.holeNumber.value
           : this.holeNumber,
@@ -3140,9 +3379,9 @@ class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
 
   @override
   String toString() {
-    return (StringBuffer('CourseSetYard(')
+    return (StringBuffer('CourseYard(')
           ..write('id: $id, ')
-          ..write('courseSetId: $courseSetId, ')
+          ..write('teeSetId: $teeSetId, ')
           ..write('holeNumber: $holeNumber, ')
           ..write('yards: $yards')
           ..write(')'))
@@ -3150,59 +3389,59 @@ class CourseSetYard extends DataClass implements Insertable<CourseSetYard> {
   }
 
   @override
-  int get hashCode => Object.hash(id, courseSetId, holeNumber, yards);
+  int get hashCode => Object.hash(id, teeSetId, holeNumber, yards);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CourseSetYard &&
+      (other is CourseYard &&
           other.id == this.id &&
-          other.courseSetId == this.courseSetId &&
+          other.teeSetId == this.teeSetId &&
           other.holeNumber == this.holeNumber &&
           other.yards == this.yards);
 }
 
-class CourseSetYardsCompanion extends UpdateCompanion<CourseSetYard> {
+class CourseYardsCompanion extends UpdateCompanion<CourseYard> {
   final Value<int> id;
-  final Value<int> courseSetId;
+  final Value<int> teeSetId;
   final Value<int> holeNumber;
   final Value<int> yards;
-  const CourseSetYardsCompanion({
+  const CourseYardsCompanion({
     this.id = const Value.absent(),
-    this.courseSetId = const Value.absent(),
+    this.teeSetId = const Value.absent(),
     this.holeNumber = const Value.absent(),
     this.yards = const Value.absent(),
   });
-  CourseSetYardsCompanion.insert({
+  CourseYardsCompanion.insert({
     this.id = const Value.absent(),
-    required int courseSetId,
+    required int teeSetId,
     required int holeNumber,
     required int yards,
-  }) : courseSetId = Value(courseSetId),
+  }) : teeSetId = Value(teeSetId),
        holeNumber = Value(holeNumber),
        yards = Value(yards);
-  static Insertable<CourseSetYard> custom({
+  static Insertable<CourseYard> custom({
     Expression<int>? id,
-    Expression<int>? courseSetId,
+    Expression<int>? teeSetId,
     Expression<int>? holeNumber,
     Expression<int>? yards,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (courseSetId != null) 'course_set_id': courseSetId,
+      if (teeSetId != null) 'tee_set_id': teeSetId,
       if (holeNumber != null) 'hole_number': holeNumber,
       if (yards != null) 'yards': yards,
     });
   }
 
-  CourseSetYardsCompanion copyWith({
+  CourseYardsCompanion copyWith({
     Value<int>? id,
-    Value<int>? courseSetId,
+    Value<int>? teeSetId,
     Value<int>? holeNumber,
     Value<int>? yards,
   }) {
-    return CourseSetYardsCompanion(
+    return CourseYardsCompanion(
       id: id ?? this.id,
-      courseSetId: courseSetId ?? this.courseSetId,
+      teeSetId: teeSetId ?? this.teeSetId,
       holeNumber: holeNumber ?? this.holeNumber,
       yards: yards ?? this.yards,
     );
@@ -3214,8 +3453,8 @@ class CourseSetYardsCompanion extends UpdateCompanion<CourseSetYard> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
-    if (courseSetId.present) {
-      map['course_set_id'] = Variable<int>(courseSetId.value);
+    if (teeSetId.present) {
+      map['tee_set_id'] = Variable<int>(teeSetId.value);
     }
     if (holeNumber.present) {
       map['hole_number'] = Variable<int>(holeNumber.value);
@@ -3228,9 +3467,373 @@ class CourseSetYardsCompanion extends UpdateCompanion<CourseSetYard> {
 
   @override
   String toString() {
-    return (StringBuffer('CourseSetYardsCompanion(')
+    return (StringBuffer('CourseYardsCompanion(')
           ..write('id: $id, ')
-          ..write('courseSetId: $courseSetId, ')
+          ..write('teeSetId: $teeSetId, ')
+          ..write('holeNumber: $holeNumber, ')
+          ..write('yards: $yards')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TeeToPinYardsTable extends TeeToPinYards
+    with TableInfo<$TeeToPinYardsTable, TeeToPinYard> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TeeToPinYardsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _teeSetIdMeta = const VerificationMeta(
+    'teeSetId',
+  );
+  @override
+  late final GeneratedColumn<int> teeSetId = GeneratedColumn<int>(
+    'tee_set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES tee_sets (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _pinSetIdMeta = const VerificationMeta(
+    'pinSetId',
+  );
+  @override
+  late final GeneratedColumn<int> pinSetId = GeneratedColumn<int>(
+    'pin_set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pin_sets (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _holeNumberMeta = const VerificationMeta(
+    'holeNumber',
+  );
+  @override
+  late final GeneratedColumn<int> holeNumber = GeneratedColumn<int>(
+    'hole_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (hole_number BETWEEN 1 AND 18)',
+  );
+  static const VerificationMeta _yardsMeta = const VerificationMeta('yards');
+  @override
+  late final GeneratedColumn<int> yards = GeneratedColumn<int>(
+    'yards',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (yards >= 0)',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    teeSetId,
+    pinSetId,
+    holeNumber,
+    yards,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tee_to_pin_yards';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TeeToPinYard> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('tee_set_id')) {
+      context.handle(
+        _teeSetIdMeta,
+        teeSetId.isAcceptableOrUnknown(data['tee_set_id']!, _teeSetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_teeSetIdMeta);
+    }
+    if (data.containsKey('pin_set_id')) {
+      context.handle(
+        _pinSetIdMeta,
+        pinSetId.isAcceptableOrUnknown(data['pin_set_id']!, _pinSetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pinSetIdMeta);
+    }
+    if (data.containsKey('hole_number')) {
+      context.handle(
+        _holeNumberMeta,
+        holeNumber.isAcceptableOrUnknown(data['hole_number']!, _holeNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_holeNumberMeta);
+    }
+    if (data.containsKey('yards')) {
+      context.handle(
+        _yardsMeta,
+        yards.isAcceptableOrUnknown(data['yards']!, _yardsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_yardsMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {teeSetId, pinSetId, holeNumber},
+  ];
+  @override
+  TeeToPinYard map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TeeToPinYard(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      teeSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tee_set_id'],
+      )!,
+      pinSetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pin_set_id'],
+      )!,
+      holeNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hole_number'],
+      )!,
+      yards: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}yards'],
+      )!,
+    );
+  }
+
+  @override
+  $TeeToPinYardsTable createAlias(String alias) {
+    return $TeeToPinYardsTable(attachedDatabase, alias);
+  }
+}
+
+class TeeToPinYard extends DataClass implements Insertable<TeeToPinYard> {
+  final int id;
+  final int teeSetId;
+  final int pinSetId;
+  final int holeNumber;
+  final int yards;
+  const TeeToPinYard({
+    required this.id,
+    required this.teeSetId,
+    required this.pinSetId,
+    required this.holeNumber,
+    required this.yards,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['tee_set_id'] = Variable<int>(teeSetId);
+    map['pin_set_id'] = Variable<int>(pinSetId);
+    map['hole_number'] = Variable<int>(holeNumber);
+    map['yards'] = Variable<int>(yards);
+    return map;
+  }
+
+  TeeToPinYardsCompanion toCompanion(bool nullToAbsent) {
+    return TeeToPinYardsCompanion(
+      id: Value(id),
+      teeSetId: Value(teeSetId),
+      pinSetId: Value(pinSetId),
+      holeNumber: Value(holeNumber),
+      yards: Value(yards),
+    );
+  }
+
+  factory TeeToPinYard.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TeeToPinYard(
+      id: serializer.fromJson<int>(json['id']),
+      teeSetId: serializer.fromJson<int>(json['tee_set_id']),
+      pinSetId: serializer.fromJson<int>(json['pin_set_id']),
+      holeNumber: serializer.fromJson<int>(json['hole_number']),
+      yards: serializer.fromJson<int>(json['yards']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'tee_set_id': serializer.toJson<int>(teeSetId),
+      'pin_set_id': serializer.toJson<int>(pinSetId),
+      'hole_number': serializer.toJson<int>(holeNumber),
+      'yards': serializer.toJson<int>(yards),
+    };
+  }
+
+  TeeToPinYard copyWith({
+    int? id,
+    int? teeSetId,
+    int? pinSetId,
+    int? holeNumber,
+    int? yards,
+  }) => TeeToPinYard(
+    id: id ?? this.id,
+    teeSetId: teeSetId ?? this.teeSetId,
+    pinSetId: pinSetId ?? this.pinSetId,
+    holeNumber: holeNumber ?? this.holeNumber,
+    yards: yards ?? this.yards,
+  );
+  TeeToPinYard copyWithCompanion(TeeToPinYardsCompanion data) {
+    return TeeToPinYard(
+      id: data.id.present ? data.id.value : this.id,
+      teeSetId: data.teeSetId.present ? data.teeSetId.value : this.teeSetId,
+      pinSetId: data.pinSetId.present ? data.pinSetId.value : this.pinSetId,
+      holeNumber: data.holeNumber.present
+          ? data.holeNumber.value
+          : this.holeNumber,
+      yards: data.yards.present ? data.yards.value : this.yards,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TeeToPinYard(')
+          ..write('id: $id, ')
+          ..write('teeSetId: $teeSetId, ')
+          ..write('pinSetId: $pinSetId, ')
+          ..write('holeNumber: $holeNumber, ')
+          ..write('yards: $yards')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, teeSetId, pinSetId, holeNumber, yards);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TeeToPinYard &&
+          other.id == this.id &&
+          other.teeSetId == this.teeSetId &&
+          other.pinSetId == this.pinSetId &&
+          other.holeNumber == this.holeNumber &&
+          other.yards == this.yards);
+}
+
+class TeeToPinYardsCompanion extends UpdateCompanion<TeeToPinYard> {
+  final Value<int> id;
+  final Value<int> teeSetId;
+  final Value<int> pinSetId;
+  final Value<int> holeNumber;
+  final Value<int> yards;
+  const TeeToPinYardsCompanion({
+    this.id = const Value.absent(),
+    this.teeSetId = const Value.absent(),
+    this.pinSetId = const Value.absent(),
+    this.holeNumber = const Value.absent(),
+    this.yards = const Value.absent(),
+  });
+  TeeToPinYardsCompanion.insert({
+    this.id = const Value.absent(),
+    required int teeSetId,
+    required int pinSetId,
+    required int holeNumber,
+    required int yards,
+  }) : teeSetId = Value(teeSetId),
+       pinSetId = Value(pinSetId),
+       holeNumber = Value(holeNumber),
+       yards = Value(yards);
+  static Insertable<TeeToPinYard> custom({
+    Expression<int>? id,
+    Expression<int>? teeSetId,
+    Expression<int>? pinSetId,
+    Expression<int>? holeNumber,
+    Expression<int>? yards,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (teeSetId != null) 'tee_set_id': teeSetId,
+      if (pinSetId != null) 'pin_set_id': pinSetId,
+      if (holeNumber != null) 'hole_number': holeNumber,
+      if (yards != null) 'yards': yards,
+    });
+  }
+
+  TeeToPinYardsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? teeSetId,
+    Value<int>? pinSetId,
+    Value<int>? holeNumber,
+    Value<int>? yards,
+  }) {
+    return TeeToPinYardsCompanion(
+      id: id ?? this.id,
+      teeSetId: teeSetId ?? this.teeSetId,
+      pinSetId: pinSetId ?? this.pinSetId,
+      holeNumber: holeNumber ?? this.holeNumber,
+      yards: yards ?? this.yards,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (teeSetId.present) {
+      map['tee_set_id'] = Variable<int>(teeSetId.value);
+    }
+    if (pinSetId.present) {
+      map['pin_set_id'] = Variable<int>(pinSetId.value);
+    }
+    if (holeNumber.present) {
+      map['hole_number'] = Variable<int>(holeNumber.value);
+    }
+    if (yards.present) {
+      map['yards'] = Variable<int>(yards.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TeeToPinYardsCompanion(')
+          ..write('id: $id, ')
+          ..write('teeSetId: $teeSetId, ')
+          ..write('pinSetId: $pinSetId, ')
           ..write('holeNumber: $holeNumber, ')
           ..write('yards: $yards')
           ..write(')'))
@@ -3493,7 +4096,9 @@ class HoleShot extends DataClass implements Insertable<HoleShot> {
   /// A putt's distance **remaining to the hole**, in feet — the unit golf, and
   /// every golf game, measures a putt in (schema v8). Only putts
   /// carry it; every other shot leaves it null and records [distanceYards].
-  /// `putts` on [HoleResults] stays the count the stats read.
+  /// `putts` on [HoleResults] stays the count the stats read. Putts saved
+  /// before v8 with a distance had it in yards; the v7 -> v8 migration moved
+  /// it here, times 3.
   ///
   /// Declared last because it was added last: `ALTER TABLE ADD COLUMN` appends,
   /// so this order is the one a migrated database has too.
@@ -3788,12 +4393,14 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
   _$GolfyDatabase(QueryExecutor e) : super(e);
   $GolfyDatabaseManager get managers => $GolfyDatabaseManager(this);
   late final $CoursesTable courses = $CoursesTable(this);
-  late final $CourseSetsTable courseSets = $CourseSetsTable(this);
+  late final $TeeSetsTable teeSets = $TeeSetsTable(this);
+  late final $PinSetsTable pinSets = $PinSetsTable(this);
   late final $EventsTable events = $EventsTable(this);
   late final $RoundsTable rounds = $RoundsTable(this);
   late final $HoleResultsTable holeResults = $HoleResultsTable(this);
   late final $CourseHolesTable courseHoles = $CourseHolesTable(this);
-  late final $CourseSetYardsTable courseSetYards = $CourseSetYardsTable(this);
+  late final $CourseYardsTable courseYards = $CourseYardsTable(this);
+  late final $TeeToPinYardsTable teeToPinYards = $TeeToPinYardsTable(this);
   late final $HoleShotsTable holeShots = $HoleShotsTable(this);
   late final Index idxRoundsDate = Index(
     'idx_rounds_date',
@@ -3807,9 +4414,13 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     'idx_rounds_event',
     'CREATE INDEX idx_rounds_event ON rounds (event_id)',
   );
-  late final Index idxRoundsCourseSet = Index(
-    'idx_rounds_course_set',
-    'CREATE INDEX idx_rounds_course_set ON rounds (course_set_id)',
+  late final Index idxRoundsTeeSet = Index(
+    'idx_rounds_tee_set',
+    'CREATE INDEX idx_rounds_tee_set ON rounds (tee_set_id)',
+  );
+  late final Index idxRoundsPinSet = Index(
+    'idx_rounds_pin_set',
+    'CREATE INDEX idx_rounds_pin_set ON rounds (pin_set_id)',
   );
   late final Index idxHolesRound = Index(
     'idx_holes_round',
@@ -3819,13 +4430,25 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     'idx_course_holes_course',
     'CREATE INDEX idx_course_holes_course ON course_holes (course_id)',
   );
-  late final Index idxCourseSetsCourse = Index(
-    'idx_course_sets_course',
-    'CREATE INDEX idx_course_sets_course ON course_sets (course_id)',
+  late final Index idxTeeSetsCourse = Index(
+    'idx_tee_sets_course',
+    'CREATE INDEX idx_tee_sets_course ON tee_sets (course_id)',
   );
-  late final Index idxCourseSetYardsSet = Index(
-    'idx_course_set_yards_set',
-    'CREATE INDEX idx_course_set_yards_set ON course_set_yards (course_set_id)',
+  late final Index idxCourseYardsTeeSet = Index(
+    'idx_course_yards_tee_set',
+    'CREATE INDEX idx_course_yards_tee_set ON course_yards (tee_set_id)',
+  );
+  late final Index idxPinSetsCourse = Index(
+    'idx_pin_sets_course',
+    'CREATE INDEX idx_pin_sets_course ON pin_sets (course_id)',
+  );
+  late final Index idxTeeToPinYardsTeeSet = Index(
+    'idx_tee_to_pin_yards_tee_set',
+    'CREATE INDEX idx_tee_to_pin_yards_tee_set ON tee_to_pin_yards (tee_set_id)',
+  );
+  late final Index idxTeeToPinYardsPinSet = Index(
+    'idx_tee_to_pin_yards_pin_set',
+    'CREATE INDEX idx_tee_to_pin_yards_pin_set ON tee_to_pin_yards (pin_set_id)',
   );
   late final Index idxHoleShotsResult = Index(
     'idx_hole_shots_result',
@@ -3834,7 +4457,7 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
   late final BackupDao backupDao = BackupDao(this as GolfyDatabase);
   late final CourseDao courseDao = CourseDao(this as GolfyDatabase);
   late final CourseHoleDao courseHoleDao = CourseHoleDao(this as GolfyDatabase);
-  late final CourseSetDao courseSetDao = CourseSetDao(this as GolfyDatabase);
+  late final YardageDao yardageDao = YardageDao(this as GolfyDatabase);
   late final RoundDao roundDao = RoundDao(this as GolfyDatabase);
   late final HoleResultDao holeResultDao = HoleResultDao(this as GolfyDatabase);
   late final HoleShotDao holeShotDao = HoleShotDao(this as GolfyDatabase);
@@ -3846,21 +4469,27 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     courses,
-    courseSets,
+    teeSets,
+    pinSets,
     events,
     rounds,
     holeResults,
     courseHoles,
-    courseSetYards,
+    courseYards,
+    teeToPinYards,
     holeShots,
     idxRoundsDate,
     idxRoundsCourse,
     idxRoundsEvent,
-    idxRoundsCourseSet,
+    idxRoundsTeeSet,
+    idxRoundsPinSet,
     idxHolesRound,
     idxCourseHolesCourse,
-    idxCourseSetsCourse,
-    idxCourseSetYardsSet,
+    idxTeeSetsCourse,
+    idxCourseYardsTeeSet,
+    idxPinSetsCourse,
+    idxTeeToPinYardsTeeSet,
+    idxTeeToPinYardsPinSet,
     idxHoleShotsResult,
   ];
   @override
@@ -3870,11 +4499,25 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
         'courses',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('course_sets', kind: UpdateKind.delete)],
+      result: [TableUpdate('tee_sets', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'course_sets',
+        'courses',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('pin_sets', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'tee_sets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('rounds', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'pin_sets',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('rounds', kind: UpdateKind.update)],
@@ -3902,10 +4545,24 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'course_sets',
+        'tee_sets',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('course_set_yards', kind: UpdateKind.delete)],
+      result: [TableUpdate('course_yards', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'tee_sets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('tee_to_pin_yards', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'pin_sets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('tee_to_pin_yards', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -3934,19 +4591,39 @@ final class $$CoursesTableReferences
     extends BaseReferences<_$GolfyDatabase, $CoursesTable, Course> {
   $$CoursesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$CourseSetsTable, List<CourseSet>>
-  _courseSetsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
-    db.courseSets,
-    aliasName: 'courses__id__course_sets__course_id',
+  static MultiTypedResultKey<$TeeSetsTable, List<TeeSet>> _teeSetsRefsTable(
+    _$GolfyDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.teeSets,
+    aliasName: 'courses__id__tee_sets__course_id',
   );
 
-  $$CourseSetsTableProcessedTableManager get courseSetsRefs {
-    final manager = $$CourseSetsTableTableManager(
+  $$TeeSetsTableProcessedTableManager get teeSetsRefs {
+    final manager = $$TeeSetsTableTableManager(
       $_db,
-      $_db.courseSets,
+      $_db.teeSets,
     ).filter((f) => f.courseId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_courseSetsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_teeSetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PinSetsTable, List<PinSet>> _pinSetsRefsTable(
+    _$GolfyDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.pinSets,
+    aliasName: 'courses__id__pin_sets__course_id',
+  );
+
+  $$PinSetsTableProcessedTableManager get pinSetsRefs {
+    final manager = $$PinSetsTableTableManager(
+      $_db,
+      $_db.pinSets,
+    ).filter((f) => f.courseId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pinSetsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4014,22 +4691,47 @@ class $$CoursesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  Expression<bool> courseSetsRefs(
-    Expression<bool> Function($$CourseSetsTableFilterComposer f) f,
+  Expression<bool> teeSetsRefs(
+    Expression<bool> Function($$TeeSetsTableFilterComposer f) f,
   ) {
-    final $$CourseSetsTableFilterComposer composer = $composerBuilder(
+    final $$TeeSetsTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.courseSets,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.courseId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableFilterComposer(
+          }) => $$TeeSetsTableFilterComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> pinSetsRefs(
+    Expression<bool> Function($$PinSetsTableFilterComposer f) f,
+  ) {
+    final $$PinSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.courseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.pinSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4133,22 +4835,47 @@ class $$CoursesTableAnnotationComposer
   GeneratedColumn<String> get gameTitle =>
       $composableBuilder(column: $table.gameTitle, builder: (column) => column);
 
-  Expression<T> courseSetsRefs<T extends Object>(
-    Expression<T> Function($$CourseSetsTableAnnotationComposer a) f,
+  Expression<T> teeSetsRefs<T extends Object>(
+    Expression<T> Function($$TeeSetsTableAnnotationComposer a) f,
   ) {
-    final $$CourseSetsTableAnnotationComposer composer = $composerBuilder(
+    final $$TeeSetsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.courseSets,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.courseId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableAnnotationComposer(
+          }) => $$TeeSetsTableAnnotationComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> pinSetsRefs<T extends Object>(
+    Expression<T> Function($$PinSetsTableAnnotationComposer a) f,
+  ) {
+    final $$PinSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.courseId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pinSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4223,7 +4950,8 @@ class $$CoursesTableTableManager
           (Course, $$CoursesTableReferences),
           Course,
           PrefetchHooks Function({
-            bool courseSetsRefs,
+            bool teeSetsRefs,
+            bool pinSetsRefs,
             bool roundsRefs,
             bool courseHolesRefs,
           })
@@ -4265,35 +4993,58 @@ class $$CoursesTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                courseSetsRefs = false,
+                teeSetsRefs = false,
+                pinSetsRefs = false,
                 roundsRefs = false,
                 courseHolesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
-                    if (courseSetsRefs) db.courseSets,
+                    if (teeSetsRefs) db.teeSets,
+                    if (pinSetsRefs) db.pinSets,
                     if (roundsRefs) db.rounds,
                     if (courseHolesRefs) db.courseHoles,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
                     return [
-                      if (courseSetsRefs)
+                      if (teeSetsRefs)
                         await $_getPrefetchedData<
                           Course,
                           $CoursesTable,
-                          CourseSet
+                          TeeSet
                         >(
                           currentTable: table,
                           referencedTable: $$CoursesTableReferences
-                              ._courseSetsRefsTable(db),
+                              ._teeSetsRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$CoursesTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).courseSetsRefs,
+                              ).teeSetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (pinSetsRefs)
+                        await $_getPrefetchedData<
+                          Course,
+                          $CoursesTable,
+                          PinSet
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CoursesTableReferences
+                              ._pinSetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CoursesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pinSetsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.courseId == item.id,
@@ -4359,30 +5110,31 @@ typedef $$CoursesTableProcessedTableManager =
       (Course, $$CoursesTableReferences),
       Course,
       PrefetchHooks Function({
-        bool courseSetsRefs,
+        bool teeSetsRefs,
+        bool pinSetsRefs,
         bool roundsRefs,
         bool courseHolesRefs,
       })
     >;
-typedef $$CourseSetsTableCreateCompanionBuilder =
-    CourseSetsCompanion Function({
+typedef $$TeeSetsTableCreateCompanionBuilder =
+    TeeSetsCompanion Function({
       Value<int> id,
       required int courseId,
       required String name,
     });
-typedef $$CourseSetsTableUpdateCompanionBuilder =
-    CourseSetsCompanion Function({
+typedef $$TeeSetsTableUpdateCompanionBuilder =
+    TeeSetsCompanion Function({
       Value<int> id,
       Value<int> courseId,
       Value<String> name,
     });
 
-final class $$CourseSetsTableReferences
-    extends BaseReferences<_$GolfyDatabase, $CourseSetsTable, CourseSet> {
-  $$CourseSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+final class $$TeeSetsTableReferences
+    extends BaseReferences<_$GolfyDatabase, $TeeSetsTable, TeeSet> {
+  $$TeeSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $CoursesTable _courseIdTable(_$GolfyDatabase db) =>
-      db.courses.createAlias('course_sets__course_id__courses__id');
+      db.courses.createAlias('tee_sets__course_id__courses__id');
 
   $$CoursesTableProcessedTableManager get courseId {
     final $_column = $_itemColumn<int>('course_id')!;
@@ -4402,14 +5154,14 @@ final class $$CourseSetsTableReferences
     _$GolfyDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.rounds,
-    aliasName: 'course_sets__id__rounds__course_set_id',
+    aliasName: 'tee_sets__id__rounds__tee_set_id',
   );
 
   $$RoundsTableProcessedTableManager get roundsRefs {
     final manager = $$RoundsTableTableManager(
       $_db,
       $_db.rounds,
-    ).filter((f) => f.courseSetId.id.sqlEquals($_itemColumn<int>('id')!));
+    ).filter((f) => f.teeSetId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_roundsRefsTable($_db));
     return ProcessedTableManager(
@@ -4417,28 +5169,46 @@ final class $$CourseSetsTableReferences
     );
   }
 
-  static MultiTypedResultKey<$CourseSetYardsTable, List<CourseSetYard>>
-  _courseSetYardsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
-    db.courseSetYards,
-    aliasName: 'course_sets__id__course_set_yards__course_set_id',
+  static MultiTypedResultKey<$CourseYardsTable, List<CourseYard>>
+  _courseYardsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.courseYards,
+    aliasName: 'tee_sets__id__course_yards__tee_set_id',
   );
 
-  $$CourseSetYardsTableProcessedTableManager get courseSetYardsRefs {
-    final manager = $$CourseSetYardsTableTableManager(
+  $$CourseYardsTableProcessedTableManager get courseYardsRefs {
+    final manager = $$CourseYardsTableTableManager(
       $_db,
-      $_db.courseSetYards,
-    ).filter((f) => f.courseSetId.id.sqlEquals($_itemColumn<int>('id')!));
+      $_db.courseYards,
+    ).filter((f) => f.teeSetId.id.sqlEquals($_itemColumn<int>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_courseSetYardsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_courseYardsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TeeToPinYardsTable, List<TeeToPinYard>>
+  _teeToPinYardsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.teeToPinYards,
+    aliasName: 'tee_sets__id__tee_to_pin_yards__tee_set_id',
+  );
+
+  $$TeeToPinYardsTableProcessedTableManager get teeToPinYardsRefs {
+    final manager = $$TeeToPinYardsTableTableManager(
+      $_db,
+      $_db.teeToPinYards,
+    ).filter((f) => f.teeSetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_teeToPinYardsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
 
-class $$CourseSetsTableFilterComposer
-    extends Composer<_$GolfyDatabase, $CourseSetsTable> {
-  $$CourseSetsTableFilterComposer({
+class $$TeeSetsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $TeeSetsTable> {
+  $$TeeSetsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4485,7 +5255,7 @@ class $$CourseSetsTableFilterComposer
       composer: this,
       getCurrentColumn: (t) => t.id,
       referencedTable: $db.rounds,
-      getReferencedColumn: (t) => t.courseSetId,
+      getReferencedColumn: (t) => t.teeSetId,
       builder:
           (
             joinBuilder, {
@@ -4503,22 +5273,47 @@ class $$CourseSetsTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> courseSetYardsRefs(
-    Expression<bool> Function($$CourseSetYardsTableFilterComposer f) f,
+  Expression<bool> courseYardsRefs(
+    Expression<bool> Function($$CourseYardsTableFilterComposer f) f,
   ) {
-    final $$CourseSetYardsTableFilterComposer composer = $composerBuilder(
+    final $$CourseYardsTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.courseSetYards,
-      getReferencedColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseYards,
+      getReferencedColumn: (t) => t.teeSetId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetYardsTableFilterComposer(
+          }) => $$CourseYardsTableFilterComposer(
             $db: $db,
-            $table: $db.courseSetYards,
+            $table: $db.courseYards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> teeToPinYardsRefs(
+    Expression<bool> Function($$TeeToPinYardsTableFilterComposer f) f,
+  ) {
+    final $$TeeToPinYardsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.teeToPinYards,
+      getReferencedColumn: (t) => t.teeSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeToPinYardsTableFilterComposer(
+            $db: $db,
+            $table: $db.teeToPinYards,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4529,9 +5324,9 @@ class $$CourseSetsTableFilterComposer
   }
 }
 
-class $$CourseSetsTableOrderingComposer
-    extends Composer<_$GolfyDatabase, $CourseSetsTable> {
-  $$CourseSetsTableOrderingComposer({
+class $$TeeSetsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $TeeSetsTable> {
+  $$TeeSetsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4572,9 +5367,9 @@ class $$CourseSetsTableOrderingComposer
   }
 }
 
-class $$CourseSetsTableAnnotationComposer
-    extends Composer<_$GolfyDatabase, $CourseSetsTable> {
-  $$CourseSetsTableAnnotationComposer({
+class $$TeeSetsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $TeeSetsTable> {
+  $$TeeSetsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4617,7 +5412,7 @@ class $$CourseSetsTableAnnotationComposer
       composer: this,
       getCurrentColumn: (t) => t.id,
       referencedTable: $db.rounds,
-      getReferencedColumn: (t) => t.courseSetId,
+      getReferencedColumn: (t) => t.teeSetId,
       builder:
           (
             joinBuilder, {
@@ -4635,22 +5430,47 @@ class $$CourseSetsTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> courseSetYardsRefs<T extends Object>(
-    Expression<T> Function($$CourseSetYardsTableAnnotationComposer a) f,
+  Expression<T> courseYardsRefs<T extends Object>(
+    Expression<T> Function($$CourseYardsTableAnnotationComposer a) f,
   ) {
-    final $$CourseSetYardsTableAnnotationComposer composer = $composerBuilder(
+    final $$CourseYardsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.courseSetYards,
-      getReferencedColumn: (t) => t.courseSetId,
+      referencedTable: $db.courseYards,
+      getReferencedColumn: (t) => t.teeSetId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetYardsTableAnnotationComposer(
+          }) => $$CourseYardsTableAnnotationComposer(
             $db: $db,
-            $table: $db.courseSetYards,
+            $table: $db.courseYards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> teeToPinYardsRefs<T extends Object>(
+    Expression<T> Function($$TeeToPinYardsTableAnnotationComposer a) f,
+  ) {
+    final $$TeeToPinYardsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.teeToPinYards,
+      getReferencedColumn: (t) => t.teeSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeToPinYardsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.teeToPinYards,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4661,48 +5481,49 @@ class $$CourseSetsTableAnnotationComposer
   }
 }
 
-class $$CourseSetsTableTableManager
+class $$TeeSetsTableTableManager
     extends
         RootTableManager<
           _$GolfyDatabase,
-          $CourseSetsTable,
-          CourseSet,
-          $$CourseSetsTableFilterComposer,
-          $$CourseSetsTableOrderingComposer,
-          $$CourseSetsTableAnnotationComposer,
-          $$CourseSetsTableCreateCompanionBuilder,
-          $$CourseSetsTableUpdateCompanionBuilder,
-          (CourseSet, $$CourseSetsTableReferences),
-          CourseSet,
+          $TeeSetsTable,
+          TeeSet,
+          $$TeeSetsTableFilterComposer,
+          $$TeeSetsTableOrderingComposer,
+          $$TeeSetsTableAnnotationComposer,
+          $$TeeSetsTableCreateCompanionBuilder,
+          $$TeeSetsTableUpdateCompanionBuilder,
+          (TeeSet, $$TeeSetsTableReferences),
+          TeeSet,
           PrefetchHooks Function({
             bool courseId,
             bool roundsRefs,
-            bool courseSetYardsRefs,
+            bool courseYardsRefs,
+            bool teeToPinYardsRefs,
           })
         > {
-  $$CourseSetsTableTableManager(_$GolfyDatabase db, $CourseSetsTable table)
+  $$TeeSetsTableTableManager(_$GolfyDatabase db, $TeeSetsTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$CourseSetsTableFilterComposer($db: db, $table: table),
+              $$TeeSetsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$CourseSetsTableOrderingComposer($db: db, $table: table),
+              $$TeeSetsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$CourseSetsTableAnnotationComposer($db: db, $table: table),
+              $$TeeSetsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> courseId = const Value.absent(),
                 Value<String> name = const Value.absent(),
-              }) => CourseSetsCompanion(id: id, courseId: courseId, name: name),
+              }) => TeeSetsCompanion(id: id, courseId: courseId, name: name),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required int courseId,
                 required String name,
-              }) => CourseSetsCompanion.insert(
+              }) => TeeSetsCompanion.insert(
                 id: id,
                 courseId: courseId,
                 name: name,
@@ -4710,8 +5531,8 @@ class $$CourseSetsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$CourseSetsTable, CourseSet>(table),
-                  $$CourseSetsTableReferences(db, table, e),
+                  e.readTable<$TeeSetsTable, TeeSet>(table),
+                  $$TeeSetsTableReferences(db, table, e),
                 ),
               )
               .toList(),
@@ -4719,13 +5540,15 @@ class $$CourseSetsTableTableManager
               ({
                 courseId = false,
                 roundsRefs = false,
-                courseSetYardsRefs = false,
+                courseYardsRefs = false,
+                teeToPinYardsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (roundsRefs) db.rounds,
-                    if (courseSetYardsRefs) db.courseSetYards,
+                    if (courseYardsRefs) db.courseYards,
+                    if (teeToPinYardsRefs) db.teeToPinYards,
                   ],
                   addJoins:
                       <
@@ -4748,12 +5571,11 @@ class $$CourseSetsTableTableManager
                               state.withJoin(
                                     currentTable: table,
                                     currentColumn: table.courseId,
-                                    referencedTable: $$CourseSetsTableReferences
+                                    referencedTable: $$TeeSetsTableReferences
                                         ._courseIdTable(db),
-                                    referencedColumn:
-                                        $$CourseSetsTableReferences
-                                            ._courseIdTable(db)
-                                            .id,
+                                    referencedColumn: $$TeeSetsTableReferences
+                                        ._courseIdTable(db)
+                                        .id,
                                   )
                                   as T;
                         }
@@ -4763,44 +5585,61 @@ class $$CourseSetsTableTableManager
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (roundsRefs)
-                        await $_getPrefetchedData<
-                          CourseSet,
-                          $CourseSetsTable,
-                          Round
-                        >(
+                        await $_getPrefetchedData<TeeSet, $TeeSetsTable, Round>(
                           currentTable: table,
-                          referencedTable: $$CourseSetsTableReferences
+                          referencedTable: $$TeeSetsTableReferences
                               ._roundsRefsTable(db),
                           managerFromTypedResult: (p0) =>
-                              $$CourseSetsTableReferences(
+                              $$TeeSetsTableReferences(
                                 db,
                                 table,
                                 p0,
                               ).roundsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.courseSetId == item.id,
+                                (e) => e.teeSetId == item.id,
                               ),
                           typedResults: items,
                         ),
-                      if (courseSetYardsRefs)
+                      if (courseYardsRefs)
                         await $_getPrefetchedData<
-                          CourseSet,
-                          $CourseSetsTable,
-                          CourseSetYard
+                          TeeSet,
+                          $TeeSetsTable,
+                          CourseYard
                         >(
                           currentTable: table,
-                          referencedTable: $$CourseSetsTableReferences
-                              ._courseSetYardsRefsTable(db),
+                          referencedTable: $$TeeSetsTableReferences
+                              ._courseYardsRefsTable(db),
                           managerFromTypedResult: (p0) =>
-                              $$CourseSetsTableReferences(
+                              $$TeeSetsTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).courseSetYardsRefs,
+                              ).courseYardsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.courseSetId == item.id,
+                                (e) => e.teeSetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (teeToPinYardsRefs)
+                        await $_getPrefetchedData<
+                          TeeSet,
+                          $TeeSetsTable,
+                          TeeToPinYard
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TeeSetsTableReferences
+                              ._teeToPinYardsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TeeSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).teeToPinYardsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.teeSetId == item.id,
                               ),
                           typedResults: items,
                         ),
@@ -4812,22 +5651,484 @@ class $$CourseSetsTableTableManager
       );
 }
 
-typedef $$CourseSetsTableProcessedTableManager =
+typedef $$TeeSetsTableProcessedTableManager =
     ProcessedTableManager<
       _$GolfyDatabase,
-      $CourseSetsTable,
-      CourseSet,
-      $$CourseSetsTableFilterComposer,
-      $$CourseSetsTableOrderingComposer,
-      $$CourseSetsTableAnnotationComposer,
-      $$CourseSetsTableCreateCompanionBuilder,
-      $$CourseSetsTableUpdateCompanionBuilder,
-      (CourseSet, $$CourseSetsTableReferences),
-      CourseSet,
+      $TeeSetsTable,
+      TeeSet,
+      $$TeeSetsTableFilterComposer,
+      $$TeeSetsTableOrderingComposer,
+      $$TeeSetsTableAnnotationComposer,
+      $$TeeSetsTableCreateCompanionBuilder,
+      $$TeeSetsTableUpdateCompanionBuilder,
+      (TeeSet, $$TeeSetsTableReferences),
+      TeeSet,
       PrefetchHooks Function({
         bool courseId,
         bool roundsRefs,
-        bool courseSetYardsRefs,
+        bool courseYardsRefs,
+        bool teeToPinYardsRefs,
+      })
+    >;
+typedef $$PinSetsTableCreateCompanionBuilder =
+    PinSetsCompanion Function({
+      Value<int> id,
+      required int courseId,
+      required String name,
+    });
+typedef $$PinSetsTableUpdateCompanionBuilder =
+    PinSetsCompanion Function({
+      Value<int> id,
+      Value<int> courseId,
+      Value<String> name,
+    });
+
+final class $$PinSetsTableReferences
+    extends BaseReferences<_$GolfyDatabase, $PinSetsTable, PinSet> {
+  $$PinSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CoursesTable _courseIdTable(_$GolfyDatabase db) =>
+      db.courses.createAlias('pin_sets__course_id__courses__id');
+
+  $$CoursesTableProcessedTableManager get courseId {
+    final $_column = $_itemColumn<int>('course_id')!;
+
+    final manager = $$CoursesTableTableManager(
+      $_db,
+      $_db.courses,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_courseIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$RoundsTable, List<Round>> _roundsRefsTable(
+    _$GolfyDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.rounds,
+    aliasName: 'pin_sets__id__rounds__pin_set_id',
+  );
+
+  $$RoundsTableProcessedTableManager get roundsRefs {
+    final manager = $$RoundsTableTableManager(
+      $_db,
+      $_db.rounds,
+    ).filter((f) => f.pinSetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_roundsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TeeToPinYardsTable, List<TeeToPinYard>>
+  _teeToPinYardsRefsTable(_$GolfyDatabase db) => MultiTypedResultKey.fromTable(
+    db.teeToPinYards,
+    aliasName: 'pin_sets__id__tee_to_pin_yards__pin_set_id',
+  );
+
+  $$TeeToPinYardsTableProcessedTableManager get teeToPinYardsRefs {
+    final manager = $$TeeToPinYardsTableTableManager(
+      $_db,
+      $_db.teeToPinYards,
+    ).filter((f) => f.pinSetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_teeToPinYardsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$PinSetsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $PinSetsTable> {
+  $$PinSetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CoursesTableFilterComposer get courseId {
+    final $$CoursesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableFilterComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> roundsRefs(
+    Expression<bool> Function($$RoundsTableFilterComposer f) f,
+  ) {
+    final $$RoundsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.rounds,
+      getReferencedColumn: (t) => t.pinSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoundsTableFilterComposer(
+            $db: $db,
+            $table: $db.rounds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> teeToPinYardsRefs(
+    Expression<bool> Function($$TeeToPinYardsTableFilterComposer f) f,
+  ) {
+    final $$TeeToPinYardsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.teeToPinYards,
+      getReferencedColumn: (t) => t.pinSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeToPinYardsTableFilterComposer(
+            $db: $db,
+            $table: $db.teeToPinYards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PinSetsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $PinSetsTable> {
+  $$PinSetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CoursesTableOrderingComposer get courseId {
+    final $$CoursesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableOrderingComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PinSetsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $PinSetsTable> {
+  $$PinSetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  $$CoursesTableAnnotationComposer get courseId {
+    final $$CoursesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseId,
+      referencedTable: $db.courses,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CoursesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.courses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> roundsRefs<T extends Object>(
+    Expression<T> Function($$RoundsTableAnnotationComposer a) f,
+  ) {
+    final $$RoundsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.rounds,
+      getReferencedColumn: (t) => t.pinSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RoundsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.rounds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> teeToPinYardsRefs<T extends Object>(
+    Expression<T> Function($$TeeToPinYardsTableAnnotationComposer a) f,
+  ) {
+    final $$TeeToPinYardsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.teeToPinYards,
+      getReferencedColumn: (t) => t.pinSetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeToPinYardsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.teeToPinYards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PinSetsTableTableManager
+    extends
+        RootTableManager<
+          _$GolfyDatabase,
+          $PinSetsTable,
+          PinSet,
+          $$PinSetsTableFilterComposer,
+          $$PinSetsTableOrderingComposer,
+          $$PinSetsTableAnnotationComposer,
+          $$PinSetsTableCreateCompanionBuilder,
+          $$PinSetsTableUpdateCompanionBuilder,
+          (PinSet, $$PinSetsTableReferences),
+          PinSet,
+          PrefetchHooks Function({
+            bool courseId,
+            bool roundsRefs,
+            bool teeToPinYardsRefs,
+          })
+        > {
+  $$PinSetsTableTableManager(_$GolfyDatabase db, $PinSetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PinSetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PinSetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PinSetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> courseId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+              }) => PinSetsCompanion(id: id, courseId: courseId, name: name),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int courseId,
+                required String name,
+              }) => PinSetsCompanion.insert(
+                id: id,
+                courseId: courseId,
+                name: name,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PinSetsTable, PinSet>(table),
+                  $$PinSetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                courseId = false,
+                roundsRefs = false,
+                teeToPinYardsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (roundsRefs) db.rounds,
+                    if (teeToPinYardsRefs) db.teeToPinYards,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (courseId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.courseId,
+                                    referencedTable: $$PinSetsTableReferences
+                                        ._courseIdTable(db),
+                                    referencedColumn: $$PinSetsTableReferences
+                                        ._courseIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (roundsRefs)
+                        await $_getPrefetchedData<PinSet, $PinSetsTable, Round>(
+                          currentTable: table,
+                          referencedTable: $$PinSetsTableReferences
+                              ._roundsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PinSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).roundsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pinSetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (teeToPinYardsRefs)
+                        await $_getPrefetchedData<
+                          PinSet,
+                          $PinSetsTable,
+                          TeeToPinYard
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PinSetsTableReferences
+                              ._teeToPinYardsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PinSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).teeToPinYardsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pinSetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$PinSetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GolfyDatabase,
+      $PinSetsTable,
+      PinSet,
+      $$PinSetsTableFilterComposer,
+      $$PinSetsTableOrderingComposer,
+      $$PinSetsTableAnnotationComposer,
+      $$PinSetsTableCreateCompanionBuilder,
+      $$PinSetsTableUpdateCompanionBuilder,
+      (PinSet, $$PinSetsTableReferences),
+      PinSet,
+      PrefetchHooks Function({
+        bool courseId,
+        bool roundsRefs,
+        bool teeToPinYardsRefs,
       })
     >;
 typedef $$EventsTableCreateCompanionBuilder =
@@ -5146,8 +6447,8 @@ typedef $$RoundsTableCreateCompanionBuilder =
       required String date,
       required int courseId,
       Value<int> roundNumber,
-      Value<String?> teeSet,
-      Value<int?> courseSetId,
+      Value<int?> teeSetId,
+      Value<int?> pinSetId,
       Value<String?> weather,
       Value<int?> windSpeedMph,
       Value<String?> difficulty,
@@ -5161,8 +6462,8 @@ typedef $$RoundsTableUpdateCompanionBuilder =
       Value<String> date,
       Value<int> courseId,
       Value<int> roundNumber,
-      Value<String?> teeSet,
-      Value<int?> courseSetId,
+      Value<int?> teeSetId,
+      Value<int?> pinSetId,
       Value<String?> weather,
       Value<int?> windSpeedMph,
       Value<String?> difficulty,
@@ -5192,17 +6493,34 @@ final class $$RoundsTableReferences
     );
   }
 
-  static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) =>
-      db.courseSets.createAlias('rounds__course_set_id__course_sets__id');
+  static $TeeSetsTable _teeSetIdTable(_$GolfyDatabase db) =>
+      db.teeSets.createAlias('rounds__tee_set_id__tee_sets__id');
 
-  $$CourseSetsTableProcessedTableManager? get courseSetId {
-    final $_column = $_itemColumn<int>('course_set_id');
+  $$TeeSetsTableProcessedTableManager? get teeSetId {
+    final $_column = $_itemColumn<int>('tee_set_id');
     if ($_column == null) return null;
-    final manager = $$CourseSetsTableTableManager(
+    final manager = $$TeeSetsTableTableManager(
       $_db,
-      $_db.courseSets,
+      $_db.teeSets,
     ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_courseSetIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_teeSetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PinSetsTable _pinSetIdTable(_$GolfyDatabase db) =>
+      db.pinSets.createAlias('rounds__pin_set_id__pin_sets__id');
+
+  $$PinSetsTableProcessedTableManager? get pinSetId {
+    final $_column = $_itemColumn<int>('pin_set_id');
+    if ($_column == null) return null;
+    final manager = $$PinSetsTableTableManager(
+      $_db,
+      $_db.pinSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pinSetIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -5269,11 +6587,6 @@ class $$RoundsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get teeSet => $composableBuilder(
-    column: $table.teeSet,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get weather => $composableBuilder(
     column: $table.weather,
     builder: (column) => ColumnFilters(column),
@@ -5322,20 +6635,43 @@ class $$RoundsTableFilterComposer
     return composer;
   }
 
-  $$CourseSetsTableFilterComposer get courseSetId {
-    final $$CourseSetsTableFilterComposer composer = $composerBuilder(
+  $$TeeSetsTableFilterComposer get teeSetId {
+    final $$TeeSetsTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.courseSetId,
-      referencedTable: $db.courseSets,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableFilterComposer(
+          }) => $$TeeSetsTableFilterComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PinSetsTableFilterComposer get pinSetId {
+    final $$PinSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pinSetId,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.pinSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5418,11 +6754,6 @@ class $$RoundsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get teeSet => $composableBuilder(
-    column: $table.teeSet,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get weather => $composableBuilder(
     column: $table.weather,
     builder: (column) => ColumnOrderings(column),
@@ -5471,20 +6802,43 @@ class $$RoundsTableOrderingComposer
     return composer;
   }
 
-  $$CourseSetsTableOrderingComposer get courseSetId {
-    final $$CourseSetsTableOrderingComposer composer = $composerBuilder(
+  $$TeeSetsTableOrderingComposer get teeSetId {
+    final $$TeeSetsTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.courseSetId,
-      referencedTable: $db.courseSets,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableOrderingComposer(
+          }) => $$TeeSetsTableOrderingComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PinSetsTableOrderingComposer get pinSetId {
+    final $$PinSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pinSetId,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.pinSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5538,9 +6892,6 @@ class $$RoundsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get teeSet =>
-      $composableBuilder(column: $table.teeSet, builder: (column) => column);
-
   GeneratedColumn<String> get weather =>
       $composableBuilder(column: $table.weather, builder: (column) => column);
 
@@ -5585,20 +6936,43 @@ class $$RoundsTableAnnotationComposer
     return composer;
   }
 
-  $$CourseSetsTableAnnotationComposer get courseSetId {
-    final $$CourseSetsTableAnnotationComposer composer = $composerBuilder(
+  $$TeeSetsTableAnnotationComposer get teeSetId {
+    final $$TeeSetsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.courseSetId,
-      referencedTable: $db.courseSets,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableAnnotationComposer(
+          }) => $$TeeSetsTableAnnotationComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PinSetsTableAnnotationComposer get pinSetId {
+    final $$PinSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pinSetId,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pinSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5672,7 +7046,8 @@ class $$RoundsTableTableManager
           Round,
           PrefetchHooks Function({
             bool courseId,
-            bool courseSetId,
+            bool teeSetId,
+            bool pinSetId,
             bool eventId,
             bool holeResultsRefs,
           })
@@ -5694,8 +7069,8 @@ class $$RoundsTableTableManager
                 Value<String> date = const Value.absent(),
                 Value<int> courseId = const Value.absent(),
                 Value<int> roundNumber = const Value.absent(),
-                Value<String?> teeSet = const Value.absent(),
-                Value<int?> courseSetId = const Value.absent(),
+                Value<int?> teeSetId = const Value.absent(),
+                Value<int?> pinSetId = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
                 Value<int?> windSpeedMph = const Value.absent(),
                 Value<String?> difficulty = const Value.absent(),
@@ -5707,8 +7082,8 @@ class $$RoundsTableTableManager
                 date: date,
                 courseId: courseId,
                 roundNumber: roundNumber,
-                teeSet: teeSet,
-                courseSetId: courseSetId,
+                teeSetId: teeSetId,
+                pinSetId: pinSetId,
                 weather: weather,
                 windSpeedMph: windSpeedMph,
                 difficulty: difficulty,
@@ -5722,8 +7097,8 @@ class $$RoundsTableTableManager
                 required String date,
                 required int courseId,
                 Value<int> roundNumber = const Value.absent(),
-                Value<String?> teeSet = const Value.absent(),
-                Value<int?> courseSetId = const Value.absent(),
+                Value<int?> teeSetId = const Value.absent(),
+                Value<int?> pinSetId = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
                 Value<int?> windSpeedMph = const Value.absent(),
                 Value<String?> difficulty = const Value.absent(),
@@ -5735,8 +7110,8 @@ class $$RoundsTableTableManager
                 date: date,
                 courseId: courseId,
                 roundNumber: roundNumber,
-                teeSet: teeSet,
-                courseSetId: courseSetId,
+                teeSetId: teeSetId,
+                pinSetId: pinSetId,
                 weather: weather,
                 windSpeedMph: windSpeedMph,
                 difficulty: difficulty,
@@ -5755,7 +7130,8 @@ class $$RoundsTableTableManager
           prefetchHooksCallback:
               ({
                 courseId = false,
-                courseSetId = false,
+                teeSetId = false,
+                pinSetId = false,
                 eventId = false,
                 holeResultsRefs = false,
               }) {
@@ -5793,15 +7169,28 @@ class $$RoundsTableTableManager
                                   )
                                   as T;
                         }
-                        if (courseSetId) {
+                        if (teeSetId) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.courseSetId,
+                                    currentColumn: table.teeSetId,
                                     referencedTable: $$RoundsTableReferences
-                                        ._courseSetIdTable(db),
+                                        ._teeSetIdTable(db),
                                     referencedColumn: $$RoundsTableReferences
-                                        ._courseSetIdTable(db)
+                                        ._teeSetIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (pinSetId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.pinSetId,
+                                    referencedTable: $$RoundsTableReferences
+                                        ._pinSetIdTable(db),
+                                    referencedColumn: $$RoundsTableReferences
+                                        ._pinSetIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -5867,7 +7256,8 @@ typedef $$RoundsTableProcessedTableManager =
       Round,
       PrefetchHooks Function({
         bool courseId,
-        bool courseSetId,
+        bool teeSetId,
+        bool pinSetId,
         bool eventId,
         bool holeResultsRefs,
       })
@@ -6790,41 +8180,36 @@ typedef $$CourseHolesTableProcessedTableManager =
       CourseHole,
       PrefetchHooks Function({bool courseId})
     >;
-typedef $$CourseSetYardsTableCreateCompanionBuilder =
-    CourseSetYardsCompanion Function({
+typedef $$CourseYardsTableCreateCompanionBuilder =
+    CourseYardsCompanion Function({
       Value<int> id,
-      required int courseSetId,
+      required int teeSetId,
       required int holeNumber,
       required int yards,
     });
-typedef $$CourseSetYardsTableUpdateCompanionBuilder =
-    CourseSetYardsCompanion Function({
+typedef $$CourseYardsTableUpdateCompanionBuilder =
+    CourseYardsCompanion Function({
       Value<int> id,
-      Value<int> courseSetId,
+      Value<int> teeSetId,
       Value<int> holeNumber,
       Value<int> yards,
     });
 
-final class $$CourseSetYardsTableReferences
-    extends
-        BaseReferences<_$GolfyDatabase, $CourseSetYardsTable, CourseSetYard> {
-  $$CourseSetYardsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
+final class $$CourseYardsTableReferences
+    extends BaseReferences<_$GolfyDatabase, $CourseYardsTable, CourseYard> {
+  $$CourseYardsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $CourseSetsTable _courseSetIdTable(_$GolfyDatabase db) => db.courseSets
-      .createAlias('course_set_yards__course_set_id__course_sets__id');
+  static $TeeSetsTable _teeSetIdTable(_$GolfyDatabase db) =>
+      db.teeSets.createAlias('course_yards__tee_set_id__tee_sets__id');
 
-  $$CourseSetsTableProcessedTableManager get courseSetId {
-    final $_column = $_itemColumn<int>('course_set_id')!;
+  $$TeeSetsTableProcessedTableManager get teeSetId {
+    final $_column = $_itemColumn<int>('tee_set_id')!;
 
-    final manager = $$CourseSetsTableTableManager(
+    final manager = $$TeeSetsTableTableManager(
       $_db,
-      $_db.courseSets,
+      $_db.teeSets,
     ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_courseSetIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_teeSetIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -6832,9 +8217,9 @@ final class $$CourseSetYardsTableReferences
   }
 }
 
-class $$CourseSetYardsTableFilterComposer
-    extends Composer<_$GolfyDatabase, $CourseSetYardsTable> {
-  $$CourseSetYardsTableFilterComposer({
+class $$CourseYardsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $CourseYardsTable> {
+  $$CourseYardsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -6856,20 +8241,20 @@ class $$CourseSetYardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $$CourseSetsTableFilterComposer get courseSetId {
-    final $$CourseSetsTableFilterComposer composer = $composerBuilder(
+  $$TeeSetsTableFilterComposer get teeSetId {
+    final $$TeeSetsTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.courseSetId,
-      referencedTable: $db.courseSets,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableFilterComposer(
+          }) => $$TeeSetsTableFilterComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6880,9 +8265,9 @@ class $$CourseSetYardsTableFilterComposer
   }
 }
 
-class $$CourseSetYardsTableOrderingComposer
-    extends Composer<_$GolfyDatabase, $CourseSetYardsTable> {
-  $$CourseSetYardsTableOrderingComposer({
+class $$CourseYardsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $CourseYardsTable> {
+  $$CourseYardsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -6904,20 +8289,20 @@ class $$CourseSetYardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$CourseSetsTableOrderingComposer get courseSetId {
-    final $$CourseSetsTableOrderingComposer composer = $composerBuilder(
+  $$TeeSetsTableOrderingComposer get teeSetId {
+    final $$TeeSetsTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.courseSetId,
-      referencedTable: $db.courseSets,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableOrderingComposer(
+          }) => $$TeeSetsTableOrderingComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6928,9 +8313,9 @@ class $$CourseSetYardsTableOrderingComposer
   }
 }
 
-class $$CourseSetYardsTableAnnotationComposer
-    extends Composer<_$GolfyDatabase, $CourseSetYardsTable> {
-  $$CourseSetYardsTableAnnotationComposer({
+class $$CourseYardsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $CourseYardsTable> {
+  $$CourseYardsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -6948,20 +8333,20 @@ class $$CourseSetYardsTableAnnotationComposer
   GeneratedColumn<int> get yards =>
       $composableBuilder(column: $table.yards, builder: (column) => column);
 
-  $$CourseSetsTableAnnotationComposer get courseSetId {
-    final $$CourseSetsTableAnnotationComposer composer = $composerBuilder(
+  $$TeeSetsTableAnnotationComposer get teeSetId {
+    final $$TeeSetsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.courseSetId,
-      referencedTable: $db.courseSets,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CourseSetsTableAnnotationComposer(
+          }) => $$TeeSetsTableAnnotationComposer(
             $db: $db,
-            $table: $db.courseSets,
+            $table: $db.teeSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6972,67 +8357,65 @@ class $$CourseSetYardsTableAnnotationComposer
   }
 }
 
-class $$CourseSetYardsTableTableManager
+class $$CourseYardsTableTableManager
     extends
         RootTableManager<
           _$GolfyDatabase,
-          $CourseSetYardsTable,
-          CourseSetYard,
-          $$CourseSetYardsTableFilterComposer,
-          $$CourseSetYardsTableOrderingComposer,
-          $$CourseSetYardsTableAnnotationComposer,
-          $$CourseSetYardsTableCreateCompanionBuilder,
-          $$CourseSetYardsTableUpdateCompanionBuilder,
-          (CourseSetYard, $$CourseSetYardsTableReferences),
-          CourseSetYard,
-          PrefetchHooks Function({bool courseSetId})
+          $CourseYardsTable,
+          CourseYard,
+          $$CourseYardsTableFilterComposer,
+          $$CourseYardsTableOrderingComposer,
+          $$CourseYardsTableAnnotationComposer,
+          $$CourseYardsTableCreateCompanionBuilder,
+          $$CourseYardsTableUpdateCompanionBuilder,
+          (CourseYard, $$CourseYardsTableReferences),
+          CourseYard,
+          PrefetchHooks Function({bool teeSetId})
         > {
-  $$CourseSetYardsTableTableManager(
-    _$GolfyDatabase db,
-    $CourseSetYardsTable table,
-  ) : super(
+  $$CourseYardsTableTableManager(_$GolfyDatabase db, $CourseYardsTable table)
+    : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$CourseSetYardsTableFilterComposer($db: db, $table: table),
+              $$CourseYardsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$CourseSetYardsTableOrderingComposer($db: db, $table: table),
+              $$CourseYardsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$CourseSetYardsTableAnnotationComposer($db: db, $table: table),
+              $$CourseYardsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<int> courseSetId = const Value.absent(),
+                Value<int> teeSetId = const Value.absent(),
                 Value<int> holeNumber = const Value.absent(),
                 Value<int> yards = const Value.absent(),
-              }) => CourseSetYardsCompanion(
+              }) => CourseYardsCompanion(
                 id: id,
-                courseSetId: courseSetId,
+                teeSetId: teeSetId,
                 holeNumber: holeNumber,
                 yards: yards,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required int courseSetId,
+                required int teeSetId,
                 required int holeNumber,
                 required int yards,
-              }) => CourseSetYardsCompanion.insert(
+              }) => CourseYardsCompanion.insert(
                 id: id,
-                courseSetId: courseSetId,
+                teeSetId: teeSetId,
                 holeNumber: holeNumber,
                 yards: yards,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$CourseSetYardsTable, CourseSetYard>(table),
-                  $$CourseSetYardsTableReferences(db, table, e),
+                  e.readTable<$CourseYardsTable, CourseYard>(table),
+                  $$CourseYardsTableReferences(db, table, e),
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({courseSetId = false}) {
+          prefetchHooksCallback: ({teeSetId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -7052,17 +8435,16 @@ class $$CourseSetYardsTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (courseSetId) {
+                    if (teeSetId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.courseSetId,
-                                referencedTable: $$CourseSetYardsTableReferences
-                                    ._courseSetIdTable(db),
-                                referencedColumn:
-                                    $$CourseSetYardsTableReferences
-                                        ._courseSetIdTable(db)
-                                        .id,
+                                currentColumn: table.teeSetId,
+                                referencedTable: $$CourseYardsTableReferences
+                                    ._teeSetIdTable(db),
+                                referencedColumn: $$CourseYardsTableReferences
+                                    ._teeSetIdTable(db)
+                                    .id,
                               )
                               as T;
                     }
@@ -7078,19 +8460,424 @@ class $$CourseSetYardsTableTableManager
       );
 }
 
-typedef $$CourseSetYardsTableProcessedTableManager =
+typedef $$CourseYardsTableProcessedTableManager =
     ProcessedTableManager<
       _$GolfyDatabase,
-      $CourseSetYardsTable,
-      CourseSetYard,
-      $$CourseSetYardsTableFilterComposer,
-      $$CourseSetYardsTableOrderingComposer,
-      $$CourseSetYardsTableAnnotationComposer,
-      $$CourseSetYardsTableCreateCompanionBuilder,
-      $$CourseSetYardsTableUpdateCompanionBuilder,
-      (CourseSetYard, $$CourseSetYardsTableReferences),
-      CourseSetYard,
-      PrefetchHooks Function({bool courseSetId})
+      $CourseYardsTable,
+      CourseYard,
+      $$CourseYardsTableFilterComposer,
+      $$CourseYardsTableOrderingComposer,
+      $$CourseYardsTableAnnotationComposer,
+      $$CourseYardsTableCreateCompanionBuilder,
+      $$CourseYardsTableUpdateCompanionBuilder,
+      (CourseYard, $$CourseYardsTableReferences),
+      CourseYard,
+      PrefetchHooks Function({bool teeSetId})
+    >;
+typedef $$TeeToPinYardsTableCreateCompanionBuilder =
+    TeeToPinYardsCompanion Function({
+      Value<int> id,
+      required int teeSetId,
+      required int pinSetId,
+      required int holeNumber,
+      required int yards,
+    });
+typedef $$TeeToPinYardsTableUpdateCompanionBuilder =
+    TeeToPinYardsCompanion Function({
+      Value<int> id,
+      Value<int> teeSetId,
+      Value<int> pinSetId,
+      Value<int> holeNumber,
+      Value<int> yards,
+    });
+
+final class $$TeeToPinYardsTableReferences
+    extends BaseReferences<_$GolfyDatabase, $TeeToPinYardsTable, TeeToPinYard> {
+  $$TeeToPinYardsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $TeeSetsTable _teeSetIdTable(_$GolfyDatabase db) =>
+      db.teeSets.createAlias('tee_to_pin_yards__tee_set_id__tee_sets__id');
+
+  $$TeeSetsTableProcessedTableManager get teeSetId {
+    final $_column = $_itemColumn<int>('tee_set_id')!;
+
+    final manager = $$TeeSetsTableTableManager(
+      $_db,
+      $_db.teeSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_teeSetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PinSetsTable _pinSetIdTable(_$GolfyDatabase db) =>
+      db.pinSets.createAlias('tee_to_pin_yards__pin_set_id__pin_sets__id');
+
+  $$PinSetsTableProcessedTableManager get pinSetId {
+    final $_column = $_itemColumn<int>('pin_set_id')!;
+
+    final manager = $$PinSetsTableTableManager(
+      $_db,
+      $_db.pinSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pinSetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TeeToPinYardsTableFilterComposer
+    extends Composer<_$GolfyDatabase, $TeeToPinYardsTable> {
+  $$TeeToPinYardsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get yards => $composableBuilder(
+    column: $table.yards,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$TeeSetsTableFilterComposer get teeSetId {
+    final $$TeeSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PinSetsTableFilterComposer get pinSetId {
+    final $$PinSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pinSetId,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.pinSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TeeToPinYardsTableOrderingComposer
+    extends Composer<_$GolfyDatabase, $TeeToPinYardsTable> {
+  $$TeeToPinYardsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get yards => $composableBuilder(
+    column: $table.yards,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$TeeSetsTableOrderingComposer get teeSetId {
+    final $$TeeSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PinSetsTableOrderingComposer get pinSetId {
+    final $$PinSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pinSetId,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.pinSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TeeToPinYardsTableAnnotationComposer
+    extends Composer<_$GolfyDatabase, $TeeToPinYardsTable> {
+  $$TeeToPinYardsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get holeNumber => $composableBuilder(
+    column: $table.holeNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get yards =>
+      $composableBuilder(column: $table.yards, builder: (column) => column);
+
+  $$TeeSetsTableAnnotationComposer get teeSetId {
+    final $$TeeSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.teeSetId,
+      referencedTable: $db.teeSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TeeSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.teeSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PinSetsTableAnnotationComposer get pinSetId {
+    final $$PinSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pinSetId,
+      referencedTable: $db.pinSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PinSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pinSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TeeToPinYardsTableTableManager
+    extends
+        RootTableManager<
+          _$GolfyDatabase,
+          $TeeToPinYardsTable,
+          TeeToPinYard,
+          $$TeeToPinYardsTableFilterComposer,
+          $$TeeToPinYardsTableOrderingComposer,
+          $$TeeToPinYardsTableAnnotationComposer,
+          $$TeeToPinYardsTableCreateCompanionBuilder,
+          $$TeeToPinYardsTableUpdateCompanionBuilder,
+          (TeeToPinYard, $$TeeToPinYardsTableReferences),
+          TeeToPinYard,
+          PrefetchHooks Function({bool teeSetId, bool pinSetId})
+        > {
+  $$TeeToPinYardsTableTableManager(
+    _$GolfyDatabase db,
+    $TeeToPinYardsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TeeToPinYardsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TeeToPinYardsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TeeToPinYardsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> teeSetId = const Value.absent(),
+                Value<int> pinSetId = const Value.absent(),
+                Value<int> holeNumber = const Value.absent(),
+                Value<int> yards = const Value.absent(),
+              }) => TeeToPinYardsCompanion(
+                id: id,
+                teeSetId: teeSetId,
+                pinSetId: pinSetId,
+                holeNumber: holeNumber,
+                yards: yards,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int teeSetId,
+                required int pinSetId,
+                required int holeNumber,
+                required int yards,
+              }) => TeeToPinYardsCompanion.insert(
+                id: id,
+                teeSetId: teeSetId,
+                pinSetId: pinSetId,
+                holeNumber: holeNumber,
+                yards: yards,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TeeToPinYardsTable, TeeToPinYard>(table),
+                  $$TeeToPinYardsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({teeSetId = false, pinSetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (teeSetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.teeSetId,
+                                referencedTable: $$TeeToPinYardsTableReferences
+                                    ._teeSetIdTable(db),
+                                referencedColumn: $$TeeToPinYardsTableReferences
+                                    ._teeSetIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (pinSetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.pinSetId,
+                                referencedTable: $$TeeToPinYardsTableReferences
+                                    ._pinSetIdTable(db),
+                                referencedColumn: $$TeeToPinYardsTableReferences
+                                    ._pinSetIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TeeToPinYardsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GolfyDatabase,
+      $TeeToPinYardsTable,
+      TeeToPinYard,
+      $$TeeToPinYardsTableFilterComposer,
+      $$TeeToPinYardsTableOrderingComposer,
+      $$TeeToPinYardsTableAnnotationComposer,
+      $$TeeToPinYardsTableCreateCompanionBuilder,
+      $$TeeToPinYardsTableUpdateCompanionBuilder,
+      (TeeToPinYard, $$TeeToPinYardsTableReferences),
+      TeeToPinYard,
+      PrefetchHooks Function({bool teeSetId, bool pinSetId})
     >;
 typedef $$HoleShotsTableCreateCompanionBuilder =
     HoleShotsCompanion Function({
@@ -7473,8 +9260,10 @@ class $GolfyDatabaseManager {
   $GolfyDatabaseManager(this._db);
   $$CoursesTableTableManager get courses =>
       $$CoursesTableTableManager(_db, _db.courses);
-  $$CourseSetsTableTableManager get courseSets =>
-      $$CourseSetsTableTableManager(_db, _db.courseSets);
+  $$TeeSetsTableTableManager get teeSets =>
+      $$TeeSetsTableTableManager(_db, _db.teeSets);
+  $$PinSetsTableTableManager get pinSets =>
+      $$PinSetsTableTableManager(_db, _db.pinSets);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db, _db.events);
   $$RoundsTableTableManager get rounds =>
@@ -7483,8 +9272,10 @@ class $GolfyDatabaseManager {
       $$HoleResultsTableTableManager(_db, _db.holeResults);
   $$CourseHolesTableTableManager get courseHoles =>
       $$CourseHolesTableTableManager(_db, _db.courseHoles);
-  $$CourseSetYardsTableTableManager get courseSetYards =>
-      $$CourseSetYardsTableTableManager(_db, _db.courseSetYards);
+  $$CourseYardsTableTableManager get courseYards =>
+      $$CourseYardsTableTableManager(_db, _db.courseYards);
+  $$TeeToPinYardsTableTableManager get teeToPinYards =>
+      $$TeeToPinYardsTableTableManager(_db, _db.teeToPinYards);
   $$HoleShotsTableTableManager get holeShots =>
       $$HoleShotsTableTableManager(_db, _db.holeShots);
 }

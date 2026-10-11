@@ -102,7 +102,8 @@ void main() {
     int totalScore = 0,
     int totalPar = 0,
     Event? event,
-    String? courseSetName,
+    String? teeSetName,
+    String? pinSetName,
   }) {
     return RoundWithCourse(
       round: Round(
@@ -114,7 +115,8 @@ void main() {
       ),
       courseName: courseName,
       event: event,
-      courseSetName: courseSetName,
+      teeSetName: teeSetName,
+      pinSetName: pinSetName,
       holesEntered: holesEntered,
       totalScore: totalScore,
       totalPar: totalPar,
@@ -418,12 +420,23 @@ void main() {
   });
 
   group('RoundRow — which yardage set the round used (#81)', () {
-    testWidgets('names the set alongside the date', (tester) async {
+    testWidgets('names the tee set and pin set alongside the date',
+        (tester) async {
       await tester.pumpWidget(wrap());
-      await emitRounds(tester, [makeRound(courseSetName: 'Blue tees')]);
+      await emitRounds(tester, [
+        makeRound(teeSetName: 'Blue', pinSetName: 'Sunday pins'),
+      ]);
 
-      expect(find.text('Blue tees'), findsOneWidget);
+      expect(find.text('Blue · Sunday pins'), findsOneWidget);
       expect(find.byIcon(Icons.straighten), findsOneWidget);
+    });
+
+    testWidgets('names a tee set alone when the round has no pin set',
+        (tester) async {
+      await tester.pumpWidget(wrap());
+      await emitRounds(tester, [makeRound(teeSetName: 'Blue')]);
+
+      expect(find.text('Blue'), findsOneWidget);
     });
 
     testWidgets('shows nothing extra for a round with no set', (tester) async {

@@ -32,7 +32,8 @@ void main() {
     String date = '2026-05-19',
     int roundNumber = 1,
     int? eventId,
-    int? courseSetId,
+    int? teeSetId,
+    int? pinSetId,
   }) =>
       db.into(db.rounds).insert(
             RoundsCompanion.insert(
@@ -40,7 +41,8 @@ void main() {
               courseId: courseId,
               roundNumber: Value(roundNumber),
               eventId: Value(eventId),
-              courseSetId: Value(courseSetId),
+              teeSetId: Value(teeSetId),
+              pinSetId: Value(pinSetId),
             ),
           );
 
@@ -102,18 +104,36 @@ void main() {
             strokeIndex: Value(strokeIndex),
           ));
 
-  Future<int> insertCourseSet(int courseId, {String name = 'Blue tees'}) =>
-      db.into(db.courseSets).insert(
-            CourseSetsCompanion.insert(courseId: courseId, name: name),
+  Future<int> insertTeeSet(int courseId, {String name = 'Blue'}) =>
+      db.into(db.teeSets).insert(
+            TeeSetsCompanion.insert(courseId: courseId, name: name),
           );
 
-  Future<void> insertCourseSetYard(
-    int setId,
+  Future<int> insertPinSet(int courseId, {String name = 'Sunday pins'}) =>
+      db.into(db.pinSets).insert(
+            PinSetsCompanion.insert(courseId: courseId, name: name),
+          );
+
+  Future<void> insertCourseYard(
+    int teeSetId,
     int holeNumber, {
     int yards = 400,
   }) =>
-      db.into(db.courseSetYards).insert(CourseSetYardsCompanion.insert(
-            courseSetId: setId,
+      db.into(db.courseYards).insert(CourseYardsCompanion.insert(
+            teeSetId: teeSetId,
+            holeNumber: holeNumber,
+            yards: yards,
+          ));
+
+  Future<void> insertTeeToPinYard(
+    int teeSetId,
+    int pinSetId,
+    int holeNumber, {
+    int yards = 390,
+  }) =>
+      db.into(db.teeToPinYards).insert(TeeToPinYardsCompanion.insert(
+            teeSetId: teeSetId,
+            pinSetId: pinSetId,
             holeNumber: holeNumber,
             yards: yards,
           ));
@@ -413,83 +433,151 @@ void main() {
     });
   });
 
-  group('course_sets', () {
+  group('tee_sets and pin_sets', () {
     test('UNIQUE(course_id, name) rejects a duplicate name in a course',
         () async {
       final cid = await insertCourse();
-      await insertCourseSet(cid, name: 'Blue');
+      await insertTeeSet(cid, name: 'Blue');
+      await insertPinSet(cid, name: 'Sunday pins');
       await expectLater(
-        insertCourseSet(cid, name: 'Blue'),
+        insertTeeSet(cid, name: 'Blue'),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertPinSet(cid, name: 'Sunday pins'),
         throwsA(isA<Exception>()),
       );
     });
 
-    test('the same set name is allowed across different courses', () async {
+    test('the same name is allowed across courses, and across kinds',
+        () async {
       final a = await insertCourse(name: 'A');
       final b = await insertCourse(name: 'B');
-      await insertCourseSet(a, name: 'Blue');
-      await insertCourseSet(b, name: 'Blue');
-      expect((await db.select(db.courseSets).get()).length, 2);
+      await insertTeeSet(a, name: 'Blue');
+      await insertTeeSet(b, name: 'Blue');
+      // A tee set and a pin set never clash: they are different things.
+      await insertPinSet(a, name: 'Blue');
+      expect((await db.select(db.teeSets).get()).length, 2);
+      expect((await db.select(db.pinSets).get()).length, 1);
     });
 
-    test('CASCADE deletes sets when the course is deleted', () async {
+    test('CASCADE deletes both kinds when the course is deleted', () async {
       final cid = await insertCourse();
-      await insertCourseSet(cid, name: 'Blue');
-      await insertCourseSet(cid, name: 'White');
+      await insertTeeSet(cid, name: 'Blue');
+      await insertTeeSet(cid, name: 'White');
+      await insertPinSet(cid);
       await (db.delete(db.courses)..where((c) => c.id.equals(cid))).go();
-      expect((await db.select(db.courseSets).get()), isEmpty);
+      expect((await db.select(db.teeSets).get()), isEmpty);
+      expect((await db.select(db.pinSets).get()), isEmpty);
     });
   });
 
-  group('course_set_yards', () {
-    test('UNIQUE(course_set_id, hole_number) rejects duplicate', () async {
+  group('course_yards', () {
+    test('UNIQUE(tee_set_id, hole_number) rejects duplicate', () async {
       final cid = await insertCourse();
-      final sid = await insertCourseSet(cid);
-      await insertCourseSetYard(sid, 1);
+      final tee = await insertTeeSet(cid);
+      await insertCourseYard(tee, 1);
       await expectLater(
-        insertCourseSetYard(sid, 1),
+        insertCourseYard(tee, 1),
         throwsA(isA<Exception>()),
       );
     });
 
-    test('CASCADE deletes yardages when the set is deleted', () async {
+    test('CASCADE deletes course yards when the tee set is deleted',
+        () async {
       final cid = await insertCourse();
-      final sid = await insertCourseSet(cid);
+      final tee = await insertTeeSet(cid);
       for (var h = 1; h <= 18; h++) {
-        await insertCourseSetYard(sid, h);
+        await insertCourseYard(tee, h);
       }
-      expect((await db.select(db.courseSetYards).get()).length, 18);
-      await (db.delete(db.courseSets)..where((s) => s.id.equals(sid))).go();
-      expect((await db.select(db.courseSetYards).get()), isEmpty);
+      expect((await db.select(db.courseYards).get()).length, 18);
+      await (db.delete(db.teeSets)..where((s) => s.id.equals(tee))).go();
+      expect((await db.select(db.courseYards).get()), isEmpty);
     });
 
     test('CHECK rejects negative yards and out-of-range hole numbers',
         () async {
       final cid = await insertCourse();
-      final sid = await insertCourseSet(cid);
+      final tee = await insertTeeSet(cid);
       await expectLater(
-        insertCourseSetYard(sid, 1, yards: -1),
+        insertCourseYard(tee, 1, yards: -1),
         throwsA(isA<Exception>()),
       );
       await expectLater(
-        insertCourseSetYard(sid, 0),
+        insertCourseYard(tee, 0),
         throwsA(isA<Exception>()),
       );
     });
   });
 
-  group('rounds.course_set_id', () {
-    test('deleting a set SET NULLs the rounds played on it', () async {
+  group('tee_to_pin_yards', () {
+    test('UNIQUE(tee_set_id, pin_set_id, hole_number) rejects duplicate, '
+        'but the same hole can differ by tee set or pin set', () async {
       final cid = await insertCourse();
-      final sid = await insertCourseSet(cid);
-      final rid = await insertRound(cid, courseSetId: sid);
+      final blue = await insertTeeSet(cid, name: 'Blue');
+      final white = await insertTeeSet(cid, name: 'White');
+      final sunday = await insertPinSet(cid, name: 'Sunday pins');
+      final monday = await insertPinSet(cid, name: 'Monday pins');
+      await insertTeeToPinYard(blue, sunday, 1, yards: 410);
+      await insertTeeToPinYard(blue, monday, 1, yards: 395);
+      await insertTeeToPinYard(white, sunday, 1, yards: 380);
+      await expectLater(
+        insertTeeToPinYard(blue, sunday, 1),
+        throwsA(isA<Exception>()),
+      );
+    });
 
-      await (db.delete(db.courseSets)..where((s) => s.id.equals(sid))).go();
+    test('CASCADE deletes them with the tee set or the pin set', () async {
+      final cid = await insertCourse();
+      final blue = await insertTeeSet(cid, name: 'Blue');
+      final white = await insertTeeSet(cid, name: 'White');
+      final sunday = await insertPinSet(cid, name: 'Sunday pins');
+      final monday = await insertPinSet(cid, name: 'Monday pins');
+      for (final tee in [blue, white]) {
+        for (final pin in [sunday, monday]) {
+          await insertTeeToPinYard(tee, pin, 1);
+        }
+      }
 
-      final round =
-          await (db.select(db.rounds)..where((r) => r.id.equals(rid)))
-              .getSingle();
-      expect(round.courseSetId, isNull);
+      await (db.delete(db.teeSets)..where((s) => s.id.equals(blue))).go();
+      expect((await db.select(db.teeToPinYards).get()).length, 2);
+      await (db.delete(db.pinSets)..where((s) => s.id.equals(sunday))).go();
+      final left = await db.select(db.teeToPinYards).get();
+      expect(left.single.teeSetId, white);
+      expect(left.single.pinSetId, monday);
+    });
+
+    test('CHECK rejects negative yards and out-of-range hole numbers',
+        () async {
+      final cid = await insertCourse();
+      final tee = await insertTeeSet(cid);
+      final pin = await insertPinSet(cid);
+      await expectLater(
+        insertTeeToPinYard(tee, pin, 1, yards: -1),
+        throwsA(isA<Exception>()),
+      );
+      await expectLater(
+        insertTeeToPinYard(tee, pin, 19),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('rounds.tee_set_id and rounds.pin_set_id', () {
+    test('deleting either set SET NULLs the rounds played on it', () async {
+      final cid = await insertCourse();
+      final tee = await insertTeeSet(cid);
+      final pin = await insertPinSet(cid);
+      final rid = await insertRound(cid, teeSetId: tee, pinSetId: pin);
+      Future<Round> round() =>
+          (db.select(db.rounds)..where((r) => r.id.equals(rid))).getSingle();
+
+      await (db.delete(db.pinSets)..where((s) => s.id.equals(pin))).go();
+      expect((await round()).pinSetId, isNull);
+      expect((await round()).teeSetId, tee);
+
+      await (db.delete(db.teeSets)..where((s) => s.id.equals(tee))).go();
+      expect((await round()).teeSetId, isNull);
     });
   });
 

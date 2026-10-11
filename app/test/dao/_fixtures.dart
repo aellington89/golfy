@@ -48,24 +48,50 @@ class TestFixtures {
     ]);
   }
 
-  /// Inserts a named yardage set for a course and returns its id.
-  Future<int> insertCourseSet(int courseId, {String name = 'Blue tees'}) {
-    return db.courseSetDao.insertSet(
-      CourseSetsCompanion.insert(courseId: courseId, name: name),
+  /// Inserts a named tee set for a course and returns its id.
+  Future<int> insertTeeSet(int courseId, {String name = 'Blue'}) {
+    return db.yardageDao.insertTeeSet(
+      TeeSetsCompanion.insert(courseId: courseId, name: name),
     );
   }
 
-  /// Saves a set's per-hole yardage. Defaults to a full 18-hole card of
+  /// Inserts a named pin set for a course and returns its id.
+  Future<int> insertPinSet(int courseId, {String name = 'Sunday pins'}) {
+    return db.yardageDao.insertPinSet(
+      PinSetsCompanion.insert(courseId: courseId, name: name),
+    );
+  }
+
+  /// Saves a tee set's course yards. Defaults to a full 18-hole card of
   /// [yards]-yard holes; pass [count] for fewer.
-  Future<void> insertCourseSetYards(
-    int setId, {
+  Future<void> insertCourseYards(
+    int teeSetId, {
     int count = 18,
     int yards = 400,
   }) {
-    return db.courseSetDao.replaceYardsForSet(setId, [
+    return db.yardageDao.replaceCourseYards(teeSetId, [
       for (var h = 1; h <= count; h++)
-        CourseSetYardsCompanion.insert(
-          courseSetId: setId,
+        CourseYardsCompanion.insert(
+          teeSetId: teeSetId,
+          holeNumber: h,
+          yards: yards,
+        ),
+    ]);
+  }
+
+  /// Saves a yardage set's tee-to-pin yards. Defaults to a full 18-hole card
+  /// of [yards]-yard holes; pass [count] for fewer.
+  Future<void> insertTeeToPinYards(
+    int teeSetId,
+    int pinSetId, {
+    int count = 18,
+    int yards = 390,
+  }) {
+    return db.yardageDao.replaceTeeToPinYards(teeSetId, pinSetId, [
+      for (var h = 1; h <= count; h++)
+        TeeToPinYardsCompanion.insert(
+          teeSetId: teeSetId,
+          pinSetId: pinSetId,
           holeNumber: h,
           yards: yards,
         ),
@@ -77,7 +103,8 @@ class TestFixtures {
     String date = '2026-05-19',
     int roundNumber = 1,
     int? eventId,
-    int? courseSetId,
+    int? teeSetId,
+    int? pinSetId,
   }) {
     return db.roundDao.insert(
       RoundsCompanion.insert(
@@ -85,7 +112,8 @@ class TestFixtures {
         courseId: courseId,
         roundNumber: Value(roundNumber),
         eventId: Value(eventId),
-        courseSetId: Value(courseSetId),
+        teeSetId: Value(teeSetId),
+        pinSetId: Value(pinSetId),
       ),
     );
   }
@@ -126,12 +154,14 @@ class TestFixtures {
 
   /// Seeds one dataset that exercises **every table and every awkward case**
   /// at once, for the backup suites (#69): two courses (one templated, one
-  /// bare), two yardage sets on one of them, four events covering each result
-  /// state and a second season of the same name, three rounds (one casual with
-  /// no event and no set, one half-played, one complete and attached to an
-  /// event), a par 3 with a null `fairwayHit`, holes with and without shots,
-  /// shots with every optional field null, a round carrying the legacy
-  /// `tee_set` and `migration_canary` columns, and notes holding quotes,
+  /// bare), two tee sets with course yards and a pin set on one of them, with
+  /// a full tee-to-pin card from one tee set and a half-filled one from the
+  /// other, four events covering each result state and a second season of the
+  /// same name, three rounds (one casual with no event and no yardage set, one
+  /// half-played on a tee set and pin set, one complete from a tee set alone
+  /// and attached to an event), a par 3 with a null `fairwayHit`, holes with
+  /// and without shots, shots with every optional field null, a round
+  /// carrying the legacy `migration_canary` column, and notes holding quotes,
   /// newlines and non-ASCII text.
   ///
   /// Returns the expected row count per SQL table name, so a test can assert
@@ -157,17 +187,22 @@ class TestFixtures {
         ),
     ]);
 
-    final blue = await insertCourseSet(pebble);
-    final gold = await insertCourseSet(pebble, name: 'Gold tees');
-    await insertCourseSetYards(blue);
-    await db.courseSetDao.replaceYardsForSet(gold, [
+    final blue = await insertTeeSet(pebble);
+    final gold = await insertTeeSet(pebble, name: 'Gold');
+    await insertCourseYards(blue);
+    await db.yardageDao.replaceCourseYards(gold, [
       for (var h = 1; h <= 18; h++)
-        CourseSetYardsCompanion.insert(
-          courseSetId: gold,
+        CourseYardsCompanion.insert(
+          teeSetId: gold,
           holeNumber: h,
           yards: h == 7 ? 0 : 400 + h * 3,
         ),
     ]);
+    // Tee-to-pin varies with the tee set too: the same pins are a different
+    // distance from each, and only half of gold's card is filled in.
+    final sunday = await insertPinSet(pebble);
+    await insertTeeToPinYards(blue, sunday);
+    await insertTeeToPinYards(gold, sunday, count: 9, yards: 420);
 
     // ── Events: one of each result state, plus a second season ─────────────
     final placed = await insertEvent();
@@ -187,9 +222,9 @@ class TestFixtures {
         date: '2026-05-19',
         courseId: pebble,
         roundNumber: const Value(1),
-        courseSetId: Value(blue),
+        teeSetId: Value(blue),
+        pinSetId: Value(sunday),
         eventId: Value(placed),
-        teeSet: const Value('Blue (legacy label)'),
         migrationCanary: const Value('v2 canary'),
         weather: const Value('Breezy'),
         windSpeedMph: const Value(12),
@@ -204,7 +239,7 @@ class TestFixtures {
         date: '2026-05-19',
         courseId: pebble,
         roundNumber: const Value(2),
-        courseSetId: Value(gold),
+        teeSetId: Value(gold),
         eventId: Value(unrecorded),
       ),
     );
@@ -319,8 +354,10 @@ class TestFixtures {
     return const <String, int>{
       'courses': 2,
       'course_holes': 18,
-      'course_sets': 2,
-      'course_set_yards': 36,
+      'tee_sets': 2,
+      'course_yards': 36,
+      'pin_sets': 1,
+      'tee_to_pin_yards': 27,
       'events': 4,
       'rounds': 3,
       'hole_results': 26, // 1 casual + 7 partial + 18 complete

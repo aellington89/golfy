@@ -165,12 +165,18 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
       final repo = ref.read(repositoryProvider);
       final eventId = _event?.id;
       final notes = _notesController.text.trim();
+      // A tee set and pin set belong to their course, so a round moved to
+      // another course leaves its yardage set behind rather than pointing at
+      // the old course's holes.
+      final movedCourse = course.id != widget.round.round.courseId;
       final companion = RoundsCompanion(
         date: Value(_isoDate),
         courseId: Value(course.id),
         roundNumber: Value(_roundNumber),
         // Value(null) explicitly clears the event when "No event" is chosen.
         eventId: Value(eventId),
+        teeSetId: movedCourse ? const Value(null) : const Value.absent(),
+        pinSetId: movedCourse ? const Value(null) : const Value.absent(),
         notes: Value(notes.isEmpty ? null : notes),
       );
       await repo.updateRound(widget.round.round.id, companion);

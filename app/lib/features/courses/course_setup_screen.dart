@@ -7,7 +7,7 @@ import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/hole_nav_bar.dart';
-import 'add_yardage_set_dialog.dart';
+import 'add_set_dialog.dart';
 import 'course_hole_card.dart';
 import 'course_template.dart';
 import 'delete_course.dart';
@@ -19,9 +19,14 @@ enum _SetMenuAction { rename, delete }
 
 const int _holeCount = 18;
 
-/// The whole of a course's template on one screen (#81): par, stroke index and
-/// the selected yardage set's yardage, together, hole by hole — replacing the
-/// old split between a par/stroke-index screen and a separate screen per set.
+/// The whole of a course's template on one screen (#81): par, stroke index,
+/// the selected tee set's course yards and the selected tee set × pin set's
+/// tee-to-pin yards, together, hole by hole.
+///
+/// Par and stroke index belong to the hole whatever it is played from. Course
+/// yards belong to a tee set; tee-to-pin yards to a tee set and a pin set
+/// together — the pair a round calls its yardage set. Picking a tee set and a
+/// pin set above the holes chooses which yards every card shows and edits.
 ///
 /// Borrows Hole Entry's idioms so setting a course up and playing it feel like
 /// the same app: the same [ParSelector] for par, the same [HoleNavBar] chip
@@ -61,17 +66,23 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
   final List<int?> _savedSi = List<int?>.filled(_holeCount, null);
   bool _cardSeeded = false;
 
-  /// Live and stored yardages per set id. Held per set so switching tee boxes
-  /// carries unsaved edits instead of discarding them or nagging to save first.
-  final Map<int, List<int>> _yardsBySet = {};
-  final Map<int, List<int?>> _savedYardsBySet = {};
+  /// Course yards per tee set id. A missing row reads unsaved, like a missing
+  /// par: a tee set's card is something to fill in and accept.
+  final _YardCards<int> _courseYards = _YardCards<int>(missingIsBlank: false);
 
-  /// Sets whose yardages have actually been loaded. Only these are ever written:
-  /// a wholesale replace built from an unseeded blank card would wipe a tee box
-  /// the user never opened.
-  final Set<int> _seededSets = {};
+  /// Tee-to-pin yards per (tee set id, pin set id). A missing row reads as a
+  /// blank field: every tee set has its own card for every pin set, and just
+  /// looking at a pair not filled in yet must not make eighteen holes unsaved.
+  final _YardCards<(int, int)> _teeToPin =
+      _YardCards<(int, int)>(missingIsBlank: true);
 
-  int? _activeSetId;
+  int? _activeTeeId;
+  int? _activePinId;
+
+  /// A set just created here and selected before the sets stream has caught up
+  /// with it — exempt from falling back to the first set until it arrives.
+  int? _addedTeeId;
+  int? _addedPinId;
   int _currentHoleIndex = 0;
   bool _saving = false;
 
@@ -102,24 +113,13 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
     }
   }
 
-  void _seedSet(int setId, List<CourseSetYard> rows) {
-    final byHole = {for (final y in rows) y.holeNumber: y.yards};
-    _yardsBySet[setId] = [
-      for (var h = 1; h <= _holeCount; h++) byHole[h] ?? 0,
-    ];
-    _savedYardsBySet[setId] = [
-      for (var h = 1; h <= _holeCount; h++) byHole[h],
-    ];
-    _seededSets.add(setId);
-  }
-
-  /// Seeds a brand-new set from an existing one, as unsaved changes.
-  Future<void> _seedCopiedSet(int newSetId, NewYardageSet spec) async {
+  /// Seeds a brand-new tee set's course yards from an existing tee set, as
+  /// unsaved changes.
+  Future<void> _seedCopiedTeeSet(int newTeeSetId, NewCourseSet spec) async {
     final source = spec.copyFromSetId;
     var yards = List<int>.filled(_holeCount, 0);
     if (source != null) {
-      final rows =
-          await ref.read(repositoryProvider).getCourseSetYards(source);
+      final rows = await ref.read(repositoryProvider).getCourseYards(source);
       final byHole = {for (final y in rows) y.holeNumber: y.yards};
       yards = applyYardOffset(
         [for (var h = 1; h <= _holeCount; h++) byHole[h] ?? 0],
@@ -128,13 +128,11 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
     }
     if (!mounted) return;
     setState(() {
-      _yardsBySet[newSetId] = yards;
-      // Nothing is stored for the new set yet, so every hole reads unsaved.
-      _savedYardsBySet[newSetId] = List<int?>.filled(_holeCount, null);
-      // Claim it as seeded *before* its stream can emit, or the empty first
-      // emission would overwrite the copy.
-      _seededSets.add(newSetId);
-      _activeSetId = newSetId;
+      // Claimed as seeded *before* its stream can emit, or the empty first
+      // emission would overwrite the copy. Nothing is stored for the new tee
+      // set yet, so every hole reads unsaved.
+      _courseYards.seedUnsaved(newTeeSetId, yards);
+      _activeTeeId = _addedTeeId = newTeeSetId;
     });
   }
 
@@ -143,26 +141,24 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
   bool _holeIsDirty(int index) {
     if (_savedPar[index] != _par[index]) return true;
     if (_savedSi[index] != _si[index]) return true;
-    // Any loaded set, not just the active one — otherwise the chips would
-    // flicker as the user switches tee boxes and the unsaved count would lie.
-    for (final setId in _seededSets) {
-      final live = _yardsBySet[setId];
-      final stored = _savedYardsBySet[setId];
-      if (live == null || stored == null) continue;
-      if (stored[index] != live[index]) return true;
-    }
-    return false;
+    // Any loaded card, not just the active ones — otherwise the chips would
+    // flicker as the user switches sets and the unsaved count would lie.
+    return _courseYards.holeIsDirty(index) || _teeToPin.holeIsDirty(index);
   }
 
-  /// A hole counts as set up once it has a stroke index and, when the course has
-  /// a tee box selected, a yardage. Par always holds a value, so it can't signal
-  /// completeness on its own.
+  /// A hole counts as set up once it has a stroke index and, for whichever tee
+  /// set and pin set are selected, its yards. Par always holds a value, so it
+  /// can't signal completeness on its own.
   bool _holeIsComplete(int index) {
     if (_si[index] == null) return false;
-    final active = _activeSetId;
-    if (active == null) return true;
-    final yards = _yardsBySet[active];
-    return yards != null && yards[index] > 0;
+    final tee = _activeTeeId;
+    if (tee == null) return true;
+    final course = _courseYards.live[tee];
+    if (course == null || course[index] <= 0) return false;
+    final pin = _activePinId;
+    if (pin == null) return true;
+    final toPin = _teeToPin.live[(tee, pin)];
+    return toPin != null && toPin[index] > 0;
   }
 
   Set<int> get _dirtyHoles => {
@@ -212,23 +208,43 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
           strokeIndex: Value(_si[i]),
         ),
     ];
-    final yardsBySet = <int, List<CourseSetYardsCompanion>>{
-      for (final setId in _seededSets)
-        if (_yardsBySet[setId] != null)
-          setId: [
-            for (var i = 0; i < _holeCount; i++)
-              CourseSetYardsCompanion.insert(
-                courseSetId: setId,
-                holeNumber: i + 1,
-                yards: _yardsBySet[setId]![i],
-              ),
-          ],
+    // Only cards that changed: the rest already say what the database does,
+    // and a pair the user only looked at has nothing to write.
+    final dirtyTees = _courseYards.dirtyCards;
+    final dirtyPairs = _teeToPin.dirtyCards;
+    final courseYardsByTeeSet = <int, List<CourseYardsCompanion>>{
+      for (final tee in dirtyTees)
+        tee: [
+          for (var i = 0; i < _holeCount; i++)
+            CourseYardsCompanion.insert(
+              teeSetId: tee,
+              holeNumber: i + 1,
+              yards: _courseYards.live[tee]![i],
+            ),
+        ],
+    };
+    final teeToPinByYardageSet = <(int, int), List<TeeToPinYardsCompanion>>{
+      for (final pair in dirtyPairs)
+        pair: [
+          for (var i = 0; i < _holeCount; i++)
+            TeeToPinYardsCompanion.insert(
+              teeSetId: pair.$1,
+              pinSetId: pair.$2,
+              holeNumber: i + 1,
+              yards: _teeToPin.live[pair]![i],
+            ),
+        ],
     };
 
     try {
       await ref
           .read(repositoryProvider)
-          .replaceCourseCard(widget.courseId, holes, yardsBySet);
+          .replaceCourseCard(
+            widget.courseId,
+            holes,
+            courseYardsByTeeSet: courseYardsByTeeSet,
+            teeToPinByYardageSet: teeToPinByYardageSet,
+          );
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -238,9 +254,8 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
           _savedPar[i] = _par[i];
           _savedSi[i] = _si[i];
         }
-        for (final setId in yardsBySet.keys) {
-          _savedYardsBySet[setId] = [..._yardsBySet[setId]!];
-        }
+        dirtyTees.forEach(_courseYards.markSaved);
+        dirtyPairs.forEach(_teeToPin.markSaved);
       });
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -319,61 +334,89 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
             _savedPar[i] = _par[i];
             _savedSi[i] = _si[i];
           }
-          _seededSets.clear();
+          _courseYards.clear();
+          _teeToPin.clear();
         });
         Navigator.of(context).pop();
     }
   }
 
-  Future<void> _addSet(List<CourseSet> existing) async {
-    final spec = await showDialog<NewYardageSet>(
+  Future<void> _addSet(CourseSetKind kind, List<ExistingSet> existing) async {
+    final spec = await showDialog<NewCourseSet>(
       context: context,
-      builder: (_) => AddYardageSetDialog(existingSets: existing),
+      builder: (_) => AddSetDialog(kind: kind, existing: existing),
     );
     if (spec == null) return;
+    final repo = ref.read(repositoryProvider);
     try {
-      final id = await ref.read(repositoryProvider).insertCourseSet(
-            CourseSetsCompanion.insert(
-              courseId: widget.courseId,
-              name: spec.name,
-            ),
-          );
-      await _seedCopiedSet(id, spec);
+      switch (kind) {
+        case CourseSetKind.tee:
+          final id = await repo.insertTeeSet(TeeSetsCompanion.insert(
+            courseId: widget.courseId,
+            name: spec.name,
+          ));
+          await _seedCopiedTeeSet(id, spec);
+        case CourseSetKind.pin:
+          final id = await repo.insertPinSet(PinSetsCompanion.insert(
+            courseId: widget.courseId,
+            name: spec.name,
+          ));
+          if (!mounted) return;
+          setState(() => _activePinId = _addedPinId = id);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('A set named "${spec.name}" already exists')),
+        SnackBar(
+          content: Text('A ${kind.noun} named "${spec.name}" already exists'),
+        ),
       );
     }
   }
 
-  Future<void> _onSetAction(_SetMenuAction action, CourseSet set) async {
+  Future<void> _onSetAction(
+    CourseSetKind kind,
+    _SetMenuAction action,
+    ExistingSet set,
+  ) async {
     final repo = ref.read(repositoryProvider);
     switch (action) {
       case _SetMenuAction.rename:
         final name = await promptSetName(
           context,
-          title: 'Rename set',
+          kind: kind,
+          title: 'Rename ${kind.noun}',
           initial: set.name,
         );
         if (name == null || name == set.name) return;
         try {
-          await repo.renameCourseSet(set.id, name);
+          switch (kind) {
+            case CourseSetKind.tee:
+              await repo.renameTeeSet(set.id, name);
+            case CourseSetKind.pin:
+              await repo.renamePinSet(set.id, name);
+          }
         } catch (_) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('A set named "$name" already exists')),
+            SnackBar(
+              content: Text('A ${kind.noun} named "$name" already exists'),
+            ),
           );
         }
       case _SetMenuAction.delete:
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Delete yardage set?'),
-            content: Text(
-              'This deletes "${set.name}" and its yardages. Rounds played on it '
-              'are kept and detached from the set (their scores are unaffected).',
-            ),
+            title: Text('Delete ${kind.noun}?'),
+            content: Text(switch (kind) {
+              CourseSetKind.tee => 'This deletes "${set.name}", its course '
+                  'yards and its tee-to-pin yards. Rounds played from it are '
+                  'kept and detached from it (their scores are unaffected).',
+              CourseSetKind.pin => 'This deletes "${set.name}" and its '
+                  'tee-to-pin yards. Rounds played to it are kept and detached '
+                  'from it (their scores are unaffected).',
+            }),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -387,17 +430,37 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
           ),
         );
         if (confirmed != true) return;
-        await repo.deleteCourseSet(set.id);
+        switch (kind) {
+          case CourseSetKind.tee:
+            await repo.deleteTeeSet(set.id);
+          case CourseSetKind.pin:
+            await repo.deletePinSet(set.id);
+        }
         if (!mounted) return;
-        // Drop its in-memory state too, so a deleted set can't be written back
+        // Drop its in-memory cards too, so a deleted set can't be written back
         // or counted as unsaved.
         setState(() {
-          _yardsBySet.remove(set.id);
-          _savedYardsBySet.remove(set.id);
-          _seededSets.remove(set.id);
-          if (_activeSetId == set.id) _activeSetId = null;
+          switch (kind) {
+            case CourseSetKind.tee:
+              _courseYards.removeWhere((tee) => tee == set.id);
+              _teeToPin.removeWhere((pair) => pair.$1 == set.id);
+              if (_activeTeeId == set.id) _activeTeeId = null;
+            case CourseSetKind.pin:
+              _teeToPin.removeWhere((pair) => pair.$2 == set.id);
+              if (_activePinId == set.id) _activePinId = null;
+          }
         });
     }
+  }
+
+  /// The set to show from [ids]: [active] while it is there — or while it is
+  /// the set [justAdded], which the stream hasn't caught up with yet — and
+  /// otherwise the first, or none.
+  static int? _resolveActive(List<int> ids, int? active, int? justAdded) {
+    if (active != null && (ids.contains(active) || active == justAdded)) {
+      return active;
+    }
+    return ids.isEmpty ? null : ids.first;
   }
 
   // ── Build ────────────────────────────────────────────────────────────────
@@ -440,8 +503,10 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
     int roundCount,
   ) {
     final cardAsync = ref.watch(courseHolesStreamProvider(widget.courseId));
-    final setsAsync = ref.watch(courseSetsStreamProvider(widget.courseId));
-    final sets = setsAsync.value ?? const <CourseSet>[];
+    final teeSets = ref.watch(teeSetsStreamProvider(widget.courseId)).value ??
+        const <TeeSet>[];
+    final pinSets = ref.watch(pinSetsStreamProvider(widget.courseId)).value ??
+        const <PinSet>[];
 
     // Seed par/SI once; a live re-seed would fight the user's typing.
     cardAsync.whenData((card) {
@@ -451,26 +516,53 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
       }
     });
 
-    // Default to the first set, and fall back if the active one disappears.
-    if (sets.isNotEmpty && !sets.any((s) => s.id == _activeSetId)) {
-      _activeSetId = sets.first.id;
-    }
+    // Default to the first of each, and fall back if the active one goes.
+    final teeIds = [for (final s in teeSets) s.id];
+    final pinIds = [for (final s in pinSets) s.id];
+    if (teeIds.contains(_addedTeeId)) _addedTeeId = null;
+    if (pinIds.contains(_addedPinId)) _addedPinId = null;
+    _activeTeeId = _resolveActive(teeIds, _activeTeeId, _addedTeeId);
+    _activePinId = _resolveActive(pinIds, _activePinId, _addedPinId);
 
-    // Only the active set is watched — one live query rather than one per set.
-    final activeSetId = _activeSetId;
-    if (activeSetId != null) {
-      ref.watch(courseSetYardsStreamProvider(activeSetId)).whenData((rows) {
-        if (!_seededSets.contains(activeSetId)) {
-          _seedSet(activeSetId, rows);
+    // Only the active cards are watched — one live query each rather than one
+    // per set.
+    final activeTeeId = _activeTeeId;
+    final activePinId = _activePinId;
+    if (activeTeeId != null) {
+      ref.watch(courseYardsStreamProvider(activeTeeId)).whenData((rows) {
+        if (!_courseYards.seeded.contains(activeTeeId)) {
+          _courseYards.seed(
+            activeTeeId,
+            {for (final y in rows) y.holeNumber: y.yards},
+          );
+        }
+      });
+    }
+    final activePair = activeTeeId == null || activePinId == null
+        ? null
+        : (activeTeeId, activePinId);
+    if (activePair != null) {
+      ref.watch(teeToPinYardsStreamProvider(activePair)).whenData((rows) {
+        if (!_teeToPin.seeded.contains(activePair)) {
+          _teeToPin.seed(
+            activePair,
+            {for (final y in rows) y.holeNumber: y.yards},
+          );
         }
       });
     }
 
     final dirty = _dirtyHoles;
-    final activeYards = activeSetId == null ? null : _yardsBySet[activeSetId];
-    final activeSetName = activeSetId == null
-        ? null
-        : sets.firstWhere((s) => s.id == activeSetId).name;
+    final courseYards =
+        activeTeeId == null ? null : _courseYards.live[activeTeeId];
+    final teeToPin = activePair == null ? null : _teeToPin.live[activePair];
+    // Null-safe: a set just added may not be in the stream's list yet.
+    final teeSetName =
+        teeSets.where((s) => s.id == activeTeeId).firstOrNull?.name;
+    final pinSetName =
+        pinSets.where((s) => s.id == activePinId).firstOrNull?.name;
+    final teeOptions = [for (final s in teeSets) (id: s.id, name: s.name)];
+    final pinOptions = [for (final s in pinSets) (id: s.id, name: s.name)];
 
     return PopScope(
       canPop: dirty.isEmpty,
@@ -529,12 +621,28 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
           error: (e, _) => Center(child: Text('Failed to load hole card: $e')),
           data: (_) => Column(
             children: [
-              _YardageSetStrip(
-                sets: sets,
-                activeSetId: activeSetId,
-                onSelect: (id) => setState(() => _activeSetId = id),
-                onAdd: () => _addSet(sets),
-                onSetAction: _onSetAction,
+              _YardageIntro(
+                hasSets: teeSets.isNotEmpty || pinSets.isNotEmpty,
+              ),
+              _SetStrip(
+                kind: CourseSetKind.tee,
+                sets: teeOptions,
+                activeId: activeTeeId,
+                empty: 'No tee sets yet. Add one (e.g. Blue) to record each '
+                    'hole\'s course yards.',
+                onSelect: (id) => setState(() => _activeTeeId = id),
+                onAdd: () => _addSet(CourseSetKind.tee, teeOptions),
+                onSetAction: (a, s) => _onSetAction(CourseSetKind.tee, a, s),
+              ),
+              _SetStrip(
+                kind: CourseSetKind.pin,
+                sets: pinOptions,
+                activeId: activePinId,
+                empty: 'No pin sets yet. Add one (e.g. Sunday pins) to record '
+                    'tee-to-pin yards from each tee set.',
+                onSelect: (id) => setState(() => _activePinId = id),
+                onAdd: () => _addSet(CourseSetKind.pin, pinOptions),
+                onSetAction: (a, s) => _onSetAction(CourseSetKind.pin, a, s),
               ),
               const Divider(height: 1),
               Expanded(
@@ -551,17 +659,20 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
                           holeNumber: i + 1,
                           par: _par[i],
                           strokeIndex: _si[i],
-                          yards: activeYards?[i],
-                          setName: activeSetName,
+                          courseYards: courseYards?[i],
+                          teeSetName: teeSetName,
+                          teeToPinYards: teeToPin?[i],
+                          pinSetName: pinSetName,
                           isDirty: _holeIsDirty(i),
                           onParChanged: (v) => setState(() => _par[i] = v),
                           onStrokeIndexChanged: (v) =>
                               setState(() => _si[i] = v),
-                          onYardsChanged: activeSetId == null
+                          onCourseYardsChanged: courseYards == null
                               ? null
-                              : (v) => setState(
-                                    () => _yardsBySet[activeSetId]![i] = v,
-                                  ),
+                              : (v) => setState(() => courseYards[i] = v),
+                          onTeeToPinYardsChanged: teeToPin == null
+                              ? null
+                              : (v) => setState(() => teeToPin[i] = v),
                         ),
                       ),
                   ],
@@ -575,50 +686,68 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
   }
 }
 
-/// The course's yardage sets as a selectable strip. Choosing one swaps which
-/// yardage every hole card shows and edits.
-class _YardageSetStrip extends StatelessWidget {
-  const _YardageSetStrip({
+/// One line above the strips saying what each set changes, once there are
+/// sets to switch between.
+class _YardageIntro extends StatelessWidget {
+  const _YardageIntro({required this.hasSets});
+
+  final bool hasSets;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasSets) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Text(
+        'Par and stroke index are the same from every tee. Course yards change '
+        'with the tee set; tee-to-pin yards with the tee set and pin set '
+        'together.',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.outline,
+        ),
+      ),
+    );
+  }
+}
+
+/// A course's tee sets or pin sets as a selectable strip. Choosing one swaps
+/// which yards every hole card shows and edits; long-press renames, the chip's
+/// delete icon deletes.
+class _SetStrip extends StatelessWidget {
+  const _SetStrip({
+    required this.kind,
     required this.sets,
-    required this.activeSetId,
+    required this.activeId,
+    required this.empty,
     required this.onSelect,
     required this.onAdd,
     required this.onSetAction,
   });
 
-  final List<CourseSet> sets;
-  final int? activeSetId;
+  final CourseSetKind kind;
+  final List<ExistingSet> sets;
+  final int? activeId;
+
+  /// What the strip says when the course has no sets of this [kind].
+  final String empty;
   final ValueChanged<int> onSelect;
   final VoidCallback onAdd;
-  final void Function(_SetMenuAction, CourseSet) onSetAction;
+  final void Function(_SetMenuAction, ExistingSet) onSetAction;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final icon = switch (kind) {
+      CourseSetKind.tee => Icons.sports_golf,
+      CourseSetKind.pin => Icons.flag_outlined,
+    };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 2),
+      child: Row(
         children: [
-          if (sets.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                'Par and stroke index are shared by every set — switching '
-                'sets only changes yardages.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
-              ),
-            ),
-          Row(
-            children: [
           Expanded(
             child: sets.isEmpty
-                ? const Text(
-                    'No yardage sets yet. Add one (e.g. a tee box or pin set) '
-                    'to record per-hole yardages.',
-                  )
+                ? Text(empty)
                 : SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -630,16 +759,17 @@ class _YardageSetStrip extends StatelessWidget {
                               onLongPress: () =>
                                   onSetAction(_SetMenuAction.rename, s),
                               child: InputChip(
-                                key: ValueKey('yardage_set_chip_${s.id}'),
+                                key: ValueKey('${kind.name}_set_chip_${s.id}'),
                                 label: Text(s.name),
-                                selected: s.id == activeSetId,
+                                selected: s.id == activeId,
                                 showCheckmark: false,
-                                avatar: const Icon(Icons.straighten, size: 18),
+                                avatar: Icon(icon, size: 18),
                                 onPressed: () => onSelect(s.id),
                                 onDeleted: () =>
                                     onSetAction(_SetMenuAction.delete, s),
                                 deleteIcon: const Icon(Icons.close, size: 18),
-                                deleteButtonTooltipMessage: 'Delete set',
+                                deleteButtonTooltipMessage:
+                                    'Delete ${kind.noun}',
                               ),
                             ),
                           ),
@@ -647,16 +777,77 @@ class _YardageSetStrip extends StatelessWidget {
                     ),
                   ),
           ),
-              TextButton.icon(
-                key: const ValueKey('add_yardage_set'),
-                onPressed: onAdd,
-                icon: const Icon(Icons.add),
-                label: const Text('Add set'),
-              ),
-            ],
+          TextButton.icon(
+            key: ValueKey('add_${kind.name}_set'),
+            onPressed: onAdd,
+            icon: const Icon(Icons.add),
+            label: Text(switch (kind) {
+              CourseSetKind.tee => 'Tee set',
+              CourseSetKind.pin => 'Pin set',
+            }),
           ),
         ],
       ),
     );
   }
+}
+
+/// Live and stored per-hole yards for one kind of yardage card — a tee set's
+/// course yards, or a yardage set's tee-to-pin yards — keyed by [K].
+///
+/// Held per card so switching sets carries unsaved edits instead of discarding
+/// them or nagging to save first. Only cards that have actually been loaded
+/// ([seeded]) are ever written: a wholesale replace built from an unseeded
+/// blank card would wipe yards the user never opened.
+class _YardCards<K> {
+  _YardCards({required this.missingIsBlank});
+
+  /// Whether a hole with no stored row matches a blank (0) field. When false,
+  /// a missing row never equals a live value, so the hole reads unsaved.
+  final bool missingIsBlank;
+
+  final Map<K, List<int>> live = {};
+  final Map<K, List<int?>> _stored = {};
+  final Set<K> seeded = {};
+
+  /// Loads a card from its stored rows, by hole number.
+  void seed(K key, Map<int, int> byHole) {
+    live[key] = [for (var h = 1; h <= _holeCount; h++) byHole[h] ?? 0];
+    _stored[key] = [
+      for (var h = 1; h <= _holeCount; h++)
+        byHole[h] ?? (missingIsBlank ? 0 : null),
+    ];
+    seeded.add(key);
+  }
+
+  /// Loads a card that has nothing stored yet, every hole unsaved.
+  void seedUnsaved(K key, List<int> yards) {
+    live[key] = [...yards];
+    _stored[key] = List<int?>.filled(_holeCount, null);
+    seeded.add(key);
+  }
+
+  bool _differs(K key, int index) {
+    final l = live[key];
+    final s = _stored[key];
+    return l != null && s != null && s[index] != l[index];
+  }
+
+  bool holeIsDirty(int index) => seeded.any((k) => _differs(k, index));
+
+  /// Every loaded card with at least one hole that differs from storage.
+  List<K> get dirtyCards => [
+        for (final k in seeded)
+          if (Iterable<int>.generate(_holeCount).any((i) => _differs(k, i))) k,
+      ];
+
+  void markSaved(K key) => _stored[key] = [...live[key]!];
+
+  void removeWhere(bool Function(K key) test) {
+    live.removeWhere((k, _) => test(k));
+    _stored.removeWhere((k, _) => test(k));
+    seeded.removeWhere(test);
+  }
+
+  void clear() => removeWhere((_) => true);
 }

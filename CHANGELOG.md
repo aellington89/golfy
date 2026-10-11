@@ -8,6 +8,67 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+
+- **Yardage is split into tee sets and pin sets.** A course used to have just
+  "yardage sets", each holding one yardage per hole, and nothing said whether a
+  set was a tee box or a set of pins. Now the two are separate, because they
+  change different numbers. A **tee set** (Blue, Championship) has its
+  **course yards**: the scorecard yardage per hole, which depends on the tee
+  set and never on where the pin is. A **pin set** (Sunday pins) has
+  **tee-to-pin** yards, the distance to that pin set's pin on each hole. That
+  distance depends on the tee set too, so it is kept per tee set: the same pins
+  are a different distance from each tee. Par and stroke index stay one per
+  hole, whatever the tee and pins. The course editor has a tee set strip and a
+  pin set strip, and each hole card shows course yards for the chosen tee set
+  and tee-to-pin for the chosen tee set and pin set. Starting a round now asks
+  for a tee set and a pin set, which together are its **yardage set**. Each
+  hole pre-fills with that pair's tee-to-pin yards, or with the tee set's
+  course yards when the round has no pin set. "Update course as I play" writes
+  back to whichever of the two the round used. The rounds list and the yards
+  field name both sets, e.g. "Blue · Sunday pins". A tee set copied from
+  another still copies its course yards with an offset. A pin set has no
+  yards of its own, so there is nothing to copy.
+
+- **The schema moves to v9, and each yardage set becomes the tee set and pin
+  set it named.** An old set was one tee set and pin set together, named "Tee
+  Set - Pin Set", and its yards were the tee-to-pin yards for that pair. The
+  migration splits each name at the " - ": "Blue - Sunday pins" becomes the
+  tee set Blue and the pin set Sunday pins, and its yards become Blue's
+  tee-to-pin yards to Sunday pins. Sets that name the same tee set or pin set
+  on a course share one; "Blue - Sunday pins" and "Blue - Monday pins" give one
+  Blue tee set with a card for each set of pins. A round played on a set is now
+  played on that tee set and pin set. Course yards start empty, since the old
+  sets never recorded them; fill them in from the course editor. A set whose
+  name has no " - " can't be split. It becomes a tee set on its own, and its
+  yards become that tee set's course yards, which is what a round with no pin
+  set uses. Rounds, holes and shots are untouched. A round that you moved to
+  another course after choosing its set used to keep the old course's set. That
+  link is now cleared, and editing a round's course clears its tee set and pin
+  set from now on. The migration runs in one step that either finishes or leaves the
+  database as it was. Backups move with it: new ones carry `tee_sets`,
+  `course_yards`, `pin_sets` and `tee_to_pin_yards` in place of `course_sets`
+  and `course_set_yards`. A backup made by v0.4.0 to v0.6.0 (schema v7 or v8)
+  still reads, converted the same way ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).
+
+### Internal
+
+- **`rounds` is rebuilt without its two dead set columns.** `course_set_id`
+  gives way to `tee_set_id` + `pin_set_id`. The legacy free-text
+  `rounds.tee_set` label is dropped in the same rebuild: no build ever wrote
+  it, and next to `tee_set_id` it only confused things. `CourseSetDao` becomes
+  `YardageDao`. A tee set and a pin set can only pair on one course, and a
+  round's sets must be on the round's course. SQL can't express either rule
+  across parent tables, so the DAOs refuse a mismatch with an `ArgumentError`
+  and a backup's `validate()` reports one. Splitting the old sets is one
+  frozen function that the migration and the v8 backup upgrader both call
+  (`lib/data/upgrades/split_yardage_sets.dart`), so a restored v8 backup and
+  an upgraded v8 database hold the same rows. An old backup is checked against
+  its own version's table list before it is upgraded. The tables the upgrade
+  rebuilds are read strictly, with their counts checked before the split. The
+  v0.6.0 golden files are frozen as `backup_v1_schema8_*.json` and tested to
+  still read. Tests 770 → 829.
+
 ## [0.6.0] - 2026-10-11
 
 A release that gives the putts their shots back ([#125]). v0.5.0 put every

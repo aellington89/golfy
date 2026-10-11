@@ -65,8 +65,8 @@ void main() {
         'date',
         'course_id',
         'round_number',
-        'tee_set',
-        'course_set_id',
+        'tee_set_id',
+        'pin_set_id',
         'weather',
         'wind_speed_mph',
         'difficulty',
@@ -107,7 +107,6 @@ void main() {
       final round = rowOf(tree, 'rounds');
       expect(round.containsKey('weather'), isTrue);
       expect(round['weather'], isNull);
-      expect(round['tee_set'], isNull);
       expect(round['migration_canary'], isNull);
     });
 
@@ -135,7 +134,7 @@ void main() {
       expect(manifest['formatVersion'], BackupManifest.currentFormatVersion);
       expect(manifest['schemaVersion'], BackupCodec.supportedSchemaVersion);
       expect(manifest['formatVersion'], 1);
-      expect(manifest['schemaVersion'], 8);
+      expect(manifest['schemaVersion'], 9);
     });
 
     test('states when it was made, in UTC', () {
@@ -177,7 +176,7 @@ void main() {
       final payload = samplePayload();
 
       expect(payload.rowCounts['course_holes'], 2);
-      expect(payload.totalRows, 9);
+      expect(payload.totalRows, 11);
       expect(payload.isEmpty, isFalse);
       expect(const BackupPayload.empty().isEmpty, isTrue);
     });

@@ -56,61 +56,109 @@ class GolfyRepository {
   ) =>
       _db.courseHoleDao.replaceForCourse(courseId, holes);
 
-  // ── Course yardage sets (#36) ─────────────────────────────────────────────
+  // ── Tee sets, pin sets and their yards ───────────────────────────────────
+  //
+  // A hole's course yards vary with the tee set alone; its tee-to-pin yards
+  // with the tee set and pin set together. A round's yardage set is a (tee
+  // set, pin set) pair. See [YardageDao].
 
-  /// Reactive list of a course's named yardage sets, ordered by name.
-  Stream<List<CourseSet>> watchCourseSets(int courseId) =>
-      _db.courseSetDao.watchSetsForCourse(courseId);
+  /// Reactive list of a course's tee sets, ordered by name.
+  Stream<List<TeeSet>> watchTeeSets(int courseId) =>
+      _db.yardageDao.watchTeeSetsForCourse(courseId);
 
-  /// Inserts a yardage set and returns its id. A duplicate `(courseId, name)`
+  /// Inserts a tee set and returns its id. A duplicate `(courseId, name)`
   /// throws (schema-level UNIQUE).
-  Future<int> insertCourseSet(CourseSetsCompanion set) =>
-      _db.courseSetDao.insertSet(set);
+  Future<int> insertTeeSet(TeeSetsCompanion set) =>
+      _db.yardageDao.insertTeeSet(set);
 
-  /// Renames a yardage set. A duplicate `(courseId, name)` throws.
-  Future<int> renameCourseSet(int id, String name) =>
-      _db.courseSetDao.renameSet(id, name);
+  /// Renames a tee set. A duplicate `(courseId, name)` throws.
+  Future<int> renameTeeSet(int id, String name) =>
+      _db.yardageDao.renameTeeSet(id, name);
 
-  /// Deletes a yardage set; its yardages cascade and rounds on it detach
-  /// (`rounds.course_set_id` SET NULL).
-  Future<int> deleteCourseSet(int id) => _db.courseSetDao.deleteSet(id);
+  /// Deletes a tee set; its course yards and tee-to-pin yards cascade and
+  /// rounds played from it detach (`rounds.tee_set_id` SET NULL).
+  Future<int> deleteTeeSet(int id) => _db.yardageDao.deleteTeeSet(id);
 
-  /// Reactive per-hole yardage for a set, ordered by hole number.
-  Stream<List<CourseSetYard>> watchCourseSetYards(int setId) =>
-      _db.courseSetDao.watchYardsForSet(setId);
+  /// Reactive list of a course's pin sets, ordered by name.
+  Stream<List<PinSet>> watchPinSets(int courseId) =>
+      _db.yardageDao.watchPinSetsForCourse(courseId);
 
-  /// One-shot read of a set's per-hole yardage, used to seed Hole Entry.
-  Future<List<CourseSetYard>> getCourseSetYards(int setId) =>
-      _db.courseSetDao.getYardsForSet(setId);
+  /// Inserts a pin set and returns its id. A duplicate `(courseId, name)`
+  /// throws (schema-level UNIQUE).
+  Future<int> insertPinSet(PinSetsCompanion set) =>
+      _db.yardageDao.insertPinSet(set);
 
-  /// Replaces a set's entire yardage card in one transaction. See
-  /// [CourseSetDao.replaceYardsForSet].
-  Future<void> replaceCourseSetYards(
-    int setId,
-    List<CourseSetYardsCompanion> yards,
+  /// Renames a pin set. A duplicate `(courseId, name)` throws.
+  Future<int> renamePinSet(int id, String name) =>
+      _db.yardageDao.renamePinSet(id, name);
+
+  /// Deletes a pin set; its tee-to-pin yards cascade and rounds played to it
+  /// detach (`rounds.pin_set_id` SET NULL).
+  Future<int> deletePinSet(int id) => _db.yardageDao.deletePinSet(id);
+
+  /// Reactive course yards for a tee set, ordered by hole number.
+  Stream<List<CourseYard>> watchCourseYards(int teeSetId) =>
+      _db.yardageDao.watchCourseYards(teeSetId);
+
+  /// One-shot read of a tee set's course yards.
+  Future<List<CourseYard>> getCourseYards(int teeSetId) =>
+      _db.yardageDao.getCourseYards(teeSetId);
+
+  /// Replaces a tee set's whole course-yards card in one transaction.
+  Future<void> replaceCourseYards(
+    int teeSetId,
+    List<CourseYardsCompanion> yards,
   ) =>
-      _db.courseSetDao.replaceYardsForSet(setId, yards);
+      _db.yardageDao.replaceCourseYards(teeSetId, yards);
 
-  /// Saves a course's whole card — the shared par / stroke-index rows plus the
-  /// yardages of each set in [yardsBySetId] — in **one** transaction (#81).
+  /// Upserts one hole's course yards, without touching the other 17.
+  Future<int> upsertCourseYard(CourseYardsCompanion yard) =>
+      _db.yardageDao.upsertCourseYard(yard);
+
+  /// Reactive tee-to-pin yards for a (tee set, pin set) yardage set, ordered
+  /// by hole number.
+  Stream<List<TeeToPinYard>> watchTeeToPinYards(int teeSetId, int pinSetId) =>
+      _db.yardageDao.watchTeeToPinYards(teeSetId, pinSetId);
+
+  /// One-shot read of a yardage set's tee-to-pin yards.
+  Future<List<TeeToPinYard>> getTeeToPinYards(int teeSetId, int pinSetId) =>
+      _db.yardageDao.getTeeToPinYards(teeSetId, pinSetId);
+
+  /// Upserts one hole's tee-to-pin yards, without touching the other 17.
+  /// Throws [ArgumentError] when the two sets are on different courses.
+  Future<int> upsertTeeToPinYard(TeeToPinYardsCompanion yard) =>
+      _db.yardageDao.upsertTeeToPinYard(yard);
+
+  /// Saves a course's whole card in **one** transaction (#81): the per-hole
+  /// par / stroke-index rows, the course yards of each tee set in
+  /// [courseYardsByTeeSet], and the tee-to-pin yards of each yardage set in
+  /// [teeToPinByYardageSet], keyed `(teeSetId, pinSetId)`.
   ///
-  /// The course editor writes par/SI and yardages together, and they are two
-  /// separate replaces. Run individually, a failure on the second would leave
-  /// the course half-saved while the editor's "everything is saved now" state
-  /// said otherwise — precisely the lie its per-hole Saved/Unsaved chips exist
-  /// to prevent. One transaction makes the save all-or-nothing.
+  /// The course editor writes them together, as separate replaces. Run
+  /// individually, a failure on a later one would leave the course half-saved
+  /// while the editor's "everything is saved now" state said otherwise —
+  /// precisely the lie its per-hole Saved/Unsaved chips exist to prevent. One
+  /// transaction makes the save all-or-nothing.
   ///
-  /// Only pass sets whose yardages have actually been loaded: each entry is a
-  /// wholesale replace, so handing it a blank card would wipe that tee box.
+  /// Only pass cards that have actually been loaded: each entry is a wholesale
+  /// replace, so handing it a blank card would wipe that tee set's or yardage
+  /// set's yards.
   Future<void> replaceCourseCard(
     int courseId,
-    List<CourseHolesCompanion> holes,
-    Map<int, List<CourseSetYardsCompanion>> yardsBySetId,
-  ) {
+    List<CourseHolesCompanion> holes, {
+    Map<int, List<CourseYardsCompanion>> courseYardsByTeeSet = const {},
+    Map<(int, int), List<TeeToPinYardsCompanion>> teeToPinByYardageSet =
+        const {},
+  }) {
     return _db.transaction(() async {
       await _db.courseHoleDao.replaceForCourse(courseId, holes);
-      for (final entry in yardsBySetId.entries) {
-        await _db.courseSetDao.replaceYardsForSet(entry.key, entry.value);
+      for (final entry in courseYardsByTeeSet.entries) {
+        await _db.yardageDao.replaceCourseYards(entry.key, entry.value);
+      }
+      for (final entry in teeToPinByYardageSet.entries) {
+        final (teeSetId, pinSetId) = entry.key;
+        await _db.yardageDao
+            .replaceTeeToPinYards(teeSetId, pinSetId, entry.value);
       }
     });
   }
@@ -120,11 +168,6 @@ class GolfyRepository {
   /// [CourseHoleDao.upsertHole].
   Future<int> upsertCourseHole(CourseHolesCompanion hole) =>
       _db.courseHoleDao.upsertHole(hole);
-
-  /// Upserts one hole's yardage within a set, without touching the other 17.
-  /// See [CourseSetDao.upsertYard].
-  Future<int> upsertCourseSetYard(CourseSetYardsCompanion yard) =>
-      _db.courseSetDao.upsertYard(yard);
 
   // ── Rounds ─────────────────────────────────────────────────────────────
 

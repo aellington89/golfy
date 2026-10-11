@@ -1,15 +1,17 @@
 {
   "golfyBackup": {
     "formatVersion": 1,
-    "schemaVersion": 8,
+    "schemaVersion": 9,
     "appVersion": "0.4.0+38",
     "exportedAt": "2026-10-03T14:32:07.000Z",
     "platform": "android",
     "rowCounts": {
       "courses": 2,
       "course_holes": 18,
-      "course_sets": 2,
-      "course_set_yards": 36,
+      "tee_sets": 2,
+      "course_yards": 36,
+      "pin_sets": 1,
+      "tee_to_pin_yards": 27,
       "events": 4,
       "rounds": 3,
       "hole_results": 26,
@@ -157,234 +159,432 @@
         "stroke_index": 18
       }
     ],
-    "course_sets": [
+    "tee_sets": [
       {
         "id": 1,
         "course_id": 1,
-        "name": "Blue tees"
+        "name": "Blue"
       },
       {
         "id": 2,
         "course_id": 1,
-        "name": "Gold tees"
+        "name": "Gold"
       }
     ],
-    "course_set_yards": [
+    "course_yards": [
       {
         "id": 1,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 1,
         "yards": 400
       },
       {
         "id": 2,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 2,
         "yards": 400
       },
       {
         "id": 3,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 3,
         "yards": 400
       },
       {
         "id": 4,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 4,
         "yards": 400
       },
       {
         "id": 5,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 5,
         "yards": 400
       },
       {
         "id": 6,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 6,
         "yards": 400
       },
       {
         "id": 7,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 7,
         "yards": 400
       },
       {
         "id": 8,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 8,
         "yards": 400
       },
       {
         "id": 9,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 9,
         "yards": 400
       },
       {
         "id": 10,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 10,
         "yards": 400
       },
       {
         "id": 11,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 11,
         "yards": 400
       },
       {
         "id": 12,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 12,
         "yards": 400
       },
       {
         "id": 13,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 13,
         "yards": 400
       },
       {
         "id": 14,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 14,
         "yards": 400
       },
       {
         "id": 15,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 15,
         "yards": 400
       },
       {
         "id": 16,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 16,
         "yards": 400
       },
       {
         "id": 17,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 17,
         "yards": 400
       },
       {
         "id": 18,
-        "course_set_id": 1,
+        "tee_set_id": 1,
         "hole_number": 18,
         "yards": 400
       },
       {
         "id": 19,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 1,
         "yards": 403
       },
       {
         "id": 20,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 2,
         "yards": 406
       },
       {
         "id": 21,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 3,
         "yards": 409
       },
       {
         "id": 22,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 4,
         "yards": 412
       },
       {
         "id": 23,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 5,
         "yards": 415
       },
       {
         "id": 24,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 6,
         "yards": 418
       },
       {
         "id": 25,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 7,
         "yards": 0
       },
       {
         "id": 26,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 8,
         "yards": 424
       },
       {
         "id": 27,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 9,
         "yards": 427
       },
       {
         "id": 28,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 10,
         "yards": 430
       },
       {
         "id": 29,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 11,
         "yards": 433
       },
       {
         "id": 30,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 12,
         "yards": 436
       },
       {
         "id": 31,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 13,
         "yards": 439
       },
       {
         "id": 32,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 14,
         "yards": 442
       },
       {
         "id": 33,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 15,
         "yards": 445
       },
       {
         "id": 34,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 16,
         "yards": 448
       },
       {
         "id": 35,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 17,
         "yards": 451
       },
       {
         "id": 36,
-        "course_set_id": 2,
+        "tee_set_id": 2,
         "hole_number": 18,
         "yards": 454
+      }
+    ],
+    "pin_sets": [
+      {
+        "id": 1,
+        "course_id": 1,
+        "name": "Sunday pins"
+      }
+    ],
+    "tee_to_pin_yards": [
+      {
+        "id": 1,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 1,
+        "yards": 390
+      },
+      {
+        "id": 2,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 2,
+        "yards": 390
+      },
+      {
+        "id": 3,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 3,
+        "yards": 390
+      },
+      {
+        "id": 4,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 4,
+        "yards": 390
+      },
+      {
+        "id": 5,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 5,
+        "yards": 390
+      },
+      {
+        "id": 6,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 6,
+        "yards": 390
+      },
+      {
+        "id": 7,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 7,
+        "yards": 390
+      },
+      {
+        "id": 8,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 8,
+        "yards": 390
+      },
+      {
+        "id": 9,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 9,
+        "yards": 390
+      },
+      {
+        "id": 10,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 10,
+        "yards": 390
+      },
+      {
+        "id": 11,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 11,
+        "yards": 390
+      },
+      {
+        "id": 12,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 12,
+        "yards": 390
+      },
+      {
+        "id": 13,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 13,
+        "yards": 390
+      },
+      {
+        "id": 14,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 14,
+        "yards": 390
+      },
+      {
+        "id": 15,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 15,
+        "yards": 390
+      },
+      {
+        "id": 16,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 16,
+        "yards": 390
+      },
+      {
+        "id": 17,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 17,
+        "yards": 390
+      },
+      {
+        "id": 18,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
+        "hole_number": 18,
+        "yards": 390
+      },
+      {
+        "id": 19,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 1,
+        "yards": 420
+      },
+      {
+        "id": 20,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 2,
+        "yards": 420
+      },
+      {
+        "id": 21,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 3,
+        "yards": 420
+      },
+      {
+        "id": 22,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 4,
+        "yards": 420
+      },
+      {
+        "id": 23,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 5,
+        "yards": 420
+      },
+      {
+        "id": 24,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 6,
+        "yards": 420
+      },
+      {
+        "id": 25,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 7,
+        "yards": 420
+      },
+      {
+        "id": 26,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 8,
+        "yards": 420
+      },
+      {
+        "id": 27,
+        "tee_set_id": 2,
+        "pin_set_id": 1,
+        "hole_number": 9,
+        "yards": 420
       }
     ],
     "events": [
@@ -427,8 +627,8 @@
         "date": "2026-05-01",
         "course_id": 2,
         "round_number": 1,
-        "tee_set": null,
-        "course_set_id": null,
+        "tee_set_id": null,
+        "pin_set_id": null,
         "weather": null,
         "wind_speed_mph": null,
         "difficulty": null,
@@ -441,8 +641,8 @@
         "date": "2026-05-19",
         "course_id": 1,
         "round_number": 1,
-        "tee_set": "Blue (legacy label)",
-        "course_set_id": 1,
+        "tee_set_id": 1,
+        "pin_set_id": 1,
         "weather": "Breezy",
         "wind_speed_mph": 12,
         "difficulty": "Pro",
@@ -455,8 +655,8 @@
         "date": "2026-05-19",
         "course_id": 1,
         "round_number": 2,
-        "tee_set": null,
-        "course_set_id": 2,
+        "tee_set_id": 2,
+        "pin_set_id": null,
         "weather": null,
         "wind_speed_mph": null,
         "difficulty": null,

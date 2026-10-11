@@ -57,6 +57,67 @@ void main() {
     });
   });
 
+  group('RoundDao — a yardage set stays on its round\'s course', () {
+    test('insert refuses a tee set or pin set from another course', () async {
+      final here = await fx.insertCourse(name: 'Here');
+      final there = await fx.insertCourse(name: 'There');
+      final foreignTee = await fx.insertTeeSet(there);
+      final foreignPin = await fx.insertPinSet(there);
+
+      await expectLater(
+        fx.insertRound(here, teeSetId: foreignTee),
+        throwsArgumentError,
+      );
+      await expectLater(
+        fx.insertRound(here, pinSetId: foreignPin),
+        throwsArgumentError,
+      );
+      expect(await db.select(db.rounds).get(), isEmpty);
+    });
+
+    test('update refuses moving a round away from its sets\' course',
+        () async {
+      final here = await fx.insertCourse(name: 'Here');
+      final there = await fx.insertCourse(name: 'There');
+      final tee = await fx.insertTeeSet(here);
+      final pin = await fx.insertPinSet(here);
+      final rid = await fx.insertRound(here, teeSetId: tee, pinSetId: pin);
+
+      await expectLater(
+        db.roundDao.updateById(rid, RoundsCompanion(courseId: Value(there))),
+        throwsArgumentError,
+      );
+
+      // Clearing both in the same update is how a round changes course.
+      await db.roundDao.updateById(
+        rid,
+        RoundsCompanion(
+          courseId: Value(there),
+          teeSetId: const Value(null),
+          pinSetId: const Value(null),
+        ),
+      );
+      final round = await db.roundDao.getById(rid);
+      expect(round!.courseId, there);
+      expect(round.teeSetId, isNull);
+      expect(round.pinSetId, isNull);
+    });
+
+    test('update refuses pointing a round at another course\'s set',
+        () async {
+      final here = await fx.insertCourse(name: 'Here');
+      final there = await fx.insertCourse(name: 'There');
+      final foreignPin = await fx.insertPinSet(there);
+      final rid = await fx.insertRound(here);
+
+      await expectLater(
+        db.roundDao
+            .updateById(rid, RoundsCompanion(pinSetId: Value(foreignPin))),
+        throwsArgumentError,
+      );
+    });
+  });
+
   group('RoundDao.deleteById', () {
     test('returns 1 when a row was deleted', () async {
       final cid = await fx.insertCourse();
@@ -110,31 +171,48 @@ void main() {
       expect(rows.single.round.courseId, cid);
     });
 
-    test('joins the yardage set name onto a round that has one (#81)',
-        () async {
+    test('joins the tee set and pin set names onto a round (#81)', () async {
       final cid = await fx.insertCourse();
-      final setId = await fx.insertCourseSet(cid, name: 'Blue tees');
-      await fx.insertRound(cid, courseSetId: setId);
+      final tee = await fx.insertTeeSet(cid, name: 'Blue');
+      final pin = await fx.insertPinSet(cid, name: 'Sunday pins');
+      await fx.insertRound(cid, teeSetId: tee, pinSetId: pin);
 
       final rows = await db.roundDao.watchAllWithCourse().first;
-      expect(rows.single.courseSetName, 'Blue tees');
+      expect(rows.single.teeSetName, 'Blue');
+      expect(rows.single.pinSetName, 'Sunday pins');
+      expect(rows.single.yardageSetLabel, 'Blue · Sunday pins');
     });
 
-    test('leaves the set name null for a round with no set (#81)', () async {
+    test('a round from a tee set alone labels with the tee set', () async {
+      final cid = await fx.insertCourse();
+      final tee = await fx.insertTeeSet(cid, name: 'Blue');
+      await fx.insertRound(cid, teeSetId: tee);
+
+      final rows = await db.roundDao.watchAllWithCourse().first;
+      expect(rows.single.pinSetName, isNull);
+      expect(rows.single.yardageSetLabel, 'Blue');
+    });
+
+    test('leaves the names null for a round with no yardage set (#81)',
+        () async {
       final cid = await fx.insertCourse();
       await fx.insertRound(cid);
 
       final rows = await db.roundDao.watchAllWithCourse().first;
-      expect(rows.single.courseSetName, isNull);
+      expect(rows.single.teeSetName, isNull);
+      expect(rows.single.pinSetName, isNull);
+      expect(rows.single.yardageSetLabel, isNull);
     });
 
-    test('the set join does not duplicate rounds (#81)', () async {
-      // The hole_results join is grouped; this one must stay 1:1 or every round
-      // on a set would appear twice.
+    test('the set joins do not duplicate rounds (#81)', () async {
+      // The hole_results join is grouped; these must stay 1:1 or every round
+      // on a yardage set would appear more than once.
       final cid = await fx.insertCourse();
-      final setId = await fx.insertCourseSet(cid, name: 'Blue tees');
-      await fx.insertCourseSetYards(setId, yards: 400);
-      final rid = await fx.insertRound(cid, courseSetId: setId);
+      final tee = await fx.insertTeeSet(cid);
+      final pin = await fx.insertPinSet(cid);
+      await fx.insertCourseYards(tee, yards: 400);
+      await fx.insertTeeToPinYards(tee, pin);
+      final rid = await fx.insertRound(cid, teeSetId: tee, pinSetId: pin);
       await fx.upsertHole(rid, 1);
       await fx.upsertHole(rid, 2);
 
@@ -143,22 +221,40 @@ void main() {
       expect(rows.single.holesEntered, 2);
     });
 
-    test('a renamed set re-emits through the rounds stream (#81)', () async {
+    test('a renamed pin set re-emits through the rounds stream (#81)',
+        () async {
       final cid = await fx.insertCourse();
-      final setId = await fx.insertCourseSet(cid, name: 'Blue tees');
-      await fx.insertRound(cid, courseSetId: setId);
+      final tee = await fx.insertTeeSet(cid, name: 'Blue');
+      final pin = await fx.insertPinSet(cid, name: 'Sunday pins');
+      await fx.insertRound(cid, teeSetId: tee, pinSetId: pin);
 
-      final names = <String?>[];
+      final labels = <String?>[];
       final sub = db.roundDao
           .watchAllWithCourse()
-          .listen((rows) => names.add(rows.single.courseSetName));
+          .listen((rows) => labels.add(rows.single.yardageSetLabel));
       await pumpEventQueue();
 
-      await db.courseSetDao.renameSet(setId, 'Championship tees');
+      await db.yardageDao.renamePinSet(pin, 'Final round');
       await pumpEventQueue();
       await sub.cancel();
 
-      expect(names, ['Blue tees', 'Championship tees']);
+      expect(labels, ['Blue · Sunday pins', 'Blue · Final round']);
+    });
+
+    test('deleting a tee set or pin set detaches its rounds', () async {
+      final cid = await fx.insertCourse();
+      final tee = await fx.insertTeeSet(cid);
+      final pin = await fx.insertPinSet(cid);
+      final rid = await fx.insertRound(cid, teeSetId: tee, pinSetId: pin);
+
+      await db.yardageDao.deletePinSet(pin);
+      var round = await db.roundDao.getById(rid);
+      expect(round!.pinSetId, isNull);
+      expect(round.teeSetId, tee);
+
+      await db.yardageDao.deleteTeeSet(tee);
+      round = await db.roundDao.getById(rid);
+      expect(round!.teeSetId, isNull);
     });
 
     test('orders by (date DESC, id DESC)', () async {

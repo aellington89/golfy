@@ -2,12 +2,13 @@ import 'package:drift/drift.dart';
 
 import 'courses.dart';
 
-/// The *shared* per-hole facts of a course's template: par and an optional
-/// stroke index, one row per (course, hole) (#36).
+/// The per-hole facts of a course that hold whichever tee set and pin set it
+/// is played on: par and an optional stroke index, one row per (course, hole)
+/// (#36).
 ///
-/// Yardage lives separately in [CourseSetYards], keyed by yardage set, because
-/// the same course can be played at different yardages (pin sets / tee boxes)
-/// while par and stroke index stay the same across them.
+/// Yardage lives elsewhere because it does vary: a hole's course yards with
+/// the tee set ([CourseYards]), and its tee-to-pin yards with the tee set and
+/// pin set together ([TeeToPinYards]).
 ///
 /// Cascade-deletes with its course — a course that still has rounds can't be
 /// deleted (the `rounds.course_id` FK is RESTRICT), so this only fires for an
