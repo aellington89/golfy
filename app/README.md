@@ -57,8 +57,10 @@ app/lib/
 │   ├── daos/                      # CourseDao, CourseHoleDao, CourseSetDao, RoundDao,
 │   │                              #   HoleResultDao, HoleShotDao, DashboardDao, EventDao,
 │   │                              #   BackupDao
-│   └── models/                    # RoundWithCourse (+ its event), HoleShotInput,
-│                                  #   DashboardStats / EventStats value classes
+│   ├── models/                    # RoundWithCourse (+ its event), HoleShotInput,
+│   │                              #   DashboardStats / EventStats value classes
+│   └── upgrades/                  # frozen data conversions a migration and the
+│                                  #   matching backup upgrader share (v8 putts)
 ├── features/
 │   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
 │   │                              #   one-screen course setup (par + stroke index +
@@ -90,6 +92,7 @@ app/test/
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
 ├── data/backup/                  # format: codec (write), decode (read), guards,
 │   │                              #   golden files — the backup contract (#69)
+├── data/upgrades/                # the frozen v7 -> v8 putt conversion rule
 ├── dao/
 │   ├── _fixtures.dart             # shared in-memory DB fixtures (incl. the
 │   │                              #   full multi-round backup fixture)

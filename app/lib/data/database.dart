@@ -19,6 +19,7 @@ import 'tables/events.dart';
 import 'tables/hole_results.dart';
 import 'tables/hole_shots.dart';
 import 'tables/rounds.dart';
+import 'upgrades/putts_in_feet.dart';
 
 part 'database.g.dart';
 
@@ -133,10 +134,50 @@ class GolfyDatabase extends _$GolfyDatabase {
             await m.alterTable(TableMigration(schema.holeResults));
           },
           // v7 -> v8: putts record their distance to the hole in feet
-          // (`hole_shots.distance_feet`). Plain additive change — every shot
-          // saved before it simply has no putt distance.
+          // (`hole_shots.distance_feet`). Add the column, then move every putt
+          // saved with a distance in yards — the only unit there was — into
+          // it, in feet. Which rows are putts is decided by the same frozen
+          // rule the v7 backup upgrader uses (`upgrades/putts_in_feet.dart`),
+          // so a restored v7 backup matches a migrated v7 database. Shots that
+          // aren't putts keep their yards.
           from7To8: (m, schema) async {
-            await m.addColumn(schema.holeShots, schema.holeShots.distanceFeet);
+            // One transaction: the conversion can touch thousands of rows,
+            // which run far faster together than as a commit each, and a step
+            // interrupted partway leaves the database as it was rather than
+            // with the column added and half its putts converted.
+            final db = m.database;
+            await db.transaction(() async {
+              await m.addColumn(
+                  schema.holeShots, schema.holeShots.distanceFeet);
+              final puttsByHole = {
+                for (final r in await db
+                    .customSelect('SELECT id, putts FROM hole_results')
+                    .get())
+                  r.read<int>('id'): r.read<int>('putts'),
+              };
+              final shots = [
+                for (final r in await db
+                    .customSelect('SELECT id, hole_result_id, shot_number, '
+                        'club, lie, distance_yards FROM hole_shots')
+                    .get())
+                  (
+                    id: r.read<int>('id'),
+                    holeResultId: r.read<int>('hole_result_id'),
+                    shotNumber: r.read<int>('shot_number'),
+                    club: r.readNullable<String>('club'),
+                    lie: r.readNullable<String>('lie'),
+                    distanceYards: r.readNullable<int>('distance_yards'),
+                  ),
+              ];
+              for (final id in puttsSavedInYards(shots, puttsByHole)) {
+                await db.customStatement(
+                  'UPDATE hole_shots '
+                  'SET distance_feet = distance_yards * $feetPerYard, '
+                  'distance_yards = NULL WHERE id = ?',
+                  [id],
+                );
+              }
+            });
           },
         ),
         beforeOpen: (details) async {

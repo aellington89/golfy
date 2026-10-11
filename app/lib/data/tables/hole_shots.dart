@@ -38,7 +38,9 @@ class HoleShots extends Table {
   /// A putt's distance **remaining to the hole**, in feet — the unit golf, and
   /// every golf game, measures a putt in (schema v8). Only putts
   /// carry it; every other shot leaves it null and records [distanceYards].
-  /// `putts` on [HoleResults] stays the count the stats read.
+  /// `putts` on [HoleResults] stays the count the stats read. Putts saved
+  /// before v8 with a distance had it in yards; the v7 -> v8 migration moved
+  /// it here, times 3.
   ///
   /// Declared last because it was added last: `ALTER TABLE ADD COLUMN` appends,
   /// so this order is the one a migrated database has too.

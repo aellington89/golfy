@@ -152,7 +152,7 @@ said — an upgrader adds or rewrites columns, never rows.
 
 | From | To | What changed | The upgrade |
 |---|---|---|---|
-| 7 | 8 | Putts record their distance to the hole in feet: `hole_shots.distance_feet` | Every `hole_shots` row gains `"distance_feet": null`. A v7 row that already has the key is refused — v7 had no such column, so the file was edited. |
+| 7 | 8 | Putts record their distance to the hole in feet: `hole_shots.distance_feet` | Every `hole_shots` row gains `"distance_feet": null`, then every putt saved with a distance in yards has it moved to `distance_feet`, times 3, leaving `distance_yards` null — exactly what the database migration does, by the same rule (`app/lib/data/upgrades/putts_in_feet.dart`). A hole's putts are the putt rows (a putter, or a shot from the green) its shots end on, as many as its `putts` and never its first shot; every other shot keeps its yards. A v7 row that already has `distance_feet` is refused — v7 had no such column, so the file was edited. |
 
 Nothing older than v7 can be upgraded, and nothing needs to be: export did not
 exist before schema v7, so no Golfy build can have written an older backup.

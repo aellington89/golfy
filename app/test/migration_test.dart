@@ -508,6 +508,80 @@ void main() {
     expect(putt.single.distanceFeet, 12);
   });
 
+  test('v7 -> v8 rewrites putts saved in yards in feet, and only putts',
+      () async {
+    final schema = await verifier.schemaAt(7);
+
+    // Two holes saved the way the v0.4.0 shot list let a player save them,
+    // every distance in yards: one finished with two putts, one chipped in
+    // from the green with no putts at all.
+    final oldDb = v7.DatabaseAtV7(schema.newConnection());
+    final courseId = await oldDb.into(oldDb.courses).insert(
+          v7.CoursesCompanion.insert(
+            name: 'Pebble Beach',
+            gameTitle: 'PGA Tour 2K25',
+          ),
+        );
+    final roundId = await oldDb.into(oldDb.rounds).insert(
+          v7.RoundsCompanion.insert(date: '2026-05-19', courseId: courseId),
+        );
+    Future<int> hole(int number, {required int score, required int putts}) =>
+        oldDb.into(oldDb.holeResults).insert(
+              v7.HoleResultsCompanion.insert(
+                roundId: roundId,
+                holeNumber: number,
+                par: 4,
+                score: score,
+                yards: 400,
+                gir: putts > 0 ? 1 : 0,
+                putts: putts,
+                upDownAttempt: 0,
+                upDownSuccess: 0,
+                penaltyStrokes: 0,
+                bunkerVisited: 0,
+                sandSave: 0,
+              ),
+            );
+    final twoPutts = await hole(1, score: 4, putts: 2);
+    final chipIn = await hole(2, score: 2, putts: 0);
+    for (final (holeId, n, club, lie, yards, result) in [
+      (twoPutts, 1, 'Driver', 'Tee', 400, null),
+      (twoPutts, 2, '8 Iron', 'Fairway', 140, null),
+      (twoPutts, 3, 'Putter', 'Green', 5, null),
+      (twoPutts, 4, 'Putter', 'Green', 1, 'Holed'),
+      (chipIn, 1, 'Driver', 'Tee', 380, null),
+      (chipIn, 2, 'Lob Wedge', 'Green', 3, 'Holed'),
+    ]) {
+      await oldDb.into(oldDb.holeShots).insert(
+            v7.HoleShotsCompanion.insert(
+              holeResultId: holeId,
+              shotNumber: n,
+              club: Value(club),
+              distanceYards: Value(yards),
+              lie: Value(lie),
+              result: Value(result),
+            ),
+          );
+    }
+    await oldDb.close();
+
+    final db = GolfyDatabase.forTesting(schema.newConnection());
+    addTearDown(db.close);
+    await verifier.migrateAndValidate(db, 8);
+
+    final byHole = await db.holeShotDao.watchForRound(roundId).first;
+    // The putts are in feet now (5 yd = 15 ft, 1 yd = 3 ft) and no longer in
+    // yards; the shots before them keep their yards.
+    expect([for (final s in byHole[1]!) s.distanceYards],
+        [400, 140, null, null]);
+    expect([for (final s in byHole[1]!) s.distanceFeet], [null, null, 15, 3]);
+    expect(byHole[1]!.last.result, 'Holed');
+    // A hole with no putts has none to convert: its last shot, from the
+    // green, is still a shot in yards.
+    expect([for (final s in byHole[2]!) s.distanceYards], [380, 3]);
+    expect([for (final s in byHole[2]!) s.distanceFeet], [null, null]);
+  });
+
   test('a freshly created database matches the generated schema', () async {
     final db = GolfyDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);

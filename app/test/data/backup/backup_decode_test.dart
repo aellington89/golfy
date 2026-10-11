@@ -205,6 +205,89 @@ void main() {
       );
     });
 
+    // The sample as v0.4.0 – v0.5.0 would have written it, with two putts
+    // after its tee shot — [shots] as (club, lie, yards) — and no
+    // distance_feet anywhere.
+    Map<String, Object?> v7Tree(List<(String?, String?, int?)> shots) {
+      final tree = sampleTree();
+      manifestOf(tree)['schemaVersion'] = 7;
+      final rows = tableOf(tree, 'hole_shots');
+      for (final (i, (club, lie, yards)) in shots.indexed) {
+        rows.add({
+          ...rowOf(tree, 'hole_shots'),
+          'id': i + 2,
+          'shot_number': i + 2,
+          'club': club,
+          'lie': lie,
+          'distance_yards': yards,
+          'result': null,
+        });
+      }
+      for (final row in rows) {
+        (row! as Map<String, Object?>).remove('distance_feet');
+      }
+      ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))['hole_shots'] =
+          rows.length;
+      return tree;
+    }
+
+    test('a schema-7 file\'s putts saved in yards are read in feet', () {
+      // The same conversion the v7 -> v8 migration runs on a database, so a
+      // restored backup matches an upgraded phone.
+      final tree = v7Tree([('Putter', 'Green', 4), ('Putter', 'Green', 1)]);
+
+      final shots = BackupCodec.decode(reencode(tree)).payload.holeShots;
+
+      expect([for (final s in shots) s.distanceYards], [412, null, null]);
+      expect([for (final s in shots) s.distanceFeet], [null, 12, 3]);
+    });
+
+    test('a schema-7 file\'s shots that aren\'t putts keep their yards', () {
+      // The sample hole took two putts, so only the last two rows are putts.
+      final tree = v7Tree([
+        ('Putter', 'Green', 9),
+        ('Sand Wedge', 'Bunker', 6),
+        ('Putter', 'Green', 2),
+        ('Putter', 'Green', 1),
+      ]);
+
+      final shots = BackupCodec.decode(reencode(tree)).payload.holeShots;
+
+      expect([for (final s in shots) s.distanceYards], [412, 9, 6, null, null]);
+      expect([for (final s in shots) s.distanceFeet],
+          [null, null, null, 6, 3]);
+    });
+
+    test('a current file is read as written — the conversion is v7\'s', () {
+      final tree = sampleTree();
+      final rows = tableOf(tree, 'hole_shots');
+      rows.add({
+        ...rowOf(tree, 'hole_shots'),
+        'id': 2,
+        'shot_number': 2,
+        'club': 'Putter',
+        'lie': 'Green',
+        'distance_yards': 4,
+      });
+      ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))['hole_shots'] =
+          rows.length;
+
+      final putt = BackupCodec.decode(reencode(tree)).payload.holeShots.last;
+
+      expect(putt.distanceYards, 4);
+      expect(putt.distanceFeet, isNull);
+    });
+
+    test('a schema-7 file repeating a shot id still decodes, for validation '
+        'to refuse', () {
+      final tree = v7Tree([('Putter', 'Green', 4), ('Putter', 'Green', null)]);
+      rowOf(tree, 'hole_shots', 2)['id'] = 2;
+
+      final payload = BackupCodec.decode(reencode(tree)).payload;
+
+      expect(payload.validate(), isNotEmpty);
+    });
+
     test('an upgrade still refuses a row that is not an object', () {
       final tree = sampleTree();
       manifestOf(tree)['schemaVersion'] = 7;

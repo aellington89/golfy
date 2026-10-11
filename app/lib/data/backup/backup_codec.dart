@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show DataClass;
 
 import '../database.dart';
+import '../upgrades/putts_in_feet.dart';
 import 'backup_format_exception.dart';
 import 'backup_manifest.dart';
 import 'backup_payload.dart';
@@ -50,12 +51,67 @@ class BackupCodec {
   static const Map<int, void Function(Map<String, Object?> data)> _upgraders =
       <int, void Function(Map<String, Object?> data)>{
     // v7 -> v8: putts record their distance in feet. No shot in a v7 file
-    // has one.
+    // has the column, and its putts saved with a distance have it in yards.
     7: _upgradeFrom7,
   };
 
-  static void _upgradeFrom7(Map<String, Object?> data) =>
-      _addNullColumn(data, 'hole_shots', 'distance_feet', fromVersion: 7);
+  static void _upgradeFrom7(Map<String, Object?> data) {
+    _addNullColumn(data, 'hole_shots', 'distance_feet', fromVersion: 7);
+    _puttYardsToFeet(data);
+  }
+
+  /// Rewrites the putts a v7 file saved in yards in feet, exactly as the v7 ->
+  /// v8 migration rewrites a database: [puttsSavedInYards] decides which rows,
+  /// for both. A row that doesn't hold what a v7 file holds is left alone —
+  /// decoding refuses it, and the file with it, anyway.
+  static void _puttYardsToFeet(Map<String, Object?> data) {
+    final puttsByHole = <int, int>{
+      for (final row in _objects(data['hole_results']))
+        if ((row['id'], row['putts']) case (final int id, final int putts))
+          id: putts,
+    };
+    // Each row with its own yards, so a file repeating an id (which validation
+    // refuses later) can't make this throw.
+    final rowsById = <int, (Map<String, Object?>, int?)>{};
+    final shots = <V7Shot>[];
+    for (final row in _objects(data['hole_shots'])) {
+      if ((
+        row['id'],
+        row['hole_result_id'],
+        row['shot_number'],
+        row['club'],
+        row['lie'],
+        row['distance_yards'],
+      )
+          case (
+            final int id,
+            final int holeResultId,
+            final int shotNumber,
+            final String? club,
+            final String? lie,
+            final int? distanceYards,
+          )) {
+        rowsById[id] = (row, distanceYards);
+        shots.add((
+          id: id,
+          holeResultId: holeResultId,
+          shotNumber: shotNumber,
+          club: club,
+          lie: lie,
+          distanceYards: distanceYards,
+        ));
+      }
+    }
+    for (final id in puttsSavedInYards(shots, puttsByHole)) {
+      final (row, yards) = rowsById[id]!;
+      if (yards == null) continue;
+      row['distance_feet'] = yards * feetPerYard;
+      row['distance_yards'] = null;
+    }
+  }
+
+  static Iterable<Map<String, Object?>> _objects(Object? rows) =>
+      rows is List ? rows.whereType<Map<String, Object?>>() : const [];
 
   /// Gives every row of [table] a null [column] — the upgrade for a nullable
   /// column added by a migration. Rows that aren't objects are left for

@@ -20,14 +20,20 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   score, up & down success and sand save follow the putts as before. "Count it
   as a putt", offered for a shot played from the green, now moves that shot to
   the first putt row and carries its distance across in feet. Holes saved
-  before this keep their putts, each laid out as a row with no distance, and
-  still read "Saved".
+  before this keep their putts and still read "Saved"; a putt you saved with a
+  distance in yards shows it converted to feet.
 
-- **The schema moves to v8**: putt distances are stored in a new
-  `hole_shots.distance_feet` column, and a migration adds it on upgrade —
-  every shot already saved simply has no putt distance. Backups move with it:
-  new ones carry `distance_feet` on every shot, and a backup made by v0.4.0 or
-  v0.5.0 (schema v7) still reads, each of its shots without a putt distance
+- **The schema moves to v8, and putts you measured in yards become feet.**
+  Putt distances are stored in a new `hole_shots.distance_feet` column. The
+  migration that adds it on upgrade also converts every putt you saved with a
+  distance in yards — 4 yd becomes 12 ft — and clears the yards, so each putt
+  has the one distance the form shows. A putt is what the form shows under
+  Putting: the putter or from-the-green shots a hole ends on, as many as its
+  putts count. Every other shot keeps its yards. A hole you re-saved in v0.5.0
+  had its putts' distances dropped then (v0.5.0 rewrote putt rows without
+  them), so those putts come through blank. Backups move with it: new ones
+  carry `distance_feet` on every shot, and a backup made by v0.4.0 or v0.5.0
+  (schema v7) still reads, its putts converted the same way
   ([`BACKUP_FORMAT.md`](BACKUP_FORMAT.md)).
 
 ### Internal
@@ -35,10 +41,13 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 - **Backup upgraders run on the file's raw rows**, before they are decoded:
   a decoded row already has today's columns, so checking a v7 row against them
   refused the file for being old rather than broken. The v7 → v8 upgrader gives
-  every shot a null `distance_feet` and refuses a v7 file that already has one.
-  The v0.5.0 golden files are frozen as `backup_v1_schema7_*.json` and tested
+  every shot a null `distance_feet`, refuses a v7 file that already has one,
+  and converts putts in yards exactly as the migration does: which rows are
+  putts is decided by one frozen function both call
+  (`lib/data/upgrades/putts_in_feet.dart`), so a restored v7 backup and an
+  upgraded v7 database hold the same rows. The v0.5.0 golden files are frozen as `backup_v1_schema7_*.json` and tested
   to still read; the current goldens now include a putt measured in feet.
-  Tests 729 → 755.
+  Tests 729 → 770.
 
 ## [0.5.0] - 2026-10-10
 
