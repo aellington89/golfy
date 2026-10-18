@@ -34,19 +34,35 @@ final courseHolesStreamProvider =
   return ref.watch(repositoryProvider).watchCourseHoles(courseId);
 });
 
-/// Reactive list of a course's named yardage sets (#36), keyed on course id,
-/// ordered by name. Backs the sets list and the New Round set picker.
-final courseSetsStreamProvider =
-    StreamProvider.family<List<CourseSet>, int>((ref, courseId) {
-  return ref.watch(repositoryProvider).watchCourseSets(courseId);
+/// Reactive list of a course's tee sets, keyed on course id, ordered by name.
+/// Backs the course editor's tee strip and the New Round tee picker.
+final teeSetsStreamProvider =
+    StreamProvider.family<List<TeeSet>, int>((ref, courseId) {
+  return ref.watch(repositoryProvider).watchTeeSets(courseId);
 });
 
-/// Reactive per-hole yardage for a single yardage set (#36), keyed on set id.
-/// Ordered by hole number; empty for a set with no yardages. Backs the set
-/// yardage editor and the Hole Entry yards auto-fill.
-final courseSetYardsStreamProvider =
-    StreamProvider.family<List<CourseSetYard>, int>((ref, setId) {
-  return ref.watch(repositoryProvider).watchCourseSetYards(setId);
+/// Reactive list of a course's pin sets, keyed on course id, ordered by name.
+/// Backs the course editor's pin strip and the New Round pin picker.
+final pinSetsStreamProvider =
+    StreamProvider.family<List<PinSet>, int>((ref, courseId) {
+  return ref.watch(repositoryProvider).watchPinSets(courseId);
+});
+
+/// Reactive course yards for a tee set, keyed on tee set id, ordered by hole
+/// number; empty for a tee set with none. Backs the course editor and the Hole
+/// Entry yards pre-fill for a round with no pin set.
+final courseYardsStreamProvider =
+    StreamProvider.family<List<CourseYard>, int>((ref, teeSetId) {
+  return ref.watch(repositoryProvider).watchCourseYards(teeSetId);
+});
+
+/// Reactive tee-to-pin yards for a yardage set, keyed on `(teeSetId,
+/// pinSetId)`, ordered by hole number. Backs the course editor and the Hole
+/// Entry yards pre-fill.
+final teeToPinYardsStreamProvider =
+    StreamProvider.family<List<TeeToPinYard>, (int, int)>((ref, sets) {
+  final (teeSetId, pinSetId) = sets;
+  return ref.watch(repositoryProvider).watchTeeToPinYards(teeSetId, pinSetId);
 });
 
 /// Reactive list of events, ordered alphabetically by name. Used by the

@@ -6,8 +6,10 @@ part of 'backup_dao.dart';
 mixin _$BackupDaoMixin on DatabaseAccessor<GolfyDatabase> {
   $CoursesTable get courses => attachedDatabase.courses;
   $CourseHolesTable get courseHoles => attachedDatabase.courseHoles;
-  $CourseSetsTable get courseSets => attachedDatabase.courseSets;
-  $CourseSetYardsTable get courseSetYards => attachedDatabase.courseSetYards;
+  $TeeSetsTable get teeSets => attachedDatabase.teeSets;
+  $CourseYardsTable get courseYards => attachedDatabase.courseYards;
+  $PinSetsTable get pinSets => attachedDatabase.pinSets;
+  $TeeToPinYardsTable get teeToPinYards => attachedDatabase.teeToPinYards;
   $EventsTable get events => attachedDatabase.events;
   $RoundsTable get rounds => attachedDatabase.rounds;
   $HoleResultsTable get holeResults => attachedDatabase.holeResults;
@@ -22,13 +24,14 @@ class BackupDaoManager {
       $$CoursesTableTableManager(_db.attachedDatabase, _db.courses);
   $$CourseHolesTableTableManager get courseHoles =>
       $$CourseHolesTableTableManager(_db.attachedDatabase, _db.courseHoles);
-  $$CourseSetsTableTableManager get courseSets =>
-      $$CourseSetsTableTableManager(_db.attachedDatabase, _db.courseSets);
-  $$CourseSetYardsTableTableManager get courseSetYards =>
-      $$CourseSetYardsTableTableManager(
-        _db.attachedDatabase,
-        _db.courseSetYards,
-      );
+  $$TeeSetsTableTableManager get teeSets =>
+      $$TeeSetsTableTableManager(_db.attachedDatabase, _db.teeSets);
+  $$CourseYardsTableTableManager get courseYards =>
+      $$CourseYardsTableTableManager(_db.attachedDatabase, _db.courseYards);
+  $$PinSetsTableTableManager get pinSets =>
+      $$PinSetsTableTableManager(_db.attachedDatabase, _db.pinSets);
+  $$TeeToPinYardsTableTableManager get teeToPinYards =>
+      $$TeeToPinYardsTableTableManager(_db.attachedDatabase, _db.teeToPinYards);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db.attachedDatabase, _db.events);
   $$RoundsTableTableManager get rounds =>

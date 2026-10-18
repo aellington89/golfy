@@ -35,7 +35,8 @@ void main() {
     List<RoundWithCourse> existing = const [],
     Event? initialEvent,
     void Function(int?)? onResult,
-    List<CourseSet> sets = const [],
+    List<TeeSet> teeSets = const [],
+    List<PinSet> pinSets = const [],
   }) {
     return ProviderScope(
       overrides: [
@@ -43,10 +44,13 @@ void main() {
         coursesByNameStreamProvider
             .overrideWith((ref) => coursesController.stream),
         eventsStreamProvider.overrideWith((ref) => eventsController.stream),
-        // The set picker (shown once a course is chosen) watches this; feed it a
-        // single-value stream so it never opens a live drift watch on the test
-        // db (the project's widget-test reactivity constraint).
-        courseSetsStreamProvider.overrideWith((ref, id) => Stream.value(sets)),
+        // The set pickers (shown once a course is chosen) watch these; feed
+        // them single-value streams so they never open a live drift watch on
+        // the test db (the project's widget-test reactivity constraint).
+        teeSetsStreamProvider
+            .overrideWith((ref, id) => Stream.value(teeSets)),
+        pinSetsStreamProvider
+            .overrideWith((ref, id) => Stream.value(pinSets)),
       ],
       child: MaterialApp(
         home: Builder(
@@ -83,13 +87,20 @@ void main() {
     List<RoundWithCourse> existing = const [],
     Event? initialEvent,
     void Function(int?)? onResult,
-    List<CourseSet> sets = const [],
+    List<TeeSet> teeSets = const [],
+    List<PinSet> pinSets = const [],
   }) async {
+    // Tall enough for the whole dialog — course, tee set, pin set, event,
+    // date, round number, notes — without scrolling.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(wrap(
       existing: existing,
       initialEvent: initialEvent,
       onResult: onResult,
-      sets: sets,
+      teeSets: teeSets,
+      pinSets: pinSets,
     ));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
@@ -278,19 +289,38 @@ void main() {
     expect(rounds.single.round.eventId, isNull);
   });
 
-  testWidgets('choosing a yardage set links it to the started round (#36)',
+  Future<void> startRound(WidgetTester tester) async {
+    await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> pick(WidgetTester tester, String picker, String option) async {
+    await tester.tap(find.byKey(ValueKey(picker)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(option).last);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a tee set and a pin set make the round\'s yardage set',
       (tester) async {
-    // Real db needs the course + set for the round's FKs (first inserts → id 1).
+    // Real db needs the course + sets for the round's FKs (first inserts → 1).
     await db.courseDao.insert(
       CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
     );
-    await db.courseSetDao.insertSet(
-      CourseSetsCompanion.insert(courseId: 1, name: 'Blue tees'),
+    await db.yardageDao.insertTeeSet(
+      TeeSetsCompanion.insert(courseId: 1, name: 'Blue'),
+    );
+    await db.yardageDao.insertPinSet(
+      PinSetsCompanion.insert(courseId: 1, name: 'Sunday pins'),
     );
 
     await openDialog(
       tester,
-      sets: const [CourseSet(id: 1, courseId: 1, name: 'Blue tees')],
+      teeSets: const [TeeSet(id: 1, courseId: 1, name: 'Blue')],
+      pinSets: const [PinSet(id: 1, courseId: 1, name: 'Sunday pins')],
     );
     await emitCourses(
       tester,
@@ -298,25 +328,55 @@ void main() {
     );
     await selectCourse(tester, 'Augusta');
 
-    // The set picker appears once a course is chosen; pick "Blue tees".
-    await tester.tap(find.byKey(const ValueKey('set_picker')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Blue tees').last);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
+    // The pickers appear once a course is chosen.
+    await pick(tester, 'tee_set_picker', 'Blue');
+    await pick(tester, 'pin_set_picker', 'Sunday pins');
+    await startRound(tester);
 
     final rounds = await tester.runAsync(
       () => db.roundDao.watchAllWithCourse().first,
     );
-    expect(rounds!.single.round.courseSetId, 1);
+    expect(rounds!.single.round.teeSetId, 1);
+    expect(rounds.single.round.pinSetId, 1);
+    expect(rounds.single.yardageSetLabel, 'Blue · Sunday pins');
   });
 
-  testWidgets('"Add new set…" creates a yardage set and links it (#81)',
+  testWidgets('a round can be started from a tee set with no pin set',
+      (tester) async {
+    await db.courseDao.insert(
+      CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+    );
+    await db.yardageDao.insertTeeSet(
+      TeeSetsCompanion.insert(courseId: 1, name: 'Blue'),
+    );
+
+    await openDialog(
+      tester,
+      teeSets: const [TeeSet(id: 1, courseId: 1, name: 'Blue')],
+    );
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
+    );
+    await selectCourse(tester, 'Augusta');
+
+    await pick(tester, 'tee_set_picker', 'Blue');
+    // With no pin sets, the picker says what the round falls back to.
+    expect(
+      find.text('No pin sets yet — without one, holes pre-fill with the tee '
+          'set’s course yards'),
+      findsOneWidget,
+    );
+    await startRound(tester);
+
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds!.single.round.teeSetId, 1);
+    expect(rounds.single.round.pinSetId, isNull);
+  });
+
+  testWidgets('"Add new tee set…" creates a tee set and links it (#81)',
       (tester) async {
     // A tee box you have not recorded yet should not send you out of the dialog
     // to the course editor and back.
@@ -331,54 +391,75 @@ void main() {
     );
     await selectCourse(tester, 'Augusta');
 
-    await tester.tap(find.byKey(const ValueKey('set_picker')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Add new set…').last);
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-        find.byKey(const ValueKey('yardage_set_name')), 'Blue tees');
-    await tester.tap(find.byKey(const ValueKey('yardage_set_add')));
+    await pick(tester, 'tee_set_picker', 'Add new tee set…');
+    await tester.enterText(find.byKey(const ValueKey('set_name')), 'Blue');
+    await tester.tap(find.byKey(const ValueKey('set_add')));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
 
     final sets = await tester
-        .runAsync(() => db.courseSetDao.watchSetsForCourse(1).first);
+        .runAsync(() => db.yardageDao.watchTeeSetsForCourse(1).first);
     expect(sets, hasLength(1));
-    expect(sets!.single.name, 'Blue tees');
+    expect(sets!.single.name, 'Blue');
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start Round'));
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
+    await startRound(tester);
 
     final rounds = await tester.runAsync(
       () => db.roundDao.watchAllWithCourse().first,
     );
-    expect(rounds!.single.round.courseSetId, sets.single.id);
-    expect(rounds.single.courseSetName, 'Blue tees');
+    expect(rounds!.single.round.teeSetId, sets.single.id);
+    expect(rounds.single.teeSetName, 'Blue');
   });
 
-  testWidgets('a new set can be copied from an existing one with an offset '
-      '(#81)', (tester) async {
+  testWidgets('"Add new pin set…" creates a pin set and links it',
+      (tester) async {
     await db.courseDao.insert(
       CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
     );
-    await db.courseSetDao.insertSet(
-      CourseSetsCompanion.insert(courseId: 1, name: 'Blue tees'),
+
+    await openDialog(tester);
+    await emitCourses(
+      tester,
+      const [Course(id: 1, name: 'Augusta', gameTitle: 'PGA')],
     );
-    await db.courseSetDao.replaceYardsForSet(1, [
+    await selectCourse(tester, 'Augusta');
+
+    await pick(tester, 'pin_set_picker', 'Add new pin set…');
+    // A pin set has no yards of its own, so there is nothing to copy.
+    expect(find.byKey(const ValueKey('set_copy_from')), findsNothing);
+    await tester.enterText(
+        find.byKey(const ValueKey('set_name')), 'Sunday pins');
+    await tester.tap(find.byKey(const ValueKey('set_add')));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    await startRound(tester);
+
+    final rounds = await tester.runAsync(
+      () => db.roundDao.watchAllWithCourse().first,
+    );
+    expect(rounds!.single.pinSetName, 'Sunday pins');
+  });
+
+  testWidgets('a new tee set can copy course yards from another with an '
+      'offset (#81)', (tester) async {
+    await db.courseDao.insert(
+      CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+    );
+    await db.yardageDao.insertTeeSet(
+      TeeSetsCompanion.insert(courseId: 1, name: 'Blue'),
+    );
+    await db.yardageDao.replaceCourseYards(1, [
       for (var h = 1; h <= 18; h++)
-        CourseSetYardsCompanion.insert(
-            courseSetId: 1, holeNumber: h, yards: 400),
+        CourseYardsCompanion.insert(teeSetId: 1, holeNumber: h, yards: 400),
     ]);
 
     await openDialog(
       tester,
-      sets: const [CourseSet(id: 1, courseId: 1, name: 'Blue tees')],
+      teeSets: const [TeeSet(id: 1, courseId: 1, name: 'Blue')],
     );
     await emitCourses(
       tester,
@@ -386,29 +467,23 @@ void main() {
     );
     await selectCourse(tester, 'Augusta');
 
-    await tester.tap(find.byKey(const ValueKey('set_picker')));
+    await pick(tester, 'tee_set_picker', 'Add new tee set…');
+    await tester.enterText(find.byKey(const ValueKey('set_name')), 'White');
+    await tester.tap(find.byKey(const ValueKey('set_copy_from')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Add new set…').last);
+    await tester.tap(find.text('Blue').last);
     await tester.pumpAndSettle();
-
-    await tester.enterText(
-        find.byKey(const ValueKey('yardage_set_name')), 'White tees');
-    await tester.tap(find.byKey(const ValueKey('yardage_set_copy_from')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Blue tees').last);
-    await tester.pumpAndSettle();
-    await tester.enterText(
-        find.byKey(const ValueKey('yardage_set_offset')), '-20');
-    await tester.tap(find.byKey(const ValueKey('yardage_set_add')));
+    await tester.enterText(find.byKey(const ValueKey('set_offset')), '-20');
+    await tester.tap(find.byKey(const ValueKey('set_add')));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
 
     // Written straight away here: there is no editor open to stage it in, and
-    // the alternative is a set with no yardages at all.
+    // the alternative is a tee set with no course yards at all.
     final yards =
-        await tester.runAsync(() => db.courseSetDao.getYardsForSet(2));
+        await tester.runAsync(() => db.yardageDao.getCourseYards(2));
     expect(yards, hasLength(18));
     expect(yards!.every((y) => y.yards == 380), isTrue);
   });

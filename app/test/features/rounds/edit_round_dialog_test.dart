@@ -9,6 +9,7 @@ import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository_provider.dart';
+import 'package:golfy_app/features/courses/course_picker.dart';
 import 'package:golfy_app/features/events/event_picker.dart';
 import 'package:golfy_app/features/rounds/edit_round_dialog.dart';
 
@@ -352,5 +353,75 @@ void main() {
 
     final row = await tester.runAsync(() => db.roundDao.getById(rid));
     expect(row!.notes, 'gusty back nine');
+  });
+
+  group('a round\'s yardage set belongs to its course', () {
+    const augusta = Course(id: 1, name: 'Augusta', gameTitle: 'PGA');
+    const pebble = Course(id: 2, name: 'Pebble', gameTitle: 'PGA');
+
+    /// A round on Augusta played from its tee set and to its pin set.
+    Future<int> seedRoundOnYardageSet() async {
+      await db.courseDao.insert(
+        CoursesCompanion.insert(name: 'Augusta', gameTitle: 'PGA'),
+      );
+      await db.courseDao.insert(
+        CoursesCompanion.insert(name: 'Pebble', gameTitle: 'PGA'),
+      );
+      final tee = await db.yardageDao
+          .insertTeeSet(TeeSetsCompanion.insert(courseId: 1, name: 'Blue'));
+      final pin = await db.yardageDao.insertPinSet(
+          PinSetsCompanion.insert(courseId: 1, name: 'Sunday pins'));
+      return db.roundDao.insert(RoundsCompanion.insert(
+        date: '2026-04-01',
+        courseId: 1,
+        teeSetId: Value(tee),
+        pinSetId: Value(pin),
+      ));
+    }
+
+    testWidgets('moving the round to another course clears it',
+        (tester) async {
+      final rid = await seedRoundOnYardageSet();
+
+      await openDialog(
+        tester,
+        round: makeRound(id: rid),
+        existingCourses: const [augusta, pebble],
+      );
+      await tester.tap(find.descendant(
+        of: find.byType(CoursePicker),
+        matching: find.byType(InkWell),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pebble'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit_round_save')));
+      await flush(tester);
+
+      // Augusta's tee and pins would pre-fill yards for Pebble's holes.
+      final row = await tester.runAsync(() => db.roundDao.getById(rid));
+      expect(row!.courseId, 2);
+      expect(row.teeSetId, isNull);
+      expect(row.pinSetId, isNull);
+    });
+
+    testWidgets('an edit that keeps the course keeps it', (tester) async {
+      final rid = await seedRoundOnYardageSet();
+
+      await openDialog(
+        tester,
+        round: makeRound(id: rid),
+        existingCourses: const [augusta, pebble],
+      );
+      await tester.enterText(find.byType(TextFormField).last, 'windy');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit_round_save')));
+      await flush(tester);
+
+      final row = await tester.runAsync(() => db.roundDao.getById(rid));
+      expect(row!.notes, 'windy');
+      expect(row.teeSetId, isNotNull);
+      expect(row.pinSetId, isNotNull);
+    });
   });
 }

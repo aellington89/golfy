@@ -5,7 +5,8 @@ part of 'hole_shot_dao.dart';
 // ignore_for_file: type=lint
 mixin _$HoleShotDaoMixin on DatabaseAccessor<GolfyDatabase> {
   $CoursesTable get courses => attachedDatabase.courses;
-  $CourseSetsTable get courseSets => attachedDatabase.courseSets;
+  $TeeSetsTable get teeSets => attachedDatabase.teeSets;
+  $PinSetsTable get pinSets => attachedDatabase.pinSets;
   $EventsTable get events => attachedDatabase.events;
   $RoundsTable get rounds => attachedDatabase.rounds;
   $HoleResultsTable get holeResults => attachedDatabase.holeResults;
@@ -18,8 +19,10 @@ class HoleShotDaoManager {
   HoleShotDaoManager(this._db);
   $$CoursesTableTableManager get courses =>
       $$CoursesTableTableManager(_db.attachedDatabase, _db.courses);
-  $$CourseSetsTableTableManager get courseSets =>
-      $$CourseSetsTableTableManager(_db.attachedDatabase, _db.courseSets);
+  $$TeeSetsTableTableManager get teeSets =>
+      $$TeeSetsTableTableManager(_db.attachedDatabase, _db.teeSets);
+  $$PinSetsTableTableManager get pinSets =>
+      $$PinSetsTableTableManager(_db.attachedDatabase, _db.pinSets);
   $$EventsTableTableManager get events =>
       $$EventsTableTableManager(_db.attachedDatabase, _db.events);
   $$RoundsTableTableManager get rounds =>

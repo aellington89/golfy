@@ -7,7 +7,7 @@ import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
 import '../../shell/tab_index_provider.dart';
-import '../courses/add_yardage_set_dialog.dart';
+import '../courses/add_set_dialog.dart';
 import '../courses/course_template.dart';
 import '../courses/course_picker.dart';
 import '../events/event_picker.dart';
@@ -58,9 +58,12 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
 
   Course? _course;
 
-  /// The chosen yardage set for [_course] (#36), or null for "no set" — Hole
-  /// Entry pre-fills yardages from it. Reset whenever the course changes.
-  CourseSet? _courseSet;
+  /// The chosen tee set and pin set for [_course] — together the round's
+  /// yardage set — each null for none. Hole Entry pre-fills each hole's yards
+  /// from them: tee-to-pin with both, course yards with a tee set alone. Reset
+  /// whenever the course changes.
+  int? _teeSetId;
+  int? _pinSetId;
 
   late DateTime _date;
   int _roundNumber = 1;
@@ -110,8 +113,9 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
   void _onCourseChanged(Course? course) {
     setState(() {
       _course = course;
-      // A set belongs to a course, so it can't survive a course change.
-      _courseSet = null;
+      // Sets belong to a course, so they can't survive a course change.
+      _teeSetId = null;
+      _pinSetId = null;
       _courseError = null;
       _roundNumberError = null;
       _recomputeRoundNumber();
@@ -178,14 +182,13 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
       final repo = ref.read(repositoryProvider);
       final eventId = _event?.id;
       final notes = _notesController.text.trim();
-      final courseSetId = _courseSet?.id;
       final companion = RoundsCompanion.insert(
         date: _isoDate,
         courseId: course.id,
         roundNumber: Value(_roundNumber),
         eventId: eventId == null ? const Value.absent() : Value(eventId),
-        courseSetId:
-            courseSetId == null ? const Value.absent() : Value(courseSetId),
+        teeSetId: Value(_teeSetId),
+        pinSetId: Value(_pinSetId),
         notes: notes.isEmpty ? const Value.absent() : Value(notes),
       );
       final newId = await repo.insertRound(companion);
@@ -231,11 +234,21 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
             if (_course != null) ...[
               const SizedBox(height: 12),
               _SetPicker(
+                kind: CourseSetKind.tee,
                 courseId: _course!.id,
-                value: _courseSet,
+                valueId: _teeSetId,
                 onChanged: _submitting
                     ? (_) {}
-                    : (s) => setState(() => _courseSet = s),
+                    : (id) => setState(() => _teeSetId = id),
+              ),
+              const SizedBox(height: 12),
+              _SetPicker(
+                kind: CourseSetKind.pin,
+                courseId: _course!.id,
+                valueId: _pinSetId,
+                onChanged: _submitting
+                    ? (_) {}
+                    : (id) => setState(() => _pinSetId = id),
               ),
             ],
             const SizedBox(height: 12),
@@ -317,117 +330,147 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
   }
 }
 
-/// Controlled dropdown of a course's yardage sets (#36) — the parent owns the
-/// selected [CourseSet]. Always offers a "No set" choice (leaves the round's
-/// yardages blank); when the course has no sets, that's the only option, with a
-/// hint to add one on the course. Sourced live from [courseSetsStreamProvider].
-/// Sentinel for the picker's "Add new set…" row; no real set id is negative.
+/// Sentinel for a picker's "Add new …" row; no real set id is negative.
 const int _addNewSetSentinel = -1;
 
+/// Controlled dropdown of a course's tee sets or pin sets — the parent owns
+/// the selected id. Always offers a "No tee set" / "No pin set" choice; when
+/// the course has none, that's the only option, with a hint. Sourced live from
+/// [teeSetsStreamProvider] or [pinSetsStreamProvider].
 class _SetPicker extends ConsumerWidget {
   const _SetPicker({
+    required this.kind,
     required this.courseId,
-    required this.value,
+    required this.valueId,
     required this.onChanged,
   });
 
+  final CourseSetKind kind;
   final int courseId;
-  final CourseSet? value;
-  final ValueChanged<CourseSet?> onChanged;
+  final int? valueId;
+  final ValueChanged<int?> onChanged;
+
+  String get _label => switch (kind) {
+        CourseSetKind.tee => 'Tee set',
+        CourseSetKind.pin => 'Pin set',
+      };
 
   /// Creates a set and selects it.
   ///
-  /// Unlike the course editor — which stages a copied card as unsaved changes
-  /// for review — a copy made here is written immediately: there is no editor
-  /// open to hold it, and the alternative is starting the round against a set
-  /// with no yardages at all. A set created blank is still useful: "Update
-  /// course as I play" fills it in hole by hole as the round is entered.
+  /// Unlike the course editor — which stages a copied tee set's course yards
+  /// as unsaved changes for review — a copy made here is written immediately:
+  /// there is no editor open to hold it, and the alternative is starting the
+  /// round against a tee set with no yards at all. A set created blank is
+  /// still useful: "Update course as I play" fills it in hole by hole as the
+  /// round is entered.
   Future<void> _createSet(
     BuildContext context,
     WidgetRef ref,
-    List<CourseSet> existing,
+    List<ExistingSet> existing,
   ) async {
-    final spec = await showDialog<NewYardageSet>(
+    final spec = await showDialog<NewCourseSet>(
       context: context,
-      builder: (_) => AddYardageSetDialog(existingSets: existing),
+      builder: (_) => AddSetDialog(kind: kind, existing: existing),
     );
     if (spec == null) return;
     final repo = ref.read(repositoryProvider);
     try {
-      final id = await repo.insertCourseSet(
-        CourseSetsCompanion.insert(courseId: courseId, name: spec.name),
-      );
-      final source = spec.copyFromSetId;
-      if (source != null) {
-        final rows = await repo.getCourseSetYards(source);
-        final byHole = {for (final y in rows) y.holeNumber: y.yards};
-        final yards = applyYardOffset(
-          [for (var h = 1; h <= 18; h++) byHole[h] ?? 0],
-          spec.offsetYards,
-        );
-        await repo.replaceCourseSetYards(id, [
-          for (var h = 1; h <= 18; h++)
-            CourseSetYardsCompanion.insert(
-              courseSetId: id,
-              holeNumber: h,
-              yards: yards[h - 1],
-            ),
-        ]);
+      final int id;
+      switch (kind) {
+        case CourseSetKind.tee:
+          id = await repo.insertTeeSet(
+            TeeSetsCompanion.insert(courseId: courseId, name: spec.name),
+          );
+          final source = spec.copyFromSetId;
+          if (source != null) {
+            final rows = await repo.getCourseYards(source);
+            final byHole = {for (final y in rows) y.holeNumber: y.yards};
+            final yards = applyYardOffset(
+              [for (var h = 1; h <= 18; h++) byHole[h] ?? 0],
+              spec.offsetYards,
+            );
+            await repo.replaceCourseYards(id, [
+              for (var h = 1; h <= 18; h++)
+                CourseYardsCompanion.insert(
+                  teeSetId: id,
+                  holeNumber: h,
+                  yards: yards[h - 1],
+                ),
+            ]);
+          }
+        case CourseSetKind.pin:
+          id = await repo.insertPinSet(
+            PinSetsCompanion.insert(courseId: courseId, name: spec.name),
+          );
       }
-      onChanged(CourseSet(id: id, courseId: courseId, name: spec.name));
+      onChanged(id);
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('A set named "${spec.name}" already exists')),
+        SnackBar(
+          content: Text('A ${kind.noun} named "${spec.name}" already exists'),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final setsAsync = ref.watch(courseSetsStreamProvider(courseId));
+    final setsAsync = switch (kind) {
+      CourseSetKind.tee => ref.watch(teeSetsStreamProvider(courseId)).whenData(
+          (sets) => [for (final s in sets) (id: s.id, name: s.name)]),
+      CourseSetKind.pin => ref.watch(pinSetsStreamProvider(courseId)).whenData(
+          (sets) => [for (final s in sets) (id: s.id, name: s.name)]),
+    };
     return setsAsync.when(
-      loading: () => const InputDecorator(
+      loading: () => InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Yardage set',
-          border: OutlineInputBorder(),
+          labelText: _label,
+          border: const OutlineInputBorder(),
         ),
-        child: Text('Loading sets…'),
+        child: const Text('Loading sets…'),
       ),
-      error: (e, _) => const InputDecorator(
+      error: (e, _) => InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Yardage set',
-          border: OutlineInputBorder(),
+          labelText: _label,
+          border: const OutlineInputBorder(),
         ),
-        child: Text('Could not load sets'),
+        child: const Text('Could not load sets'),
       ),
       data: (sets) {
-        // The selected set may have been deleted; fall back to "No set".
+        // The selected set may have been deleted; fall back to none.
         final selectedId =
-            sets.any((s) => s.id == value?.id) ? value?.id : null;
+            sets.any((s) => s.id == valueId) ? valueId : null;
         return DropdownButtonFormField<int?>(
-          key: const ValueKey('set_picker'),
+          key: ValueKey('${kind.name}_set_picker'),
           initialValue: selectedId,
           decoration: InputDecoration(
-            labelText: 'Yardage set',
+            labelText: _label,
             border: const OutlineInputBorder(),
             helperText: sets.isEmpty
-                ? 'No sets yet — add one to pre-fill this round’s yardages'
+                ? switch (kind) {
+                    CourseSetKind.tee =>
+                      'No tee sets yet — add one to pre-fill this round’s '
+                          'yardages',
+                    CourseSetKind.pin =>
+                      'No pin sets yet — without one, holes pre-fill with the '
+                          'tee set’s course yards',
+                  }
                 : null,
           ),
           items: [
-            const DropdownMenuItem<int?>(
+            DropdownMenuItem<int?>(
               value: null,
-              child: Text('No set'),
+              child: Text('No ${kind.noun}'),
             ),
             for (final s in sets)
               DropdownMenuItem<int?>(value: s.id, child: Text(s.name)),
             // Mirrors the "Add new…" affordance on the course and event
-            // pickers: a tee box you have not recorded yet shouldn't send you
-            // out of the dialog to the course editor and back.
-            const DropdownMenuItem<int?>(
+            // pickers: a set you have not recorded yet shouldn't send you out
+            // of the dialog to the course editor and back.
+            DropdownMenuItem<int?>(
               value: _addNewSetSentinel,
-              child: Text('Add new set…'),
+              child: Text('Add new ${kind.noun}…'),
             ),
           ],
           onChanged: (id) {
@@ -435,7 +478,7 @@ class _SetPicker extends ConsumerWidget {
               _createSet(context, ref, sets);
               return;
             }
-            onChanged(id == null ? null : sets.firstWhere((s) => s.id == id));
+            onChanged(id);
           },
         );
       },

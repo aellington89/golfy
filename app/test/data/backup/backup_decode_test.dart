@@ -178,8 +178,7 @@ void main() {
     test('reads a schema-7 file, whose shots have no putt distance', () {
       // A v7 file is the sample with no `distance_feet` on its shots: the
       // column arrived in v8.
-      final tree = sampleTree();
-      manifestOf(tree)['schemaVersion'] = 7;
+      final tree = preV9SampleTree(7);
       for (final row in tableOf(tree, 'hole_shots')) {
         (row! as Map<String, Object?>).remove('distance_feet');
       }
@@ -187,15 +186,14 @@ void main() {
       final bundle = BackupCodec.decode(reencode(tree));
 
       expect(bundle.manifest.schemaVersion, 7);
-      expect(bundle.payload, samplePayload());
+      expect(bundle.payload, upgradedV8SamplePayload());
       expect(bundle.payload.holeShots.single.distanceFeet, isNull);
     });
 
     test('refuses a schema-7 file whose shot claims a putt distance', () {
       // v7 had no such column, so a v7 file carrying one has been edited — and
       // silently keeping or dropping the value would both be guesses.
-      final tree = sampleTree();
-      manifestOf(tree)['schemaVersion'] = 7;
+      final tree = preV9SampleTree(7);
       rowOf(tree, 'hole_shots')['distance_feet'] = 12;
 
       expect(
@@ -209,8 +207,7 @@ void main() {
     // after its tee shot — [shots] as (club, lie, yards) — and no
     // distance_feet anywhere.
     Map<String, Object?> v7Tree(List<(String?, String?, int?)> shots) {
-      final tree = sampleTree();
-      manifestOf(tree)['schemaVersion'] = 7;
+      final tree = preV9SampleTree(7);
       final rows = tableOf(tree, 'hole_shots');
       for (final (i, (club, lie, yards)) in shots.indexed) {
         rows.add({
@@ -289,14 +286,185 @@ void main() {
     });
 
     test('an upgrade still refuses a row that is not an object', () {
-      final tree = sampleTree();
-      manifestOf(tree)['schemaVersion'] = 7;
+      final tree = preV9SampleTree(7);
       tableOf(tree, 'hole_shots')[0] = 'not a row';
 
       expect(
         () => BackupCodec.decode(reencode(tree)),
         throwsBackup(BackupFormatProblem.badRow,
             table: 'hole_shots', rowIndex: 0),
+      );
+    });
+
+    test('reads a schema-8 file, its "Tee Set - Pin Set" set as that pair',
+        () {
+      // A v8 set was one tee set and pin set, holding their tee-to-pin yards.
+      final tree = preV9SampleTree(8);
+      expect(rowOf(tree, 'course_sets')['name'], 'Blue tees - Sunday pins');
+
+      final bundle = BackupCodec.decode(reencode(tree));
+
+      expect(bundle.manifest.schemaVersion, 8);
+      expect(bundle.payload, upgradedV8SamplePayload());
+      expect(bundle.payload.validate(), isEmpty);
+    });
+
+    test('a schema-8 set with no pin set in its name keeps its yards as '
+        'course yards', () {
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'course_sets')['name'] = 'Blue tees';
+
+      final payload = BackupCodec.decode(reencode(tree)).payload;
+
+      expect(payload.teeSets.single.name, 'Blue tees');
+      expect(payload.pinSets, isEmpty);
+      expect(payload.teeToPinYards, isEmpty);
+      expect(payload.courseYards.single.yards, 398);
+      expect(payload.rounds.single.teeSetId, 1);
+      expect(payload.rounds.single.pinSetId, isNull);
+      expect(payload.validate(), isEmpty);
+    });
+
+    test('counts the rows the split produced', () {
+      // Two sets naming the same tee set: the file said two sets, and they
+      // arrive as one tee set and two pin sets.
+      final tree = preV9SampleTree(8);
+      tableOf(tree, 'course_sets').add({
+        ...rowOf(tree, 'course_sets'),
+        'id': 2,
+        'name': 'Blue tees - Monday pins',
+      });
+      final counts = manifestOf(tree)['rowCounts']! as Map<String, Object?>;
+      counts['course_sets'] = 2;
+
+      final payload = BackupCodec.decode(reencode(tree)).payload;
+
+      expect(payload.teeSets.map((t) => t.name), ['Blue tees']);
+      expect(payload.pinSets.map((p) => p.name),
+          ['Sunday pins', 'Monday pins']);
+      expect(payload.validate(), isEmpty);
+    });
+
+    test('a schema-8 round on another course\'s set arrives without one', () {
+      // Possible in v8 by editing a round's course after picking its set. v9
+      // refuses the link, so the upgrade clears it — as the migration does.
+      final tree = preV9SampleTree(8);
+      tableOf(tree, 'courses').add({
+        ...rowOf(tree, 'courses'),
+        'id': 2,
+        'name': 'Augusta',
+      });
+      ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))['courses'] =
+          2;
+      rowOf(tree, 'rounds')['course_id'] = 2;
+
+      final payload = BackupCodec.decode(reencode(tree)).payload;
+
+      expect(payload.rounds.single.teeSetId, isNull);
+      expect(payload.rounds.single.pinSetId, isNull);
+      expect(payload.validate(), isEmpty);
+    });
+
+    test('refuses a schema-8 round on a set the file lacks', () {
+      // There is no name to split, so nothing to point the round at — and
+      // keeping the old id could land on an unrelated new tee set.
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'rounds')['course_set_id'] = 99;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'course_set_id 99 is not in course_sets',
+            table: 'rounds',
+            rowIndex: 0),
+      );
+    });
+
+    test('refuses a schema-8 yardage row on a set the file lacks', () {
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'course_set_yards')['course_set_id'] = 99;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'course_set_id 99 is not in course_sets',
+            table: 'course_set_yards',
+            rowIndex: 0),
+      );
+    });
+
+    test('refuses a schema-8 file repeating a set id', () {
+      final tree = preV9SampleTree(8);
+      tableOf(tree, 'course_sets').add({
+        ...rowOf(tree, 'course_sets'),
+        'name': 'White - Sunday pins',
+      });
+      ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))[
+          'course_sets'] = 2;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'id 1 appears twice',
+            table: 'course_sets',
+            rowIndex: 1),
+      );
+    });
+
+    test('refuses a schema-8 file carrying a v9 table', () {
+      final tree = preV9SampleTree(8);
+      dataOf(tree)['pin_sets'] = <Object?>[];
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.unknownTable, table: 'pin_sets'),
+      );
+    });
+
+    test('refuses a schema-8 file missing one of its own tables', () {
+      final tree = preV9SampleTree(8);
+      dataOf(tree).remove('course_sets');
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.missingTable, table: 'course_sets'),
+      );
+    });
+
+    test('refuses a schema-8 yardage row with a column v8 did not have', () {
+      // Its rows are rebuilt, not carried, so an extra value would be lost.
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'course_set_yards')['tee_set_id'] = 1;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'unexpected tee_set_id',
+            table: 'course_set_yards',
+            rowIndex: 0),
+      );
+    });
+
+    test('refuses a schema-8 round that already has a v9 column', () {
+      final tree = preV9SampleTree(8);
+      rowOf(tree, 'rounds')['pin_set_id'] = null;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.badRow,
+            mentioning: 'pin_set_id', table: 'rounds', rowIndex: 0),
+      );
+    });
+
+    test('checks a schema-8 file\'s yardage counts before splitting', () {
+      final tree = preV9SampleTree(8);
+      ((manifestOf(tree)['rowCounts']! as Map<String, Object?>))[
+          'course_set_yards'] = 5;
+
+      expect(
+        () => BackupCodec.decode(reencode(tree)),
+        throwsBackup(BackupFormatProblem.rowCountMismatch,
+            table: 'course_set_yards'),
       );
     });
 
@@ -590,6 +758,76 @@ void main() {
       );
     });
 
+    test('catches tee-to-pin yards pointing at a pin set not in the file', () {
+      final broken = samplePayload().copyWith(pinSets: const <PinSet>[]);
+
+      expect(
+        broken.validate(),
+        contains(const BackupProblem(
+          'tee_to_pin_yards',
+          'pin_set_id 1 is not in pin_sets',
+          rowIndex: 0,
+        )),
+      );
+    });
+
+    /// The sample with a second course, and its pin set moved onto it.
+    BackupPayload pinsOnAnotherCourse() {
+      final payload = samplePayload();
+      return payload.copyWith(
+        courses: [
+          ...payload.courses,
+          payload.courses.first.copyWith(id: 2, name: 'Augusta'),
+        ],
+        pinSets: [payload.pinSets.first.copyWith(courseId: 2)],
+      );
+    }
+
+    test('catches a yardage set whose tee set and pin set are on different '
+        'courses', () {
+      expect(
+        pinsOnAnotherCourse().validate(),
+        contains(const BackupProblem(
+          'tee_to_pin_yards',
+          'tee_set_id 1 and pin_set_id 1 are on different courses',
+          rowIndex: 0,
+        )),
+      );
+    });
+
+    test('catches a round on another course\'s tee set or pin set', () {
+      final payload = pinsOnAnotherCourse();
+      final broken = payload.copyWith(
+        // The round is on course 1 and its pin set now on course 2; move it to
+        // course 2 instead and its tee set is the one out of place.
+        teeToPinYards: const <TeeToPinYard>[],
+      );
+      final moved = broken.copyWith(
+        rounds: [broken.rounds.first.copyWith(courseId: 2)],
+      );
+
+      expect(
+        broken.validate(),
+        [
+          const BackupProblem(
+            'rounds',
+            'pin_set_id 1 is not on course 1',
+            rowIndex: 0,
+          ),
+        ],
+      );
+      expect(
+        moved.validate(),
+        [
+          const BackupProblem(
+            'rounds',
+            'tee_set_id 1 is not on course 2',
+            rowIndex: 0,
+          ),
+        ],
+      );
+    });
+
     test('decoding does not validate — the two are separate steps', () {
       // A file can be perfectly well-formed and still describe an impossible
       // database. #70 runs both, in this order, before it writes anything.
@@ -609,7 +847,7 @@ void main() {
 
       expect(
         manifest.toString(),
-        'BackupManifest(format 1, schema 8, 0.4.0+38, android, '
+        'BackupManifest(format 1, schema 9, 0.4.0+38, android, '
         '2026-10-03T14:32:07.000Z)',
       );
     });

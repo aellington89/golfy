@@ -415,16 +415,29 @@ void main() {
     expect(find.text('Saved'), findsOneWidget);
   });
 
+  /// The text in hole 1's yards field.
+  String hole1Yards(WidgetTester tester) => tester
+      .widget<TextField>(find.descendant(
+        of: find.byKey(const ValueKey('hole_card_1')),
+        matching: find.byKey(const ValueKey('yards')),
+      ))
+      .controller!
+      .text;
+
   testWidgets(
-      'pre-fills an untouched hole: par from the course, yards from the '
-      "round's set (#36)", (tester) async {
+      'pre-fills an untouched hole: par from the course, yards tee to pin '
+      "from the round's yardage set", (tester) async {
     final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
     // Distinctive values (default is par 4) so the auto-fill is unmistakable:
-    // par from the shared course card, yards from the round's chosen set.
+    // par from the course card, yards from the tee set × pin set — not the
+    // tee set's course yards, which the pin position changes.
     await fx.insertCourseHoles(cid, par: 5);
-    final setId = await fx.insertCourseSet(cid, name: 'Blue');
-    await fx.insertCourseSetYards(setId, yards: 540);
-    final rid = await fx.insertRound(cid, date: '2026-05-25', courseSetId: setId);
+    final tee = await fx.insertTeeSet(cid, name: 'Blue');
+    final pin = await fx.insertPinSet(cid, name: 'Sunday pins');
+    await fx.insertCourseYards(tee, yards: 540);
+    await fx.insertTeeToPinYards(tee, pin, yards: 527);
+    final rid = await fx.insertRound(cid,
+        date: '2026-05-25', teeSetId: tee, pinSetId: pin);
 
     final container = makeContainer(activeRoundId: rid);
     addTearDown(container.dispose);
@@ -436,7 +449,7 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    // Hole 1's par control is pre-selected to 5 and its yards field shows 540.
+    // Hole 1's par control is pre-selected to 5 and its yards field shows 527.
     final parButton = tester.widget<SegmentedButton<int>>(
       find
           .descendant(
@@ -446,14 +459,8 @@ void main() {
           .first,
     );
     expect(parButton.selected, {5});
-
-    final yards = tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const ValueKey('hole_card_1')),
-        matching: find.byKey(const ValueKey('yards')),
-      ),
-    );
-    expect(yards.controller!.text, '540');
+    expect(hole1Yards(tester), '527');
+    expect(find.text('Yards · Blue · Sunday pins'), findsWidgets);
 
     // Saving the hole persists the auto-filled par/yards.
     await answerTee(tester);
@@ -466,7 +473,31 @@ void main() {
     final rows = await tester
         .runAsync(() => db.holeResultDao.watchForRound(rid).first);
     expect(rows!.single.par, 5);
-    expect(rows.single.yards, 540);
+    expect(rows.single.yards, 527);
+  });
+
+  testWidgets(
+      "a round with a tee set but no pin set pre-fills the tee set's course "
+      'yards', (tester) async {
+    final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+    final tee = await fx.insertTeeSet(cid, name: 'Blue');
+    final pin = await fx.insertPinSet(cid);
+    await fx.insertCourseYards(tee, yards: 540);
+    // Another round's pins: not this round's, so not its yards.
+    await fx.insertTeeToPinYards(tee, pin, yards: 527);
+    final rid = await fx.insertRound(cid, date: '2026-05-25', teeSetId: tee);
+
+    final container = makeContainer(activeRoundId: rid);
+    addTearDown(container.dispose);
+
+    resizeForForm(tester);
+    await tester.pumpWidget(wrap(container));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(hole1Yards(tester), '540');
   });
 
   testWidgets(
@@ -634,9 +665,9 @@ void main() {
     // already been saved once.
     final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
     await fx.insertCourseHoles(cid, par: 3);
-    final setId = await fx.insertCourseSet(cid);
-    await fx.insertCourseSetYards(setId, yards: 165);
-    final rid = await fx.insertRound(cid, courseSetId: setId);
+    final tee = await fx.insertTeeSet(cid);
+    await fx.insertCourseYards(tee, yards: 165);
+    final rid = await fx.insertRound(cid, teeSetId: tee);
 
     final container = makeContainer(activeRoundId: rid);
     addTearDown(container.dispose);
@@ -788,10 +819,64 @@ void main() {
       final card = await tester
           .runAsync(() => db.courseHoleDao.getForCourse(seed.courseId));
       expect(card, hasLength(1), reason: 'par is still recorded');
-      // The yardage has nowhere to go without a set, and that is not an error.
-      final sets = await tester
-          .runAsync(() => db.courseSetDao.watchSetsForCourse(seed.courseId).first);
-      expect(sets, isEmpty);
+      // The yardage has nowhere to go without a tee set, and that is not an
+      // error.
+      final yards = await tester.runAsync(() => db.select(db.courseYards).get());
+      expect(yards, isEmpty);
+      final toPin =
+          await tester.runAsync(() => db.select(db.teeToPinYards).get());
+      expect(toPin, isEmpty);
+    });
+
+    Future<void> playHole1(WidgetTester tester, String yards) async {
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const ValueKey('hole_card_1')),
+          matching: find.byKey(const ValueKey('yards')),
+        ),
+        yards,
+      );
+      await tester.pumpAndSettle();
+      await answerTee(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('on a tee set and pin set, the yards played sync tee to pin',
+        (tester) async {
+      final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      final tee = await fx.insertTeeSet(cid);
+      final pin = await fx.insertPinSet(cid);
+      final rid =
+          await fx.insertRound(cid, teeSetId: tee, pinSetId: pin);
+      await open(tester, rid);
+
+      await playHole1(tester, '412');
+
+      final toPin = await tester
+          .runAsync(() => db.yardageDao.getTeeToPinYards(tee, pin));
+      expect(toPin!.single.yards, 412);
+      // The pins don't move the scorecard yardage, so it isn't written.
+      final course =
+          await tester.runAsync(() => db.yardageDao.getCourseYards(tee));
+      expect(course, isEmpty);
+    });
+
+    testWidgets("on a tee set alone, the yards played sync as course yards",
+        (tester) async {
+      final cid = await fx.insertCourse(name: 'Augusta', gameTitle: 'PGA');
+      final tee = await fx.insertTeeSet(cid);
+      final rid = await fx.insertRound(cid, teeSetId: tee);
+      await open(tester, rid);
+
+      await playHole1(tester, '430');
+
+      final course =
+          await tester.runAsync(() => db.yardageDao.getCourseYards(tee));
+      expect(course!.single.yards, 430);
     });
 
     testWidgets('a stroke index typed on the card saves to the course',

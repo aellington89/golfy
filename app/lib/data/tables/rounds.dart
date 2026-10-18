@@ -1,13 +1,15 @@
 import 'package:drift/drift.dart';
 
-import 'course_sets.dart';
 import 'courses.dart';
 import 'events.dart';
+import 'pin_sets.dart';
+import 'tee_sets.dart';
 
 @TableIndex(name: 'idx_rounds_date', columns: {#date})
 @TableIndex(name: 'idx_rounds_course', columns: {#courseId})
 @TableIndex(name: 'idx_rounds_event', columns: {#eventId})
-@TableIndex(name: 'idx_rounds_course_set', columns: {#courseSetId})
+@TableIndex(name: 'idx_rounds_tee_set', columns: {#teeSetId})
+@TableIndex(name: 'idx_rounds_pin_set', columns: {#pinSetId})
 class Rounds extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get date => text()();
@@ -15,18 +17,24 @@ class Rounds extends Table {
       .references(Courses, #id, onDelete: KeyAction.restrict)();
   IntColumn get roundNumber => integer().withDefault(const Constant(1))();
 
-  /// Legacy free-text tee-set label from the original schema. Never written by
-  /// the app; superseded by [courseSetId] (#36) and left in place only so the
-  /// v6 migration stays additive. Safe to drop in a later tidy.
-  TextColumn get teeSet => text().nullable()();
-
-  /// The [CourseSets] yardage set this round was played on (#36), or null for a
-  /// round with no set chosen. `SET NULL` on delete so removing a set detaches
-  /// its rounds rather than destroying them; Hole Entry pulls the round's
-  /// yardages from this set.
-  IntColumn get courseSetId => integer()
+  /// The [TeeSets] tee box this round was played from, or null when none was
+  /// chosen. With [pinSetId] it is the round's **yardage set**: Hole Entry
+  /// pre-fills each hole with that pair's tee-to-pin yards, or with this tee
+  /// set's course yards when the round has no pin set.
+  ///
+  /// `SET NULL` on delete, so removing a tee set detaches its rounds rather
+  /// than destroying them. Must belong to [courseId] — `RoundDao` checks.
+  IntColumn get teeSetId => integer()
       .nullable()
-      .references(CourseSets, #id, onDelete: KeyAction.setNull)();
+      .references(TeeSets, #id, onDelete: KeyAction.setNull)();
+
+  /// The [PinSets] pin positions this round was played to, or null when none
+  /// was chosen. The other half of the round's yardage set, beside
+  /// [teeSetId]. `SET NULL` on delete; must belong to [courseId].
+  IntColumn get pinSetId => integer()
+      .nullable()
+      .references(PinSets, #id, onDelete: KeyAction.setNull)();
+
   TextColumn get weather => text().nullable()();
   IntColumn get windSpeedMph => integer().nullable()();
   TextColumn get difficulty => text().nullable()();

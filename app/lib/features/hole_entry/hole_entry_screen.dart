@@ -51,17 +51,28 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   /// The active round's template auto-fill sources, keyed by hole number (#36),
   /// refreshed each build and read by [_initialForHole] (so a hole the user
   /// never opened still saves the course's par/yards). `par` comes from the
-  /// course's shared per-hole card ([courseHolesStreamProvider]); `yards` from
-  /// the round's chosen yardage set ([courseSetYardsStreamProvider]). Either is
-  /// empty when absent — the graceful "no data" fallback (par 4 / blank yards).
+  /// course's per-hole card ([courseHolesStreamProvider]). Yards come from the
+  /// round's yardage set: its tee set's course yards
+  /// ([courseYardsStreamProvider]) and its tee set × pin set's tee-to-pin yards
+  /// ([teeToPinYardsStreamProvider]). Each is empty when absent — the graceful
+  /// "no data" fallback (par 4 / blank yards).
   Map<int, int> _parByHole = const {};
-  Map<int, int> _yardsByHole = const {};
+  Map<int, int> _courseYardsByHole = const {};
+  Map<int, int> _teeToPinByHole = const {};
 
-  /// The round's course and chosen yardage set, refreshed each build. Needed to
-  /// write corrections back to the course template (#81).
+  /// The round's course and yardage set, refreshed each build. Needed to write
+  /// corrections back to the course template (#81).
   int? _courseId;
-  int? _courseSetId;
-  String? _courseSetName;
+  int? _teeSetId;
+  int? _pinSetId;
+  String? _teeSetName;
+  String? _pinSetName;
+
+  /// The yards a hole pre-fills with: the yardage set's tee-to-pin when the
+  /// round has a tee set and a pin set, the tee set's course yards when it has
+  /// a tee set alone, and nothing otherwise.
+  Map<int, int> get _yardsByHole =>
+      _pinSetId == null ? _courseYardsByHole : _teeToPinByHole;
 
   /// Stroke index per hole as the course has it stored.
   Map<int, int?> _strokeIndexByHole = const {};
@@ -138,7 +149,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
   }
 
   /// The starting draft for a hole the user hasn't touched or saved: par from
-  /// the course's shared card and yards from the round's set (#36), each falling
+  /// the course's card and yards from the round's yardage set, each falling
   /// back to the plain default when absent. Saved holes are seeded separately in
   /// [_seedFromSaved] and take precedence via `_drafts[hole] ??` at the call
   /// sites.
@@ -203,13 +214,25 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
           par: syncCourse ? draft.par : (_parByHole[holeNumber] ?? draft.par),
           strokeIndex: writeSi ? Value(si) : const Value.absent(),
         ));
-        final setId = _courseSetId;
-        if (syncCourse && setId != null && draft.yards > 0) {
-          await repo.upsertCourseSetYard(CourseSetYardsCompanion.insert(
-            courseSetId: setId,
-            holeNumber: holeNumber,
-            yards: draft.yards,
-          ));
+        // The yards played are the yardage set's: tee-to-pin with a pin set,
+        // the tee set's course yards without one.
+        final teeSetId = _teeSetId;
+        final pinSetId = _pinSetId;
+        if (syncCourse && teeSetId != null && draft.yards > 0) {
+          if (pinSetId != null) {
+            await repo.upsertTeeToPinYard(TeeToPinYardsCompanion.insert(
+              teeSetId: teeSetId,
+              pinSetId: pinSetId,
+              holeNumber: holeNumber,
+              yards: draft.yards,
+            ));
+          } else {
+            await repo.upsertCourseYard(CourseYardsCompanion.insert(
+              teeSetId: teeSetId,
+              holeNumber: holeNumber,
+              yards: draft.yards,
+            ));
+          }
         }
       }
       if (!mounted) return;
@@ -254,9 +277,14 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
           holeNumber: hole,
           par: draft.par,
           strokeIndex: _strokeIndexByHole[hole],
-          yards: _yardsByHole[hole] ?? draft.yards,
-          courseSetId: _courseSetId,
-          setName: _courseSetName,
+          teeSetId: _teeSetId,
+          teeSetName: _teeSetName,
+          courseYards: _courseYardsByHole[hole] ??
+              (_pinSetId == null ? draft.yards : 0),
+          pinSetId: _pinSetId,
+          pinSetName: _pinSetName,
+          teeToPinYards: _teeToPinByHole[hole] ??
+              (_pinSetId == null ? 0 : draft.yards),
         );
     }
   }
@@ -285,13 +313,15 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     final roundAsync = ref.watch(roundWithCourseProvider(activeRoundId));
     final holesAsync = ref.watch(holeResultsStreamProvider(activeRoundId));
 
-    // The active round's template auto-fill (#36): par from the course's shared
-    // per-hole card, yards from the round's chosen yardage set. Both refresh
-    // when the round (hence course / set) changes; each is empty until it loads
-    // or when the course has no card / the round has no set.
-    final round = roundAsync.value?.round;
+    // The active round's template auto-fill (#36): par from the course's
+    // per-hole card, yards from the round's yardage set. All refresh when the
+    // round (hence course / sets) changes; each is empty until it loads or
+    // when the course has no card / the round has no such set.
+    final roundWithCourse = roundAsync.value;
+    final round = roundWithCourse?.round;
     final courseId = round?.courseId;
-    final courseSetId = round?.courseSetId;
+    final teeSetId = round?.teeSetId;
+    final pinSetId = round?.pinSetId;
     final parByHole = <int, int>{};
     final strokeIndexByHole = <int, int?>{};
     var courseHasCard = false;
@@ -315,27 +345,33 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
         }
       });
     }
-    final yardsByHole = <int, int>{};
-    if (courseSetId != null) {
-      ref.watch(courseSetYardsStreamProvider(courseSetId)).whenData((yards) {
+    final courseYardsByHole = <int, int>{};
+    if (teeSetId != null) {
+      ref.watch(courseYardsStreamProvider(teeSetId)).whenData((yards) {
         for (final y in yards) {
-          yardsByHole[y.holeNumber] = y.yards;
+          courseYardsByHole[y.holeNumber] = y.yards;
+        }
+      });
+    }
+    final teeToPinByHole = <int, int>{};
+    if (teeSetId != null && pinSetId != null) {
+      ref
+          .watch(teeToPinYardsStreamProvider((teeSetId, pinSetId)))
+          .whenData((yards) {
+        for (final y in yards) {
+          teeToPinByHole[y.holeNumber] = y.yards;
         }
       });
     }
     _parByHole = parByHole;
-    _yardsByHole = yardsByHole;
+    _courseYardsByHole = courseYardsByHole;
+    _teeToPinByHole = teeToPinByHole;
     _strokeIndexByHole = strokeIndexByHole;
     _courseId = courseId;
-    _courseSetId = courseSetId;
-    _courseSetName = courseSetId == null
-        ? null
-        : ref
-            .watch(courseSetsStreamProvider(round!.courseId))
-            .value
-            ?.where((s) => s.id == courseSetId)
-            .map((s) => s.name)
-            .firstOrNull;
+    _teeSetId = teeSetId;
+    _pinSetId = pinSetId;
+    _teeSetName = roundWithCourse?.teeSetName;
+    _pinSetName = roundWithCourse?.pinSetName;
 
     // Saved shots per hole (#22), attached to a saved hole's draft below. Built
     // before `_seedFromSaved` runs so seeding sees them.
@@ -437,7 +473,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
                 _dirty.add(holeNumber);
               });
             },
-            courseSetName: _courseSetName,
+            yardageSetName: yardageSetLabelOf(_teeSetName, _pinSetName),
             strokeIndex: _strokeIndexFor(holeNumber),
             strokeIndexDirty: _strokeIndexIsDirty(holeNumber),
             strokeIndexClashWith: _strokeIndexClash(

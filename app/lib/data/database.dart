@@ -4,22 +4,25 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'daos/backup_dao.dart';
 import 'daos/course_dao.dart';
 import 'daos/course_hole_dao.dart';
-import 'daos/course_set_dao.dart';
 import 'daos/dashboard_dao.dart';
 import 'daos/event_dao.dart';
 import 'daos/hole_result_dao.dart';
 import 'daos/hole_shot_dao.dart';
 import 'daos/round_dao.dart';
+import 'daos/yardage_dao.dart';
 import 'schema_versions.dart';
 import 'tables/course_holes.dart';
-import 'tables/course_set_yards.dart';
-import 'tables/course_sets.dart';
+import 'tables/course_yards.dart';
 import 'tables/courses.dart';
 import 'tables/events.dart';
 import 'tables/hole_results.dart';
 import 'tables/hole_shots.dart';
+import 'tables/pin_sets.dart';
 import 'tables/rounds.dart';
+import 'tables/tee_sets.dart';
+import 'tables/tee_to_pin_yards.dart';
 import 'upgrades/putts_in_feet.dart';
+import 'upgrades/split_yardage_sets.dart';
 
 part 'database.g.dart';
 
@@ -30,15 +33,17 @@ part 'database.g.dart';
     HoleResults,
     Events,
     CourseHoles,
-    CourseSets,
-    CourseSetYards,
+    TeeSets,
+    CourseYards,
+    PinSets,
+    TeeToPinYards,
     HoleShots,
   ],
   daos: [
     BackupDao,
     CourseDao,
     CourseHoleDao,
-    CourseSetDao,
+    YardageDao,
     RoundDao,
     HoleResultDao,
     HoleShotDao,
@@ -52,7 +57,7 @@ class GolfyDatabase extends _$GolfyDatabase {
   GolfyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -177,6 +182,123 @@ class GolfyDatabase extends _$GolfyDatabase {
                   [id],
                 );
               }
+            });
+          },
+          // v8 -> v9: yardage splits by tee set and pin set. A hole has course
+          // yards per tee set (`course_yards`) and tee-to-pin yards per tee
+          // set × pin set (`tee_to_pin_yards`); a round's yardage set is its
+          // `tee_set_id` + `pin_set_id`. Each v8 set was one such pair, named
+          // "Tee Set - Pin Set", holding the pair's tee-to-pin yards — so its
+          // name splits into a tee set and a pin set, its yards become their
+          // tee-to-pin yards, and a round played on it is played on the pair.
+          // The split is the frozen rule the v8 backup upgrader uses too
+          // (`upgrades/split_yardage_sets.dart`). `rounds` is rebuilt without
+          // `course_set_id` and the never-written `tee_set` label.
+          from8To9: (m, schema) async {
+            // One transaction, so an interrupted step leaves v8 as it was.
+            final db = m.database;
+            await db.transaction(() async {
+              final split = splitYardageSets(
+                [
+                  for (final r in await db
+                      .customSelect('SELECT id, course_id, name FROM course_sets')
+                      .get())
+                    (
+                      id: r.read<int>('id'),
+                      courseId: r.read<int>('course_id'),
+                      name: r.read<String>('name'),
+                    ),
+                ],
+                [
+                  for (final r in await db
+                      .customSelect('SELECT id, course_set_id, hole_number, '
+                          'yards FROM course_set_yards')
+                      .get())
+                    (
+                      id: r.read<int>('id'),
+                      courseSetId: r.read<int>('course_set_id'),
+                      holeNumber: r.read<int>('hole_number'),
+                      yards: r.read<int>('yards'),
+                    ),
+                ],
+              );
+              // Which set each round was played on, read before the rebuild
+              // drops the column.
+              final roundSets = [
+                for (final r in await db
+                    .customSelect('SELECT id, course_id, course_set_id '
+                        'FROM rounds WHERE course_set_id IS NOT NULL')
+                    .get())
+                  (
+                    id: r.read<int>('id'),
+                    courseId: r.read<int>('course_id'),
+                    setId: r.read<int>('course_set_id'),
+                  ),
+              ];
+
+              await m.createTable(schema.teeSets);
+              await m.create(schema.idxTeeSetsCourse);
+              await m.createTable(schema.pinSets);
+              await m.create(schema.idxPinSetsCourse);
+              await m.createTable(schema.courseYards);
+              await m.create(schema.idxCourseYardsTeeSet);
+              await m.createTable(schema.teeToPinYards);
+              await m.create(schema.idxTeeToPinYardsTeeSet);
+              await m.create(schema.idxTeeToPinYardsPinSet);
+              for (final t in split.teeSets) {
+                await db.customStatement(
+                  'INSERT INTO tee_sets (id, course_id, name) VALUES (?, ?, ?)',
+                  [t.id, t.courseId, t.name],
+                );
+              }
+              for (final p in split.pinSets) {
+                await db.customStatement(
+                  'INSERT INTO pin_sets (id, course_id, name) VALUES (?, ?, ?)',
+                  [p.id, p.courseId, p.name],
+                );
+              }
+              for (final y in split.courseYards) {
+                await db.customStatement(
+                  'INSERT INTO course_yards (id, tee_set_id, hole_number, '
+                  'yards) VALUES (?, ?, ?, ?)',
+                  [y.id, y.teeSetId, y.holeNumber, y.yards],
+                );
+              }
+              for (final y in split.teeToPinYards) {
+                await db.customStatement(
+                  'INSERT INTO tee_to_pin_yards (id, tee_set_id, pin_set_id, '
+                  'hole_number, yards) VALUES (?, ?, ?, ?, ?)',
+                  [y.id, y.teeSetId, y.pinSetId, y.holeNumber, y.yards],
+                );
+              }
+
+              // TableMigration re-runs the old table's index statements after
+              // the rebuild, and this one names a column the new table drops.
+              await db.customStatement('DROP INDEX idx_rounds_course_set');
+              await m.alterTable(
+                TableMigration(
+                  schema.rounds,
+                  newColumns: [schema.rounds.teeSetId, schema.rounds.pinSetId],
+                ),
+              );
+              await m.create(schema.idxRoundsTeeSet);
+              await m.create(schema.idxRoundsPinSet);
+              for (final round in roundSets) {
+                final pair = split.bySetId[round.setId];
+                // A set on another course — possible in v8 by editing a
+                // round's course after picking its set — would pre-fill yards
+                // for different holes. v9 refuses that link, so it is left
+                // unset rather than carried across.
+                if (pair == null || pair.courseId != round.courseId) continue;
+                await db.customStatement(
+                  'UPDATE rounds SET tee_set_id = ?, pin_set_id = ? '
+                  'WHERE id = ?',
+                  [pair.teeSetId, pair.pinSetId, round.id],
+                );
+              }
+
+              await m.deleteTable('course_set_yards');
+              await m.deleteTable('course_sets');
             });
           },
         ),
