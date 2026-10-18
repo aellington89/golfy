@@ -27,10 +27,11 @@ sideload and upgrade in place.
 
 ## Status — v0.7.1
 
-**v0.7.1** is the latest release, and it changes nothing about the app: the
-same screens, the same data, the same schema at v9. It carries the dependency
-batch from `deps/patch` — `build_runner` 2.16.1 → 2.16.2, a codegen tool that
-isn't part of the APK.
+**v0.7.1** is the latest release, and it fixes the course editor opening on
+the wrong sets: it now starts on the tee set and pin set of the round you last
+played on that course, so yards saved by "Update course as I play" show up
+where you expect them. The New Round dialog also asks for a tee set when you
+pick a pin set without one. The schema stays at v9.
 
 **v0.7.0** split a course's yardage into **tee
 sets** and **pin sets**. A tee set has its **course yards**, the scorecard
@@ -264,7 +265,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 829 passing tests
+flutter test                           # 830 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

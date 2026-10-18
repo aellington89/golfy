@@ -10,17 +10,33 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [0.7.1] - 2026-10-18
 
-A release with nothing in it for the app. Golfy behaves exactly as v0.7.0 did —
-the same screens, the same data, the same schema at v9 — and upgrading is in
-place as usual. What it carries is the dependency batch that collected on
-`deps/patch` since v0.7.0, merged up to `master` in [#131]: one patch bump to
-the code generator, which changes nothing that ships in the APK.
+A release that fixes the course editor losing track of the sets you played
+([#130]). v0.7.0 split a course's yardage into tee sets and pin sets, and
+"Update course as I play" saved each hole's yards into the round's pair, but
+the editor always opened on whichever sets sort first by name, so after a
+round on a new pin set the yards you had just recorded looked lost. They were
+there all along; the editor now opens on the sets of the round you last played
+on that course.
 
-The schema does **not** move: still v9, and no migration runs on upgrade. Under
-the project's own rules this is a **patch**, and only just — everything below
-is `### Internal`, which contributes no bump, so the calculator reports that no
-release is needed and offers the patch for exactly this case, as it did for
-v0.3.3.
+It also carries the dependency batch that collected on `deps/patch` since
+v0.7.0, merged up to `master` in [#131]: one patch bump to the code
+generator, which changes nothing that ships in the APK.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. The
+release is a **patch**, for the `### Fixed` entry below.
+
+### Fixed
+
+- **The course editor opens on the tee set and pin set you last played**
+  ([#130]). "Update course as I play" saved each hole's yards into the round's
+  tee set and pin set, but the course editor always opened on whichever tee set
+  and pin set sort first by name. After a round on a newly added pin set, its
+  tee-to-pin yards were stored, but the editor showed another pin set's card,
+  so the update looked lost. The editor now starts on the sets of the round
+  last played on the course, and a set you pick or add still takes over. The
+  New Round dialog also says to pick a tee set when you pick a pin set without
+  one, because tee-to-pin yards are kept per tee set and a pin set alone has
+  nowhere to record them.
 
 ### Internal
 
@@ -1025,4 +1041,5 @@ Phase 1 — data layer and navigation shell.
 [#125]: https://github.com/aellington89/golfy/pull/125
 [#127]: https://github.com/aellington89/golfy/pull/127
 [#129]: https://github.com/aellington89/golfy/pull/129
+[#130]: https://github.com/aellington89/golfy/pull/130
 [#131]: https://github.com/aellington89/golfy/pull/131
