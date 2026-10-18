@@ -25,18 +25,23 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.7.0
+## Status — v0.7.1
 
-**v0.7.0** is the latest release, and it splits a course's yardage into **tee
+**v0.7.1** is the latest release, and it fixes the course editor opening on
+the wrong sets: it now starts on the tee set and pin set of the round you last
+played on that course, so yards saved by "Update course as I play" show up
+where you expect them. The New Round dialog also asks for a tee set when you
+pick a pin set without one. The schema stays at v9.
+
+**v0.7.0** split a course's yardage into **tee
 sets** and **pin sets**. A tee set has its **course yards**, the scorecard
 number for each hole, which the pins never change. A pin set has
 **tee-to-pin** yards for each tee set, because the same pins are a different
 distance from each tee. A round records both, and each hole pre-fills with that
 pair's tee-to-pin yards, or with the tee set's course yards when the round has
-no pin set. Your old yardage sets, named "Tee Set - Pin Set", become that tee
-set and pin set on upgrade, and their yards become tee-to-pin yards. The schema
-moves to v9, so a migration runs when you install it, and backups made by
-v0.4.0 to v0.6.0 still read.
+no pin set. Old yardage sets, named "Tee Set - Pin Set", became that tee set
+and pin set on upgrade, and their yards became tee-to-pin yards. The schema
+moved to v9, and backups made by v0.4.0 to v0.6.0 still read.
 
 **v0.6.0** gave each putt a shot row of its own under **Putting**, with its
 distance to the hole in feet — the unit golf games show on the green. Adding or
@@ -260,7 +265,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 829 passing tests
+flutter test                           # 830 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```

@@ -8,6 +8,23 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-18
+
+A release that fixes the course editor losing track of the sets you played
+([#130]). v0.7.0 split a course's yardage into tee sets and pin sets, and
+"Update course as I play" saved each hole's yards into the round's pair, but
+the editor always opened on whichever sets sort first by name, so after a
+round on a new pin set the yards you had just recorded looked lost. They were
+there all along; the editor now opens on the sets of the round you last played
+on that course.
+
+It also carries the dependency batch that collected on `deps/patch` since
+v0.7.0, merged up to `master` in [#131]: one patch bump to the code
+generator, which changes nothing that ships in the APK.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. The
+release is a **patch**, for the `### Fixed` entry below.
+
 ### Fixed
 
 - **The course editor opens on the tee set and pin set you last played**
@@ -20,6 +37,12 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   New Round dialog also says to pick a tee set when you pick a pin set without
   one, because tee-to-pin yards are kept per tee set and a pin set alone has
   nowhere to record them.
+
+### Internal
+
+- **`build_runner` moves from 2.16.1 to 2.16.2** ([#129]; merged up in
+  [#131]). A dev dependency only: it runs drift's codegen and is not part of
+  the app, and the committed `*.g.dart` output is unchanged by it.
 
 ## [0.7.0] - 2026-10-11
 
@@ -950,7 +973,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/aellington89/golfy/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/aellington89/golfy/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/aellington89/golfy/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/aellington89/golfy/compare/v0.4.0...v0.5.0
@@ -1016,4 +1040,6 @@ Phase 1 — data layer and navigation shell.
 [#120]: https://github.com/aellington89/golfy/pull/120
 [#125]: https://github.com/aellington89/golfy/pull/125
 [#127]: https://github.com/aellington89/golfy/pull/127
+[#129]: https://github.com/aellington89/golfy/pull/129
 [#130]: https://github.com/aellington89/golfy/pull/130
+[#131]: https://github.com/aellington89/golfy/pull/131
