@@ -8,6 +8,26 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-18
+
+A release with nothing in it for the app. Golfy behaves exactly as v0.7.0 did —
+the same screens, the same data, the same schema at v9 — and upgrading is in
+place as usual. What it carries is the dependency batch that collected on
+`deps/patch` since v0.7.0, merged up to `master` in [#131]: one patch bump to
+the code generator, which changes nothing that ships in the APK.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. Under
+the project's own rules this is a **patch**, and only just — everything below
+is `### Internal`, which contributes no bump, so the calculator reports that no
+release is needed and offers the patch for exactly this case, as it did for
+v0.3.3.
+
+### Internal
+
+- **`build_runner` moves from 2.16.1 to 2.16.2** ([#129]; merged up in
+  [#131]). A dev dependency only: it runs drift's codegen and is not part of
+  the app, and the committed `*.g.dart` output is unchanged by it.
+
 ## [0.7.0] - 2026-10-11
 
 A release about the yardage on a course ([#127]). Until now a course had
@@ -937,7 +957,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/aellington89/golfy/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/aellington89/golfy/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/aellington89/golfy/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/aellington89/golfy/compare/v0.4.0...v0.5.0
@@ -1003,3 +1024,5 @@ Phase 1 — data layer and navigation shell.
 [#120]: https://github.com/aellington89/golfy/pull/120
 [#125]: https://github.com/aellington89/golfy/pull/125
 [#127]: https://github.com/aellington89/golfy/pull/127
+[#129]: https://github.com/aellington89/golfy/pull/129
+[#131]: https://github.com/aellington89/golfy/pull/131
