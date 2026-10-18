@@ -24,12 +24,15 @@ void main() {
   Course course({String name = 'Augusta', String game = 'PGA'}) =>
       Course(id: courseId, name: name, gameTitle: game);
 
-  RoundWithCourse round(int id) => RoundWithCourse(
+  RoundWithCourse round(int id, {int? teeSetId, int? pinSetId}) =>
+      RoundWithCourse(
         round: Round(
           id: id,
           date: '2026-05-25',
           courseId: courseId,
           roundNumber: 1,
+          teeSetId: teeSetId,
+          pinSetId: pinSetId,
         ),
         courseName: 'Augusta',
         event: null,
@@ -383,6 +386,37 @@ void main() {
           textShown(tester, const ValueKey('course_hole_tee_to_pin_1')), '409');
       // The scorecard yardage is the tee set's, whatever the pins.
       expect(textShown(tester, const ValueKey('course_hole_yards_1')), '431');
+    });
+
+    testWidgets('opens on the sets of the round last played here',
+        (tester) async {
+      // "Update course as I play" records into the round's sets; the editor
+      // has to show those, not whichever set sorts first by name.
+      await pump(
+        tester,
+        card: uniformCard(par: 4, strokeIndex: 3),
+        rounds: [
+          round(2, teeSetId: 10, pinSetId: 5),
+          round(1, teeSetId: 9, pinSetId: 4),
+        ],
+        tees: [tee(9, 'Blue'), tee(10, 'White')],
+        pins: [pin(4, 'Monday pins'), pin(5, 'Sunday pins')],
+        yards: {9: uniformYards(9, 431), 10: uniformYards(10, 402)},
+        toPin: {
+          (9, 4): uniformToPin(9, 4, 425),
+          (10, 5): uniformToPin(10, 5, 388),
+        },
+      );
+
+      expect(textShown(tester, const ValueKey('course_hole_yards_1')), '402');
+      expect(
+          textShown(tester, const ValueKey('course_hole_tee_to_pin_1')), '388');
+
+      // A set picked by hand sticks.
+      await tester.tap(find.byKey(const ValueKey('pin_set_chip_4')));
+      await tester.pumpAndSettle();
+      expect(
+          textShown(tester, const ValueKey('course_hole_tee_to_pin_1')), '');
     });
 
     testWidgets('a pin set with nothing entered does not read unsaved',

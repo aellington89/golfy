@@ -8,6 +8,19 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The course editor opens on the tee set and pin set you last played**
+  ([#130]). "Update course as I play" saved each hole's yards into the round's
+  tee set and pin set, but the course editor always opened on whichever tee set
+  and pin set sort first by name. After a round on a newly added pin set, its
+  tee-to-pin yards were stored, but the editor showed another pin set's card,
+  so the update looked lost. The editor now starts on the sets of the round
+  last played on the course, and a set you pick or add still takes over. The
+  New Round dialog also says to pick a tee set when you pick a pin set without
+  one, because tee-to-pin yards are kept per tee set and a pin set alone has
+  nowhere to record them.
+
 ## [0.7.0] - 2026-10-11
 
 A release about the yardage on a course ([#127]). Until now a course had
@@ -1003,3 +1016,4 @@ Phase 1 — data layer and navigation shell.
 [#120]: https://github.com/aellington89/golfy/pull/120
 [#125]: https://github.com/aellington89/golfy/pull/125
 [#127]: https://github.com/aellington89/golfy/pull/127
+[#130]: https://github.com/aellington89/golfy/pull/130

@@ -246,6 +246,12 @@ class _NewRoundDialogState extends ConsumerState<NewRoundDialog> {
                 kind: CourseSetKind.pin,
                 courseId: _course!.id,
                 valueId: _pinSetId,
+                // Tee-to-pin yards are stored per tee set, so a pin set alone
+                // has nowhere to record or pre-fill them from.
+                hint: _pinSetId != null && _teeSetId == null
+                    ? 'Pick a tee set too — tee-to-pin yards are kept per tee '
+                        'set'
+                    : null,
                 onChanged: _submitting
                     ? (_) {}
                     : (id) => setState(() => _pinSetId = id),
@@ -343,11 +349,16 @@ class _SetPicker extends ConsumerWidget {
     required this.courseId,
     required this.valueId,
     required this.onChanged,
+    this.hint,
   });
 
   final CourseSetKind kind;
   final int courseId;
   final int? valueId;
+
+  /// Helper text shown under the picker, taking the place of the "no sets
+  /// yet" hint.
+  final String? hint;
   final ValueChanged<int?> onChanged;
 
   String get _label => switch (kind) {
@@ -447,7 +458,7 @@ class _SetPicker extends ConsumerWidget {
           decoration: InputDecoration(
             labelText: _label,
             border: const OutlineInputBorder(),
-            helperText: sets.isEmpty
+            helperText: hint ?? (sets.isEmpty
                 ? switch (kind) {
                     CourseSetKind.tee =>
                       'No tee sets yet — add one to pre-fill this round’s '
@@ -456,7 +467,8 @@ class _SetPicker extends ConsumerWidget {
                       'No pin sets yet — without one, holes pre-fill with the '
                           'tee set’s course yards',
                   }
-                : null,
+                : null),
+            helperMaxLines: 2,
           ),
           items: [
             DropdownMenuItem<int?>(

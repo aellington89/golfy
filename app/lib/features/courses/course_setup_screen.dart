@@ -83,6 +83,13 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
   /// with it — exempt from falling back to the first set until it arrives.
   int? _addedTeeId;
   int? _addedPinId;
+
+  /// Whether the active sets have been pointed at the course's latest round's
+  /// yet. Done once, when the sets and rounds have loaded, so the yardages just
+  /// recorded by "Update course as I play" are the ones on screen — not
+  /// whichever set sorts first by name. Set as soon as the user picks or adds a
+  /// set, so a late-loading stream can't override their choice.
+  bool _activeSetsDefaulted = false;
   int _currentHoleIndex = 0;
   bool _saving = false;
 
@@ -133,6 +140,7 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
       // set yet, so every hole reads unsaved.
       _courseYards.seedUnsaved(newTeeSetId, yards);
       _activeTeeId = _addedTeeId = newTeeSetId;
+      _activeSetsDefaulted = true;
     });
   }
 
@@ -362,7 +370,10 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
             name: spec.name,
           ));
           if (!mounted) return;
-          setState(() => _activePinId = _addedPinId = id);
+          setState(() {
+            _activePinId = _addedPinId = id;
+            _activeSetsDefaulted = true;
+          });
       }
     } catch (_) {
       if (!mounted) return;
@@ -468,10 +479,14 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final coursesAsync = ref.watch(coursesByNameStreamProvider);
-    final rounds =
-        ref.watch(roundsStreamProvider).value ?? const <RoundWithCourse>[];
-    final roundCount =
-        rounds.where((r) => r.round.courseId == widget.courseId).length;
+    final roundsValue = ref.watch(roundsStreamProvider).value;
+    final courseRounds = [
+      for (final r in roundsValue ?? const <RoundWithCourse>[])
+        if (r.round.courseId == widget.courseId) r.round,
+    ];
+    // Newest first, so this is the round last played here; null until the
+    // rounds have loaded, or when the course has never been played.
+    final latestRound = roundsValue == null ? null : courseRounds.firstOrNull;
 
     return coursesAsync.when(
       loading: () =>
@@ -491,7 +506,14 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
             ),
           );
         }
-        return _buildEditor(context, course, courses, roundCount);
+        return _buildEditor(
+          context,
+          course,
+          courses,
+          courseRounds.length,
+          roundsLoaded: roundsValue != null,
+          latestRound: latestRound,
+        );
       },
     );
   }
@@ -500,13 +522,15 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
     BuildContext context,
     Course course,
     List<Course> allCourses,
-    int roundCount,
-  ) {
+    int roundCount, {
+    required bool roundsLoaded,
+    required Round? latestRound,
+  }) {
     final cardAsync = ref.watch(courseHolesStreamProvider(widget.courseId));
-    final teeSets = ref.watch(teeSetsStreamProvider(widget.courseId)).value ??
-        const <TeeSet>[];
-    final pinSets = ref.watch(pinSetsStreamProvider(widget.courseId)).value ??
-        const <PinSet>[];
+    final teeSetsValue = ref.watch(teeSetsStreamProvider(widget.courseId)).value;
+    final pinSetsValue = ref.watch(pinSetsStreamProvider(widget.courseId)).value;
+    final teeSets = teeSetsValue ?? const <TeeSet>[];
+    final pinSets = pinSetsValue ?? const <PinSet>[];
 
     // Seed par/SI once; a live re-seed would fight the user's typing.
     cardAsync.whenData((card) {
@@ -521,6 +545,16 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
     final pinIds = [for (final s in pinSets) s.id];
     if (teeIds.contains(_addedTeeId)) _addedTeeId = null;
     if (pinIds.contains(_addedPinId)) _addedPinId = null;
+    if (!_activeSetsDefaulted &&
+        roundsLoaded &&
+        teeSetsValue != null &&
+        pinSetsValue != null) {
+      _activeSetsDefaulted = true;
+      final tee = latestRound?.teeSetId;
+      final pin = latestRound?.pinSetId;
+      if (teeIds.contains(tee)) _activeTeeId = tee;
+      if (pinIds.contains(pin)) _activePinId = pin;
+    }
     _activeTeeId = _resolveActive(teeIds, _activeTeeId, _addedTeeId);
     _activePinId = _resolveActive(pinIds, _activePinId, _addedPinId);
 
@@ -630,7 +664,10 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
                 activeId: activeTeeId,
                 empty: 'No tee sets yet. Add one (e.g. Blue) to record each '
                     'hole\'s course yards.',
-                onSelect: (id) => setState(() => _activeTeeId = id),
+                onSelect: (id) => setState(() {
+                  _activeTeeId = id;
+                  _activeSetsDefaulted = true;
+                }),
                 onAdd: () => _addSet(CourseSetKind.tee, teeOptions),
                 onSetAction: (a, s) => _onSetAction(CourseSetKind.tee, a, s),
               ),
@@ -640,7 +677,10 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
                 activeId: activePinId,
                 empty: 'No pin sets yet. Add one (e.g. Sunday pins) to record '
                     'tee-to-pin yards from each tee set.',
-                onSelect: (id) => setState(() => _activePinId = id),
+                onSelect: (id) => setState(() {
+                  _activePinId = id;
+                  _activeSetsDefaulted = true;
+                }),
                 onAdd: () => _addSet(CourseSetKind.pin, pinOptions),
                 onSetAction: (a, s) => _onSetAction(CourseSetKind.pin, a, s),
               ),
