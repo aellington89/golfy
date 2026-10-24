@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/backup/backup_destination.dart';
 import '../../data/backup/backup_provider.dart';
+import '../../data/backup/backup_service.dart';
 import '../../data/repository_provider.dart';
 
 /// The **Back up your data** tile on the Settings screen (#69).
@@ -28,27 +29,7 @@ class _ExportBackupTileState extends ConsumerState<ExportBackupTile> {
     try {
       final result = await ref.read(backupServiceProvider).createBackup();
       if (!mounted) return;
-      messenger.hideCurrentSnackBar();
-      switch (result.status) {
-        case BackupSaveStatus.saved:
-          messenger.showSnackBar(SnackBar(
-            content: Text('Backup saved · ${result.location ?? result.fileName}'),
-          ));
-        case BackupSaveStatus.shared:
-          messenger.showSnackBar(SnackBar(
-            content: Text('Backup created · ${result.fileName}'),
-          ));
-        case BackupSaveStatus.cancelled:
-          messenger.showSnackBar(
-            const SnackBar(content: Text('Backup cancelled — nothing saved')),
-          );
-        case BackupSaveStatus.failed:
-          messenger.showSnackBar(SnackBar(
-            content: Text("Backup failed — ${result.error ?? 'unknown error'}"),
-            action: SnackBarAction(label: 'Retry', onPressed: _export),
-            duration: const Duration(seconds: 8),
-          ));
-      }
+      showBackupResult(messenger, result, onRetry: _export);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,4 +80,35 @@ class _ExportBackupTileState extends ConsumerState<ExportBackupTile> {
 
   static String _plural(int count, String noun) =>
       count == 1 ? '1 $noun' : '$count ${noun}s';
+}
+
+/// Says what became of an export, specifically — "export did nothing" is the
+/// worst failure a backup feature can have. Shared with the restore tile's
+/// "Back up first" (#70), so a backup reads the same wherever it was made.
+void showBackupResult(
+  ScaffoldMessengerState messenger,
+  BackupResult result, {
+  required VoidCallback onRetry,
+}) {
+  messenger.hideCurrentSnackBar();
+  switch (result.status) {
+    case BackupSaveStatus.saved:
+      messenger.showSnackBar(SnackBar(
+        content: Text('Backup saved · ${result.location ?? result.fileName}'),
+      ));
+    case BackupSaveStatus.shared:
+      messenger.showSnackBar(SnackBar(
+        content: Text('Backup created · ${result.fileName}'),
+      ));
+    case BackupSaveStatus.cancelled:
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Backup cancelled — nothing saved')),
+      );
+    case BackupSaveStatus.failed:
+      messenger.showSnackBar(SnackBar(
+        content: Text("Backup failed — ${result.error ?? 'unknown error'}"),
+        action: SnackBarAction(label: 'Retry', onPressed: onRetry),
+        duration: const Duration(seconds: 8),
+      ));
+  }
 }
