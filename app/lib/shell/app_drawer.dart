@@ -5,7 +5,7 @@ import '../features/settings/settings_screen.dart';
 
 /// App-wide navigation drawer — the top-level home for managing reference data
 /// that doesn't warrant its own bottom-nav tab (#36 workflow): **Courses** and
-/// **Settings**, which carries the backup action (#69) and will grow the
+/// **Settings**, which carries backup and restore (#69, #70) and will grow the
 /// version / licences / privacy / support rows (#72).
 ///
 /// Added as `drawer:` on each top-level tab screen's Scaffold (Events, Rounds,
@@ -52,7 +52,7 @@ class AppDrawer extends StatelessWidget {
             key: const ValueKey('drawer_settings'),
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
-            subtitle: const Text('Back up your data'),
+            subtitle: const Text('Back up & restore'),
             onTap: () {
               Navigator.of(context).pop(); // close the drawer
               Navigator.of(context, rootNavigator: true).push(

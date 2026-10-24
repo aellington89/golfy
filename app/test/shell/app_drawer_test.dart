@@ -79,8 +79,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('drawer_settings')));
     await tester.pumpAndSettle();
 
-    // Landed on Settings, which is where the backup action lives (#69).
+    // Landed on Settings, which is where backup and restore live (#69, #70).
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(find.text('Back up your data'), findsOneWidget);
+    expect(find.text('Restore from a backup'), findsOneWidget);
   });
 }

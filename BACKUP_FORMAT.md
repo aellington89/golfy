@@ -169,28 +169,46 @@ A file that claims an older version is refused as one Golfy cannot upgrade.
 
 ## Restoring one
 
-Implemented by [#70](https://github.com/aellington89/golfy/issues/70); the
-procedure is here because the format was designed around it.
+Implemented by [#70](https://github.com/aellington89/golfy/issues/70)
+(`RestoreService`, `BackupDao.replaceAll`); the format was designed around
+this procedure.
 
 1. **Pick a file** with the system picker. `file_selector`'s *open* dialog
    works on Android as well as Windows — it is only *save* that Android lacks
-   — so import needs no dependency export did not already add.
-2. **Decode, check counts, check references.** Refuse with the reason, having
-   touched nothing.
+   — so import needs no dependency export did not already add. On Android the
+   picker offers `application/json`, `text/plain` and
+   `application/octet-stream`, since a file that has been through Drive or a
+   mail attachment does not always keep its type; it copies the chosen
+   document into the app's cache, and that copy is deleted once read.
+2. **Read it, decode it, check counts and references.** A file over 64 MB is
+   not read at all (a year of heavy play is a few MB), one that is not UTF-8
+   is refused, and a leading byte-order mark — which some Windows editors add
+   on saving — is dropped before decoding. Then decode and
+   `BackupPayload.validate()`. Anything refused is refused with the reason,
+   having touched nothing.
 3. **Show the user what the file holds** (row counts, when it was made, which
-   app version made it) *and* what they currently have, then require an
-   explicit confirmation. Replacing is destructive and must look it.
+   app version made it, on which platform) *and* what they currently have,
+   then require an explicit confirmation. Replacing is destructive and must
+   look it: the action is in the error colour and the dialog says it cannot be
+   undone. When the device holds data, the dialog also offers **Back up
+   first**, which runs the ordinary export instead.
 4. **Apply in one transaction**: delete children → parents, insert parents →
-   children with the ids from the file. If anything fails, the transaction
-   rolls back and the device is exactly as it was. That, rather than a
-   backup-of-the-backup, is the answer to "what if restore dies halfway".
+   children with the ids from the file, then read everything back and compare
+   it with the file. If anything fails — a CHECK constraint, a duplicate id, a
+   read-back that disagrees — the transaction rolls back and the device is
+   exactly as it was. That, rather than a backup-of-the-backup, is the answer
+   to "what if restore dies halfway".
 5. **Insert through the tables, not the DAOs.** The DAO-layer invariants
    (`upDownSuccess` requires an attempt, `putts < score`, and so on) exist to
    stop bad *user input*; a restore replays rows that already passed them, and
-   the SQL CHECK constraints still police a hand-edited file.
-6. **Nothing else.** The database stays the same file, foreign keys stay on,
-   and drift's watchers fire on commit — every screen refreshes by itself, with
-   no app restart and no file swap.
+   the SQL CHECK constraints still police a hand-edited file. Rows go in as
+   `toCompanion(false)`, so an explicit null stays null, and as plain inserts,
+   so a duplicate fails rather than overwriting.
+6. **Nothing else in the database.** It stays the same file, foreign keys stay
+   on, and drift's watchers fire on commit — every screen refreshes by itself,
+   with no app restart and no file swap. The one piece of state outside the
+   database that names a row, the round open in Hole Entry, is cleared: the
+   restored ids are the file's, so that id may now be a different round.
 
 Because restore *replaces*, there is no id remapping and no conflict resolution
 to design. If merge is ever wanted, this format supports it: every row carries
@@ -208,8 +226,9 @@ exist to fail, so none of this depends on remembering it.
 
 **A table was added** → "every table in the schema is in the backup" fails.
 Add it to `BackupPayload` (a typed list, plus its entry in `tables`), to
-`backupTableOrder` **parents-first**, and to `BackupCodec.decode`'s row
-factories. Add rows to `TestFixtures.seedFullBackupFixture()` and to
+`backupTableOrder` **parents-first**, to `BackupCodec.decode`'s row
+factories, and to `BackupDao.replaceAll`'s inserts (the restore round-trip
+tests fail until you do). Add rows to `TestFixtures.seedFullBackupFixture()` and to
 `samplePayload()` in `app/test/data/backup/_sample.dart`, then regenerate the
 golden files.
 
@@ -294,6 +313,9 @@ format.
 | Format, envelope, payload, codec | [`app/lib/data/backup/`](app/lib/data/backup) |
 | Reading every table in one transaction | [`app/lib/data/daos/backup_dao.dart`](app/lib/data/daos/backup_dao.dart) |
 | Building a file and handing it over | `backup_service.dart`, `backup_destination.dart` |
-| The Export action | [`app/lib/features/settings/`](app/lib/features/settings) |
-| Format tests, guards, golden files | [`app/test/data/backup/`](app/test/data/backup) |
+| Restoring every table in one transaction | `BackupDao.replaceAll` |
+| Picking a file, checking it, applying it | `backup_source.dart`, `restore_service.dart` |
+| The Export and Restore actions | [`app/lib/features/settings/`](app/lib/features/settings) |
+| Format tests, guards, golden files, restore service | [`app/test/data/backup/`](app/test/data/backup) |
+| Restore into the database | `app/test/dao/backup_dao_restore_test.dart` |
 | The seeded fixture every suite shares | `app/test/dao/_fixtures.dart` (`seedFullBackupFixture`) |

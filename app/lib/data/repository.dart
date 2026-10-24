@@ -283,4 +283,13 @@ class GolfyRepository {
   /// transaction so the result is a consistent snapshot. See
   /// [BackupDao.readAll].
   Future<BackupPayload> readBackupPayload() => _db.backupDao.readAll();
+
+  /// Replaces everything on the device with [payload] (#70), in one
+  /// transaction that rolls back whole on any failure. See
+  /// [BackupDao.replaceAll].
+  Future<void> restoreBackupPayload(BackupPayload payload) =>
+      _db.backupDao.replaceAll(payload);
+
+  /// Rows per SQL table name — what the device holds now (#70).
+  Future<Map<String, int>> countBackupRows() => _db.backupDao.countRows();
 }

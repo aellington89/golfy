@@ -12,9 +12,12 @@ Thumbs.db
 desktop.ini
 
 # ── Local data / runtime SQLite ────────────────────────────────────────────
-# The app writes its database under %USERPROFILE%/.golfy/golfy.db (Windows)
-# and ~/.golfy/golfy.db on other platforms — never inside the repo. These
-# rules catch any stray local dump or test scratch DB.
+# The app writes its database, golfy.sqlite, to drift's default location —
+# the app's private documents directory on Android, and the user's Documents
+# folder on Windows (%USERPROFILE%\Documents, or wherever OneDrive has moved
+# it) — never inside the repo. (~/.golfy/golfy.db was the PySide6 app's, before
+# the move to Flutter.) These rules catch any stray local dump or test
+# scratch DB.
 *.db
 *.sqlite
 *.sqlite3
