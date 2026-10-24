@@ -25,13 +25,20 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.7.1
+## Status — v0.8.0
 
-**v0.7.1** is the latest release, and it fixes the course editor opening on
-the wrong sets: it now starts on the tee set and pin set of the round you last
-played on that course, so yards saved by "Update course as I play" show up
-where you expect them. The New Round dialog also asks for a tee set when you
-pick a pin set without one. The schema stays at v9.
+**v0.8.0** is the latest release, and it lets a backup back onto a device.
+**Settings → Restore from a backup** picks a backup file, shows what it holds
+next to what the device holds now, and on your say-so puts its courses, tee and
+pin sets, rounds, holes, shots and events in place of the device's own — with a
+**Back up first** button when there is anything to lose. A damaged, edited or
+newer-than-the-app file is refused before anything changes, and every backup
+Golfy has written restores, from v0.4.0 on. The schema stays at v9.
+
+**v0.7.1** fixed the course editor opening on the wrong sets: it now starts on
+the tee set and pin set of the round you last played on that course, so yards
+saved by "Update course as I play" show up where you expect them. The New Round
+dialog also asks for a tee set when you pick a pin set without one.
 
 **v0.7.0** split a course's yardage into **tee
 sets** and **pin sets**. A tee set has its **course yards**, the scorecard
@@ -60,9 +67,9 @@ and the shots disagree. The schema stayed at v7.
 for its own sake: your data could now leave the device. **Settings → Back up your
 data** writes every course, round, hole and shot to one plain JSON file and
 hands it to the share sheet (Android) or a Save-as dialog (Windows). You choose
-where it goes, and nothing is uploaded. Restoring from a backup comes with
-[#70](https://github.com/aellington89/golfy/issues/70); the format is already fixed and documented in
-[`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), so a backup made now will restore then.
+where it goes, and nothing is uploaded. Restoring from a backup came with
+v0.8.0 ([#70](https://github.com/aellington89/golfy/issues/70)), reading the
+format fixed then and documented in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md).
 The schema stayed at v7.
 
 **v0.3.3**, like v0.3.2 before it, changed nothing about the app: the same
@@ -290,7 +297,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 830 passing tests
+flutter test                           # 867 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
