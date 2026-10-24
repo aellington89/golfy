@@ -224,13 +224,17 @@ express (e.g. you can't make an up-and-down without attempting one, or pair a
 tee set with another course's pin set) are enforced by the DAO layer with loud
 `ArgumentError`s.
 
-## Back up your data
+## Back up and restore your data
 
 Golfy keeps everything on the device and sends nothing anywhere, which also
 means a lost or wiped phone loses every round. **Export** writes the lot —
 courses, tee sets, pin sets and their yards, rounds, holes, shots and events —
-to one file you choose
-the home for ([#69](https://github.com/aellington89/golfy/issues/69)):
+to one file you choose the home for
+([#69](https://github.com/aellington89/golfy/issues/69)), and **Restore** puts
+that file back onto a device
+([#70](https://github.com/aellington89/golfy/issues/70)).
+
+### Back up
 
 1. Open the side menu → **Settings**.
 2. Check the line under **Back up your data**: it says how many rounds, courses
@@ -247,14 +251,35 @@ the home for ([#69](https://github.com/aellington89/golfy/issues/69)):
 
 **How often?** After any session you would not want to re-enter. **Does it go
 anywhere by itself?** No — nothing leaves the device unless you send it, and no
-backup is ever made without you asking. **Can I put one back?** The file is
-built to be read back in, and Golfy already knows how to read and check one;
-restoring it onto a device arrives with
-[#70](https://github.com/aellington89/golfy/issues/70). Keep every file you
-make until then — they will still be valid when it lands.
+backup is ever made without you asking.
 
-The format is documented in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), which is
-also the contract the restore feature is being built against.
+### Restore
+
+1. Make sure the device can reach the file: on Android, in Drive, in Files, or
+   as a downloaded attachment; on Windows, in any folder.
+2. Open the side menu → **Settings** → **Restore from a backup**.
+3. Pick the file. Golfy reads and checks all of it before anything happens; a
+   file it cannot restore is refused with the reason, and nothing changes.
+4. Read the question. It shows what the backup holds — when it was made, by
+   which version of Golfy, and how many rounds, courses, events, holes and
+   shots — beside what this device holds now.
+5. Tap **Replace** (or **Restore**, on a device with nothing on it yet).
+6. The bar at the bottom says what was restored. Every tab shows the restored
+   data straight away.
+
+**Does it merge with what is already here?** No — restoring **replaces**
+everything on the device with what the file holds. If the device has rounds
+you want to keep, tap **Back up first** in the question; it saves them with the
+ordinary export, and you can restore again afterwards. **What if I pick the
+wrong file?** Nothing happens until you tap Replace, and the question shows
+what is in the file, so read it first. **What if it fails partway?** The
+restore is all or nothing: the device is left exactly as it was. **Which files
+restore?** Any backup Golfy has made, from v0.4.0 on. A file made by a *newer*
+Golfy is refused — update Golfy first. **Was I in the middle of a round?** A
+restore closes the round open in Hole Entry; open it again from Rounds.
+
+The format is documented in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), the
+contract both Export and Restore keep.
 
 ## Build & run
 

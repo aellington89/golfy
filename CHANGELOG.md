@@ -8,6 +8,32 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+
+- **A backup can go back onto a device** ([#70]): **Settings → Restore from a
+  backup** opens the system file picker — Drive, Files and downloaded
+  attachments on Android, any folder on Windows — and puts the file's courses,
+  tee and pin sets, rounds, holes, shots and events onto this device. It is the
+  other half of Export ([#69]): a new or wiped phone now gets its rounds back.
+
+  Restoring **replaces** what is on the device rather than merging with it, so
+  it asks first. The question shows what the file holds — when it was made, by
+  which Golfy, on what, and how many rounds, courses, events, holes and shots —
+  beside what the device holds now, and says plainly that it cannot be undone.
+  When the device has data, **Back up first** saves it with the ordinary export
+  before anything is replaced.
+
+  A file is checked whole before anything is touched: one that is not a Golfy
+  backup, was made by a newer Golfy, has been cut short or edited, or holds
+  rows that do not fit together is refused with the reason, and nothing on the
+  device changes. Every backup Golfy has ever written restores, from v0.4.0
+  on; files made before v0.7.0's tee-set and pin-set split are converted as
+  they are read, exactly as an upgraded database was. The replace itself is a
+  single transaction, so a restore that fails partway leaves the device as it
+  was, and every screen shows the restored data without a restart. A round
+  open in Hole Entry is closed by a restore, since its id may now belong to a
+  different round.
+
 ## [0.7.1] - 2026-10-18
 
 A release that fixes the course editor losing track of the sets you played
