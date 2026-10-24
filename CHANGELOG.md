@@ -8,6 +8,25 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-24
+
+A release that brings a backup back ([#70]). Since v0.4.0, **Settings → Back
+up your data** has written everything to one JSON file you keep wherever you
+like, but nothing could read that file again. Now **Settings → Restore from a
+backup** does: pick the file, see what it holds next to what the device holds,
+and confirm. A new or wiped phone gets its courses, rounds and events back,
+and every backup Golfy has made restores, including those from before v0.7.0's
+tee-set and pin-set split.
+
+A restore **replaces** what is on the device rather than merging with it, and
+it asks first, with a **Back up first** button whenever there is something to
+lose. A file that is damaged, edited, or from a newer Golfy is refused before
+anything changes, and the replace runs as one transaction, so a restore either
+finishes or leaves the device as it was.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. The
+release is a **minor**, for the `### Added` entry below.
+
 ### Added
 
 - **A backup can go back onto a device** ([#70]): **Settings → Restore from a
@@ -33,6 +52,15 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   was, and every screen shows the restored data without a restart. A round
   open in Hole Entry is closed by a restore, since its id may now belong to a
   different round.
+
+### Internal
+
+- **The drift version check compares `major.minor`, not exact versions**
+  ([#133]; merged up in [#134]). drift and drift_dev share a minor line but
+  ship patch releases separately — drift 2.35.2 has no drift_dev 2.35.2 — so
+  requiring the two to match exactly made a routine drift bump impossible to
+  get green. A split across minor lines still fails. Test-only; nothing in the
+  APK changes.
 
 ## [0.7.1] - 2026-10-18
 
@@ -999,7 +1027,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/aellington89/golfy/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/aellington89/golfy/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/aellington89/golfy/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/aellington89/golfy/compare/v0.5.0...v0.6.0
@@ -1069,3 +1098,5 @@ Phase 1 — data layer and navigation shell.
 [#129]: https://github.com/aellington89/golfy/pull/129
 [#130]: https://github.com/aellington89/golfy/pull/130
 [#131]: https://github.com/aellington89/golfy/pull/131
+[#133]: https://github.com/aellington89/golfy/pull/133
+[#134]: https://github.com/aellington89/golfy/pull/134
