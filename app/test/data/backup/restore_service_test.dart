@@ -162,7 +162,7 @@ void main() {
 
     test('a file starting with a byte-order mark is still read', () async {
       final restore =
-          service(FakeSource.text('﻿${golden('backup_v1_full.json')}'));
+          service(FakeSource.text('\uFEFF${golden('backup_v1_full.json')}'));
 
       expect(await restore.prepare(), isA<RestoreReady>());
     });

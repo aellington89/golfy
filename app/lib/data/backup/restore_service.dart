@@ -126,7 +126,7 @@ class RestoreService {
     }
     // A file re-saved by some Windows editors starts with a byte-order mark,
     // which JSON does not allow. It is not part of the data.
-    if (text.startsWith('﻿')) text = text.substring(1);
+    if (text.startsWith('\uFEFF')) text = text.substring(1);
 
     final BackupBundle bundle;
     try {
