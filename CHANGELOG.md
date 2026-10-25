@@ -8,6 +8,21 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+
+- **Golfy has its own icon and launch screen** ([#71]). The stock Flutter
+  icon is gone from the Android launcher and from the Windows taskbar, title
+  bar and Explorer. In its place is a flag-yellow pennant on a white pin in
+  the cup, with a ball on the green, under a blue sky. On Android 8 and later
+  it's an adaptive icon, so it takes whatever shape your launcher uses, and on
+  Android 13 and later it follows your **themed icons** colours when that
+  setting is on.
+
+  While Android starts the app, it now shows the same flag on a green circle,
+  on the background colour the app opens with, light or dark to match your
+  system setting. Before, it was plain white or black. Windows needs no launch
+  screen: its window appears once the app is ready, as before.
+
 ### Changed
 
 - **The score distribution names every result** ([#59]). The dashboard card
@@ -22,6 +37,17 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   par 4, Condor on a par 5. A note on the card says so. The percentages are
   each row's share of holes played, and the Ace row isn't added to that total,
   so the nine score rows still add up to 100%.
+
+### Internal
+
+- **The icon and splash are generated from source art, and tested** ([#71]).
+  The artwork is SVG under `app/branding/`. `flutter_launcher_icons` and
+  `flutter_native_splash`, both dev dependencies only, turn it into the
+  committed Android resources, and the multi-size Windows `.ico` is built
+  from the same SVG. `test/branding/` fails if a stock Flutter icon comes
+  back in any variant, or if the splash colours stop matching the theme's
+  surface colours. Nothing new runs in the app: no new runtime dependency,
+  permission or code path.
 
 ## [0.8.0] - 2026-10-24
 
@@ -1103,6 +1129,7 @@ Phase 1 — data layer and navigation shell.
 [#86]: https://github.com/aellington89/golfy/issues/86
 [#69]: https://github.com/aellington89/golfy/issues/69
 [#70]: https://github.com/aellington89/golfy/issues/70
+[#71]: https://github.com/aellington89/golfy/issues/71
 [#72]: https://github.com/aellington89/golfy/issues/72
 [#111]: https://github.com/aellington89/golfy/pull/111
 [#112]: https://github.com/aellington89/golfy/pull/112

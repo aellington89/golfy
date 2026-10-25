@@ -297,7 +297,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 867 passing tests
+flutter test                           # 885 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
@@ -326,6 +326,8 @@ golfy/
 │   │   ├── shell/       # AppShell + bottom-nav state
 │   │   ├── app.dart     # MaterialApp root
 │   │   └── main.dart    # entry point
+│   ├── branding/        # launcher icon + splash source art (SVG); the Android
+│   │                    #   and Windows icon resources are generated from it
 │   ├── tool/            # release version calculator (no app code)
 │   └── test/            # widget + DAO + schema-constraint tests
 ├── .github/

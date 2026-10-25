@@ -82,6 +82,11 @@ app/lib/
 ├── app.dart                       # MaterialApp + light/dark theme (ThemeMode.system)
 └── main.dart                      # runApp + ProviderScope
 
+app/branding/                      # icon + splash source art (SVG + PNG exports), build-time
+                                   #   only, not a Flutter asset; see Branding below (#71)
+app/flutter_launcher_icons.yaml    # launcher icon generator config
+app/flutter_native_splash.yaml     # splash generator config
+
 app/tool/                          # release tooling — not part of the app
 ├── release_rules.dart             # pure version rules (imports nothing)
 └── next_version.dart              # CLI: next version, and the CI tag guard
@@ -91,6 +96,8 @@ app/test/
 ├── migration_test.dart            # drift SchemaVerifier: every vN -> vN+1 step
 ├── widget_test.dart               # AppShell smoke test
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
+├── branding/                      # committed icon + splash resources: no stock Flutter
+│                                  #   icon, sizes/layers, splash colour = theme surface (#71)
 ├── data/backup/                  # format: codec (write), decode (read), guards,
 │   │                              #   golden files — the backup contract (#69)
 ├── data/upgrades/                # the frozen v7 -> v8 putt and v8 -> v9 yardage rules
@@ -196,12 +203,13 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (867 tests)
+flutter test                           # everything (885 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
 flutter test test/tool                 # release version rules (no database)
 flutter test test/data/backup          # backup format: codec, decode, guards, goldens
+flutter test test/branding             # launcher icon + splash resources (no database)
 ```
 
 The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
@@ -231,6 +239,42 @@ so the generated `toJson()` / `fromJson()` key by SQL column name
 (`game_title`, not `gameTitle`). Nothing but the backup file (#69) serializes
 rows, so that option *is* the backup's key naming — changing it changes a file
 format users already hold. See [Data backup](#data-backup-export).
+
+## Branding (launcher icon & splash)
+
+The launcher icon and the Android splash screen are **generated** from the
+source art in [`branding/`](branding), and the output is committed, like the
+drift code above (#71). [`branding/README.md`](branding/README.md) has the
+palette, the safe-zone geometry and the full regenerate procedure. In short,
+after editing an SVG and re-exporting its PNG:
+
+```powershell
+dart run flutter_launcher_icons          # Android mipmaps + adaptive / themed icon
+dart run flutter_native_splash:create    # Android splash, pre-12 and 12+, light + dark
+flutter test test/branding               # check the result
+```
+
+and rebuild `windows/runner/resources/app_icon.ico` as `branding/README.md`
+describes. `flutter_launcher_icons` would write only a single 256 px image
+there, so its Windows output is turned off.
+
+- **Don't hand-edit the generated resources**: `android/app/src/main/res/`
+  `mipmap-*`, `drawable*/` and `values*/styles.xml`, and `app_icon.ico`. The
+  next run overwrites them.
+- **The splash background is the theme's surface colour**, the colour the
+  first Flutter frame paints, so the launch screen hands over without a
+  change of colour. [`test/branding/splash_test.dart`](test/branding/splash_test.dart)
+  compares the config and the generated output with `golfyColorScheme(...)`
+  in [`lib/app.dart`](lib/app.dart). If you change the theme's seed colours,
+  it fails until you put the new surface colours into
+  `flutter_native_splash.yaml` and regenerate.
+- **Windows has no splash.** Its window stays hidden until Flutter draws the
+  first frame (`windows/runner/flutter_window.cpp`).
+- **Dependencies:** `flutter_launcher_icons` and `flutter_native_splash` are
+  dev dependencies that run only when you invoke them, so nothing is added to
+  the APK and there's no manifest change. `crypto` is a dev dependency for
+  the stock-icon hash check in
+  [`test/branding/launcher_icon_test.dart`](test/branding/launcher_icon_test.dart).
 
 ## Database migrations
 
