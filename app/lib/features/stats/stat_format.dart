@@ -37,10 +37,19 @@ String formatSignedAverage(double? value) {
 /// One row of the dashboard's score-distribution chart: a display label and the
 /// number of holes that fell in that category.
 class ScoreCategoryCount {
-  const ScoreCategoryCount({required this.label, required this.count});
+  const ScoreCategoryCount({
+    required this.label,
+    required this.count,
+    this.isAce = false,
+  });
 
   final String label;
   final int count;
+
+  /// True only for the Ace row. Aces are also counted in their par-relative
+  /// row, so this row is an overlay: it is excluded from the holes total that
+  /// percentages divide by, and the UI highlights it.
+  final bool isAce;
 
   @override
   bool operator ==(Object other) =>
@@ -48,46 +57,58 @@ class ScoreCategoryCount {
       other is ScoreCategoryCount &&
           runtimeType == other.runtimeType &&
           label == other.label &&
-          count == other.count;
+          count == other.count &&
+          isAce == other.isAce;
 
   @override
-  int get hashCode => Object.hash(label, count);
+  int get hashCode => Object.hash(label, count, isAce);
 
   @override
   String toString() => 'ScoreCategoryCount($label: $count)';
 }
 
-/// Folds the raw per-`(score - par)` buckets into the five fixed display
-/// categories — Eagles (`≤ -2`, including albatross), Birdies (`-1`), Pars
-/// (`0`), Bogeys (`+1`), Double+ (`≥ +2`) — always returning all five in
-/// display order, zero-filled.
+/// The par-relative rows in display order, as `score - par` → label. The ends
+/// are open: anything at or below the first key lands in Condor, and anything
+/// at or above the last lands in Quadruple+ bogey, so no bucket is dropped.
+const _parRelativeLabels = <int, String>{
+  -4: 'Condor',
+  -3: 'Albatross',
+  -2: 'Eagle',
+  -1: 'Birdie',
+  0: 'Par',
+  1: 'Bogey',
+  2: 'Double bogey',
+  3: 'Triple bogey',
+  4: 'Quadruple+ bogey',
+};
+
+/// Folds the raw per-`(score - par)` buckets into the fixed display rows,
+/// always returning all ten in display order, zero-filled:
+///
+/// * **Ace** — holes-in-one (`score == 1`), summed from [ScoreBucket.aces].
+/// * **Condor** (`≤ -4`), **Albatross** (`-3`), **Eagle** (`-2`), **Birdie**
+///   (`-1`), **Par** (`0`), **Bogey** (`+1`), **Double bogey** (`+2`),
+///   **Triple bogey** (`+3`), **Quadruple+ bogey** (`≥ +4`).
+///
+/// An ace is counted twice: in the Ace row *and* in the par-relative row it
+/// scores as (eagle on a par 3, albatross on a par 4, condor on a par 5). The
+/// nine par-relative rows therefore still sum to the number of holes; the Ace
+/// row is flagged [ScoreCategoryCount.isAce] so callers can leave it out of
+/// that total.
 List<ScoreCategoryCount> groupScoreDistribution(List<ScoreBucket> buckets) {
-  var eagles = 0;
-  var birdies = 0;
-  var pars = 0;
-  var bogeys = 0;
-  var doublePlus = 0;
+  final keys = _parRelativeLabels.keys;
+  final counts = {for (final k in keys) k: 0};
+  var aces = 0;
 
   for (final b in buckets) {
-    final diff = b.scoreVsPar;
-    if (diff <= -2) {
-      eagles += b.count;
-    } else if (diff == -1) {
-      birdies += b.count;
-    } else if (diff == 0) {
-      pars += b.count;
-    } else if (diff == 1) {
-      bogeys += b.count;
-    } else {
-      doublePlus += b.count;
-    }
+    final key = b.scoreVsPar.clamp(keys.first, keys.last);
+    counts[key] = counts[key]! + b.count;
+    aces += b.aces;
   }
 
   return [
-    ScoreCategoryCount(label: 'Eagles', count: eagles),
-    ScoreCategoryCount(label: 'Birdies', count: birdies),
-    ScoreCategoryCount(label: 'Pars', count: pars),
-    ScoreCategoryCount(label: 'Bogeys', count: bogeys),
-    ScoreCategoryCount(label: 'Double+', count: doublePlus),
+    ScoreCategoryCount(label: 'Ace', count: aces, isAce: true),
+    for (final e in _parRelativeLabels.entries)
+      ScoreCategoryCount(label: e.value, count: counts[e.key]!),
   ];
 }

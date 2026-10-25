@@ -59,6 +59,22 @@ void main() {
   });
 
   group('groupScoreDistribution', () {
+    const labels = [
+      'Ace',
+      'Condor',
+      'Albatross',
+      'Eagle',
+      'Birdie',
+      'Par',
+      'Bogey',
+      'Double bogey',
+      'Triple bogey',
+      'Quadruple+ bogey',
+    ];
+
+    int countOf(List<ScoreCategoryCount> rows, String label) =>
+        rows.singleWhere((c) => c.label == label).count;
+
     test('maps the central buckets to their categories, zero-filling', () {
       final result = groupScoreDistribution(const [
         ScoreBucket(scoreVsPar: -1, count: 6),
@@ -67,34 +83,75 @@ void main() {
       ]);
 
       expect(result, const [
-        ScoreCategoryCount(label: 'Eagles', count: 0),
-        ScoreCategoryCount(label: 'Birdies', count: 6),
-        ScoreCategoryCount(label: 'Pars', count: 26),
-        ScoreCategoryCount(label: 'Bogeys', count: 4),
-        ScoreCategoryCount(label: 'Double+', count: 0),
+        ScoreCategoryCount(label: 'Ace', count: 0, isAce: true),
+        ScoreCategoryCount(label: 'Condor', count: 0),
+        ScoreCategoryCount(label: 'Albatross', count: 0),
+        ScoreCategoryCount(label: 'Eagle', count: 0),
+        ScoreCategoryCount(label: 'Birdie', count: 6),
+        ScoreCategoryCount(label: 'Par', count: 26),
+        ScoreCategoryCount(label: 'Bogey', count: 4),
+        ScoreCategoryCount(label: 'Double bogey', count: 0),
+        ScoreCategoryCount(label: 'Triple bogey', count: 0),
+        ScoreCategoryCount(label: 'Quadruple+ bogey', count: 0),
       ]);
     });
 
-    test('folds albatross/eagle into Eagles and triple+ into Double+', () {
+    test('gives every score-to-par value from -4 to +3 its own row', () {
+      final result = groupScoreDistribution([
+        for (var d = -4; d <= 3; d++) ScoreBucket(scoreVsPar: d, count: d + 10),
+      ]);
+
+      expect(countOf(result, 'Condor'), 6);
+      expect(countOf(result, 'Albatross'), 7);
+      expect(countOf(result, 'Eagle'), 8);
+      expect(countOf(result, 'Birdie'), 9);
+      expect(countOf(result, 'Par'), 10);
+      expect(countOf(result, 'Bogey'), 11);
+      expect(countOf(result, 'Double bogey'), 12);
+      expect(countOf(result, 'Triple bogey'), 13);
+    });
+
+    test('Quadruple+ bogey absorbs +4 and worse; Condor absorbs -4 and better',
+        () {
       final result = groupScoreDistribution(const [
-        ScoreBucket(scoreVsPar: -3, count: 1), // albatross
-        ScoreBucket(scoreVsPar: -2, count: 2), // eagle
-        ScoreBucket(scoreVsPar: 2, count: 3), // double bogey
-        ScoreBucket(scoreVsPar: 4, count: 1), // quadruple bogey
+        ScoreBucket(scoreVsPar: -5, count: 1), // not possible today (par ≤ 5)
+        ScoreBucket(scoreVsPar: -4, count: 1),
+        ScoreBucket(scoreVsPar: 4, count: 2),
+        ScoreBucket(scoreVsPar: 5, count: 3),
+        ScoreBucket(scoreVsPar: 6, count: 4),
       ]);
 
-      expect(result.first, const ScoreCategoryCount(label: 'Eagles', count: 3));
-      expect(result.last, const ScoreCategoryCount(label: 'Double+', count: 4));
+      expect(countOf(result, 'Condor'), 2);
+      expect(countOf(result, 'Triple bogey'), 0);
+      expect(countOf(result, 'Quadruple+ bogey'), 9);
     });
 
-    test('empty input yields all five categories at zero', () {
+    test('aces are summed across buckets and also stay in their own row', () {
+      final result = groupScoreDistribution(const [
+        ScoreBucket(scoreVsPar: -4, count: 1, aces: 1), // ace on a par 5
+        ScoreBucket(scoreVsPar: -3, count: 2, aces: 1), // ace on a par 4
+        ScoreBucket(scoreVsPar: -2, count: 3, aces: 1), // ace on a par 3
+        ScoreBucket(scoreVsPar: 0, count: 10),
+      ]);
+
+      expect(result.first,
+          const ScoreCategoryCount(label: 'Ace', count: 3, isAce: true));
+      expect(countOf(result, 'Condor'), 1);
+      expect(countOf(result, 'Albatross'), 2);
+      expect(countOf(result, 'Eagle'), 3);
+      // The par-relative rows still add up to the number of holes.
+      final holes = result
+          .where((c) => !c.isAce)
+          .fold<int>(0, (s, c) => s + c.count);
+      expect(holes, 16);
+    });
+
+    test('empty input yields all ten categories at zero, only Ace flagged', () {
       final result = groupScoreDistribution(const []);
 
-      expect(result.map((c) => c.count), [0, 0, 0, 0, 0]);
-      expect(
-        result.map((c) => c.label),
-        ['Eagles', 'Birdies', 'Pars', 'Bogeys', 'Double+'],
-      );
+      expect(result.map((c) => c.label), labels);
+      expect(result.map((c) => c.count), List.filled(10, 0));
+      expect(result.where((c) => c.isAce).map((c) => c.label), ['Ace']);
     });
   });
 }

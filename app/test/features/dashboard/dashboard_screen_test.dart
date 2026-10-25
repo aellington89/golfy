@@ -108,17 +108,25 @@ void main() {
     expect(textOfKey(tester, 'stat_putts'), '2.0');
     expect(textOfKey(tester, 'stat_updown_pct'), '—'); // no attempts
 
-    // Score distribution — raw counts plus each category's share of all 4 holes.
-    expect(textOfKey(tester, 'dist_eagles'), '0');
-    expect(textOfKey(tester, 'dist_birdies'), '1');
-    expect(textOfKey(tester, 'dist_pars'), '2');
-    expect(textOfKey(tester, 'dist_bogeys'), '1');
-    expect(textOfKey(tester, 'dist_double_plus'), '0');
-    expect(textOfKey(tester, 'dist_eagles_pct'), '0.0%');
-    expect(textOfKey(tester, 'dist_birdies_pct'), '25.0%'); // 1 of 4
-    expect(textOfKey(tester, 'dist_pars_pct'), '50.0%'); // 2 of 4
-    expect(textOfKey(tester, 'dist_bogeys_pct'), '25.0%'); // 1 of 4
-    expect(textOfKey(tester, 'dist_double_plus_pct'), '0.0%');
+    // Score distribution — raw counts plus each category's share of all 4
+    // holes. Every one of the ten rows renders, zero-filled.
+    const expected = {
+      'dist_ace': ('0', '0.0%'),
+      'dist_condor': ('0', '0.0%'),
+      'dist_albatross': ('0', '0.0%'),
+      'dist_eagle': ('0', '0.0%'),
+      'dist_birdie': ('1', '25.0%'), // 1 of 4
+      'dist_par': ('2', '50.0%'), // 2 of 4
+      'dist_bogey': ('1', '25.0%'), // 1 of 4
+      'dist_double_bogey': ('0', '0.0%'),
+      'dist_triple_bogey': ('0', '0.0%'),
+      'dist_quadruple_plus': ('0', '0.0%'),
+    };
+    for (final MapEntry(key: key, value: (count, pct)) in expected.entries) {
+      expect(textOfKey(tester, key), count, reason: key);
+      expect(textOfKey(tester, '${key}_pct'), pct, reason: '${key}_pct');
+    }
+    expect(find.byKey(const ValueKey('dist_ace_note')), findsOneWidget);
   });
 
   testWidgets('a par-3-only round shows — for fairway %', (tester) async {
@@ -136,11 +144,15 @@ void main() {
     expect(textOfKey(tester, 'stat_fairway_pct'), '—');
   });
 
-  testWidgets('score distribution folds eagles and double-plus', (tester) async {
+  testWidgets('score distribution splits double, triple and quadruple+ bogeys',
+      (tester) async {
     final rid = await seedRound();
     await fx.upsertHole(rid, 1, par: 5, score: 3); // eagle (-2)
     await fx.upsertHole(rid, 2, par: 4, score: 6); // double bogey (+2)
-    await fx.upsertHole(rid, 3, par: 4, score: 8); // (+4)
+    await fx.upsertHole(rid, 3, par: 4, score: 7); // triple bogey (+3)
+    await fx.upsertHole(rid, 4, par: 4, score: 8); // quadruple bogey (+4)
+    await fx.upsertHole(rid, 5, par: 4, score: 10); // (+6) → Quadruple+
+    await fx.upsertHole(rid, 6, par: 4, score: 4); // par
 
     final container = makeContainer();
     addTearDown(container.dispose);
@@ -149,11 +161,63 @@ void main() {
     await tester.pumpWidget(wrap(container));
     await settle(tester);
 
-    expect(textOfKey(tester, 'dist_eagles'), '1');
-    expect(textOfKey(tester, 'dist_double_plus'), '2');
-    // Shares of all 3 holes — also exercises one-decimal rounding.
-    expect(textOfKey(tester, 'dist_eagles_pct'), '33.3%'); // 1 of 3
-    expect(textOfKey(tester, 'dist_double_plus_pct'), '66.7%'); // 2 of 3
+    expect(textOfKey(tester, 'dist_eagle'), '1');
+    expect(textOfKey(tester, 'dist_double_bogey'), '1');
+    expect(textOfKey(tester, 'dist_triple_bogey'), '1');
+    expect(textOfKey(tester, 'dist_quadruple_plus'), '2');
+    // Shares of all 6 holes — also exercises one-decimal rounding.
+    expect(textOfKey(tester, 'dist_eagle_pct'), '16.7%'); // 1 of 6
+    expect(textOfKey(tester, 'dist_quadruple_plus_pct'), '33.3%'); // 2 of 6
+  });
+
+  testWidgets('an ace counts in its own row and in its par-relative row',
+      (tester) async {
+    final rid = await seedRound();
+    await fx.upsertHole(rid, 1,
+        par: 3, score: 1, putts: 0, fairwayHit: null); // ace + eagle
+    await fx.upsertHole(rid, 2, par: 5, score: 1, putts: 0); // ace + condor
+    await fx.upsertHole(rid, 3, par: 4, score: 8); // quadruple bogey
+    await fx.upsertHole(rid, 4, par: 4, score: 4); // par
+
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    resizeTall(tester);
+    await tester.pumpWidget(wrap(container));
+    await settle(tester);
+
+    expect(textOfKey(tester, 'dist_ace'), '2');
+    expect(textOfKey(tester, 'dist_eagle'), '1');
+    expect(textOfKey(tester, 'dist_condor'), '1');
+    expect(textOfKey(tester, 'dist_albatross'), '0');
+    expect(textOfKey(tester, 'dist_quadruple_plus'), '1');
+    // Percentages divide by the 4 holes played, not the 6 row entries: the
+    // Ace row overlays the others rather than adding to the total.
+    expect(textOfKey(tester, 'dist_ace_pct'), '50.0%'); // 2 of 4
+    expect(textOfKey(tester, 'dist_eagle_pct'), '25.0%'); // 1 of 4
+    expect(textOfKey(tester, 'dist_par_pct'), '25.0%'); // 1 of 4
+    expect(find.byKey(const ValueKey('dist_ace_note')), findsOneWidget);
+  });
+
+  testWidgets('distribution rows fit a phone-width screen without overflow',
+      (tester) async {
+    final rid = await seedRound();
+    await fx.upsertHole(rid, 1, par: 4, score: 8); // fills Quadruple+ bogey
+
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    // 360 dp — a small Android phone. A RenderFlex overflow from the
+    // widened label column would fail the test.
+    tester.view.physicalSize = const Size(360, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(wrap(container));
+    await settle(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Quadruple+ bogey'), findsOneWidget);
+    expect(textOfKey(tester, 'dist_quadruple_plus_pct'), '100.0%');
   });
 
   testWidgets('best round vs par carries its sign', (tester) async {

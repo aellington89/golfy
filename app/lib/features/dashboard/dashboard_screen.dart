@@ -224,32 +224,55 @@ class _ScoreDistributionSection extends StatelessWidget {
   final DashboardStats stats;
 
   static const _countKeys = <String, String>{
-    'Eagles': 'dist_eagles',
-    'Birdies': 'dist_birdies',
-    'Pars': 'dist_pars',
-    'Bogeys': 'dist_bogeys',
-    'Double+': 'dist_double_plus',
+    'Ace': 'dist_ace',
+    'Condor': 'dist_condor',
+    'Albatross': 'dist_albatross',
+    'Eagle': 'dist_eagle',
+    'Birdie': 'dist_birdie',
+    'Par': 'dist_par',
+    'Bogey': 'dist_bogey',
+    'Double bogey': 'dist_double_bogey',
+    'Triple bogey': 'dist_triple_bogey',
+    'Quadruple+ bogey': 'dist_quadruple_plus',
   };
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final categories = groupScoreDistribution(stats.scoreDistribution);
+    // The bar scale spans every row, Ace included, so no bar can exceed its
+    // track. The percentage total skips the Ace row: aces are already counted
+    // in their eagle / albatross / condor row, so the rest sums to the holes
+    // played and their shares add up to 100%.
     final maxCount =
         categories.fold<int>(0, (m, c) => c.count > m ? c.count : m);
-    final total = categories.fold<int>(0, (s, c) => s + c.count);
+    final total = categories
+        .where((c) => !c.isAce)
+        .fold<int>(0, (s, c) => s + c.count);
 
     return _StatSection(
       title: 'Score distribution',
       children: [
-        for (final c in categories)
+        for (final c in categories) ...[
           _DistributionBar(
             label: c.label,
             count: c.count,
             total: total,
             maxCount: maxCount,
+            barColor: c.isAce ? theme.colorScheme.tertiary : null,
             countKey: ValueKey(_countKeys[c.label]!),
             percentKey: ValueKey('${_countKeys[c.label]!}_pct'),
           ),
+          if (c.isAce) const Divider(height: 12),
+        ],
+        const SizedBox(height: 4),
+        Text(
+          'Aces also count in their Eagle, Albatross or Condor row.',
+          key: const ValueKey('dist_ace_note'),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
@@ -261,6 +284,7 @@ class _ScoreDistributionSection extends StatelessWidget {
 /// ([count] / [total]) shown prominently above the raw [count]. The bar fill and
 /// the percentage use different denominators on purpose — the bar reads
 /// relatively (against the tallest category), the percentage absolutely.
+/// [barColor] overrides the fill (the theme's primary) for a highlighted row.
 class _DistributionBar extends StatelessWidget {
   const _DistributionBar({
     required this.label,
@@ -269,6 +293,7 @@ class _DistributionBar extends StatelessWidget {
     required this.maxCount,
     required this.countKey,
     required this.percentKey,
+    this.barColor,
   });
 
   final String label;
@@ -277,6 +302,7 @@ class _DistributionBar extends StatelessWidget {
   final int maxCount;
   final Key countKey;
   final Key percentKey;
+  final Color? barColor;
 
   @override
   Widget build(BuildContext context) {
@@ -287,9 +313,15 @@ class _DistributionBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
+          // Wide enough for the longest label, "Quadruple+ bogey".
           SizedBox(
-            width: 84,
-            child: Text(label, style: theme.textTheme.bodyMedium),
+            width: 120,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium,
+            ),
           ),
           Expanded(
             child: ClipRRect(
@@ -300,7 +332,9 @@ class _DistributionBar extends StatelessWidget {
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
                   widthFactor: fraction,
-                  child: ColoredBox(color: theme.colorScheme.primary),
+                  child: ColoredBox(
+                    color: barColor ?? theme.colorScheme.primary,
+                  ),
                 ),
               ),
             ),
