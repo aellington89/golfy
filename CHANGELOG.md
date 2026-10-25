@@ -8,6 +8,21 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Changed
+
+- **The score distribution names every result** ([#59]). The dashboard card
+  used to fold anything at two under or better into **Eagles** and anything
+  at two over or worse into **Double+**. It now has a row each for **Condor**
+  (-4), **Albatross** (-3), **Eagle**, **Birdie**, **Par**, **Bogey**,
+  **Double bogey**, **Triple bogey** and **Quadruple+ bogey** (+4 or worse),
+  always in that order and shown at zero when empty.
+
+  An **Ace** row sits above them, highlighted, counting holes-in-one. An ace is
+  also counted in the row its score falls in: Eagle on a par 3, Albatross on a
+  par 4, Condor on a par 5. A note on the card says so. The percentages are
+  each row's share of holes played, and the Ace row isn't added to that total,
+  so the nine score rows still add up to 100%.
+
 ## [0.8.0] - 2026-10-24
 
 A release that brings a backup back ([#70]). Since v0.4.0, **Settings → Back
@@ -1081,6 +1096,7 @@ Phase 1 — data layer and navigation shell.
 [#55]: https://github.com/aellington89/golfy/issues/55
 [#47]: https://github.com/aellington89/golfy/issues/47
 [#56]: https://github.com/aellington89/golfy/issues/56
+[#59]: https://github.com/aellington89/golfy/issues/59
 [#63]: https://github.com/aellington89/golfy/issues/63
 [#81]: https://github.com/aellington89/golfy/issues/81
 [#79]: https://github.com/aellington89/golfy/issues/79
