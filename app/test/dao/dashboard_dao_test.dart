@@ -316,6 +316,29 @@ void main() {
         const ScoreBucket(scoreVsPar: 3, count: 1),
       ]);
     });
+
+    test('counts holes-in-one (score = 1) inside the bucket they land in',
+        () async {
+      final cid = await fx.insertCourse();
+      final rid = await fx.insertRound(cid);
+      // An ace on each par, plus a non-ace eagle and albatross so the -2 and
+      // -3 buckets each hold one ace and one ordinary score.
+      await fx.upsertHole(rid, 1,
+          par: 3, score: 1, putts: 0, fairwayHit: null); // ace, -2
+      await fx.upsertHole(rid, 2, par: 4, score: 1, putts: 0); // ace, -3
+      await fx.upsertHole(rid, 3, par: 5, score: 1, putts: 0); // ace, -4
+      await fx.upsertHole(rid, 4, par: 5, score: 3, putts: 1); // eagle, -2
+      await fx.upsertHole(rid, 5, par: 5, score: 2, putts: 0); // albatross, -3
+      await fx.upsertHole(rid, 6, par: 4, score: 4); // par, no ace
+
+      final stats = await db.dashboardDao.watchStats().first;
+      expect(stats.scoreDistribution, [
+        const ScoreBucket(scoreVsPar: -4, count: 1, aces: 1),
+        const ScoreBucket(scoreVsPar: -3, count: 2, aces: 1),
+        const ScoreBucket(scoreVsPar: -2, count: 2, aces: 1),
+        const ScoreBucket(scoreVsPar: 0, count: 1),
+      ]);
+    });
   });
 
   group('DashboardDao.watchStats — best round', () {

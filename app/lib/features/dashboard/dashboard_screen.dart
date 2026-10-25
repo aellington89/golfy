@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -224,34 +226,106 @@ class _ScoreDistributionSection extends StatelessWidget {
   final DashboardStats stats;
 
   static const _countKeys = <String, String>{
-    'Eagles': 'dist_eagles',
-    'Birdies': 'dist_birdies',
-    'Pars': 'dist_pars',
-    'Bogeys': 'dist_bogeys',
-    'Double+': 'dist_double_plus',
+    'Ace': 'dist_ace',
+    'Condor': 'dist_condor',
+    'Albatross': 'dist_albatross',
+    'Eagle': 'dist_eagle',
+    'Birdie': 'dist_birdie',
+    'Par': 'dist_par',
+    'Bogey': 'dist_bogey',
+    'Double bogey': 'dist_double_bogey',
+    'Triple bogey': 'dist_triple_bogey',
+    'Quadruple+ bogey': 'dist_quadruple_plus',
   };
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final categories = groupScoreDistribution(stats.scoreDistribution);
+    // The bar scale spans every row, Ace included, so no bar can exceed its
+    // track. The percentage total skips the Ace row: aces are already counted
+    // in their eagle / albatross / condor row, so the rest sums to the holes
+    // played and their shares add up to 100%.
     final maxCount =
         categories.fold<int>(0, (m, c) => c.count > m ? c.count : m);
-    final total = categories.fold<int>(0, (s, c) => s + c.count);
+    final total = categories
+        .where((c) => !c.isAce)
+        .fold<int>(0, (s, c) => s + c.count);
+    final measuredLabelWidth = _widestLabel(
+      context,
+      [for (final c in categories) c.label],
+      theme.textTheme.bodyMedium,
+    );
 
     return _StatSection(
       title: 'Score distribution',
       children: [
-        for (final c in categories)
-          _DistributionBar(
-            label: c.label,
-            count: c.count,
-            total: total,
-            maxCount: maxCount,
-            countKey: ValueKey(_countKeys[c.label]!),
-            percentKey: ValueKey('${_countKeys[c.label]!}_pct'),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Every row shares one label width: the widest label as rendered
+            // in this platform's font and text scale, so none is cut off. It
+            // is capped so a narrow phone at a large text size still leaves
+            // the bars room; past the cap a label ellipsises.
+            final labelWidth = math.min(
+              measuredLabelWidth,
+              constraints.maxWidth * _maxLabelShare,
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final c in categories) ...[
+                  _DistributionBar(
+                    label: c.label,
+                    labelWidth: labelWidth,
+                    count: c.count,
+                    total: total,
+                    maxCount: maxCount,
+                    barColor: c.isAce ? theme.colorScheme.tertiary : null,
+                    countKey: ValueKey(_countKeys[c.label]!),
+                    percentKey: ValueKey('${_countKeys[c.label]!}_pct'),
+                  ),
+                  if (c.isAce) const Divider(height: 12),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  'Aces also count in their Eagle, Albatross or Condor row.',
+                  key: const ValueKey('dist_ace_note'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ],
     );
+  }
+
+  /// The most of a row's width the label column may take.
+  static const _maxLabelShare = 0.45;
+
+  /// The width of the widest of [labels] laid out in [style] at the ambient
+  /// text scale, plus a small gap before the bar.
+  static double _widestLabel(
+    BuildContext context,
+    List<String> labels,
+    TextStyle? style,
+  ) {
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    );
+    var widest = 0.0;
+    for (final label in labels) {
+      painter
+        ..text = TextSpan(text: label, style: style)
+        ..layout();
+      widest = math.max(widest, painter.width);
+    }
+    painter.dispose();
+    return widest.ceilToDouble() + 8;
   }
 }
 
@@ -261,22 +335,28 @@ class _ScoreDistributionSection extends StatelessWidget {
 /// ([count] / [total]) shown prominently above the raw [count]. The bar fill and
 /// the percentage use different denominators on purpose — the bar reads
 /// relatively (against the tallest category), the percentage absolutely.
+/// [barColor] overrides the fill (the theme's primary) for a highlighted row.
+/// [labelWidth] is shared by every row so the bars line up.
 class _DistributionBar extends StatelessWidget {
   const _DistributionBar({
     required this.label,
+    required this.labelWidth,
     required this.count,
     required this.total,
     required this.maxCount,
     required this.countKey,
     required this.percentKey,
+    this.barColor,
   });
 
   final String label;
+  final double labelWidth;
   final int count;
   final int total;
   final int maxCount;
   final Key countKey;
   final Key percentKey;
+  final Color? barColor;
 
   @override
   Widget build(BuildContext context) {
@@ -288,8 +368,13 @@ class _DistributionBar extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 84,
-            child: Text(label, style: theme.textTheme.bodyMedium),
+            width: labelWidth,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium,
+            ),
           ),
           Expanded(
             child: ClipRRect(
@@ -300,7 +385,9 @@ class _DistributionBar extends StatelessWidget {
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
                   widthFactor: fraction,
-                  child: ColoredBox(color: theme.colorScheme.primary),
+                  child: ColoredBox(
+                    color: barColor ?? theme.colorScheme.primary,
+                  ),
                 ),
               ),
             ),
