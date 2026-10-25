@@ -39,7 +39,9 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // Default launcher label; the debug build type overrides it below.
-        manifestPlaceholders["appLabel"] = "golfy_app"
+        // Only the label is "Golfy": applicationId and namespace stay
+        // com.golfy.golfy_app, since changing them would orphan installed data (#138).
+        manifestPlaceholders["appLabel"] = "Golfy"
     }
 
     signingConfigs {
@@ -72,7 +74,7 @@ android {
             // build can coexist with a real release install on one device (#23).
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            manifestPlaceholders["appLabel"] = "golfy_app (debug)"
+            manifestPlaceholders["appLabel"] = "Golfy (debug)"
         }
     }
 }

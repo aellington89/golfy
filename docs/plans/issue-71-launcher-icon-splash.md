@@ -258,7 +258,8 @@ All work is on `test`, one PR `test → master` with labels `ui`, `enhancement`,
 Steps 1–5 landed as five commits on `test`. The open questions went to their recommendations:
 - Q1: the flag-in-cup motif, approved at the step-1 preview.
 - Q2: the artwork drawn here.
-- Q3 and Q4: the `golfy_app` label and a debug-build icon left for follow-ups.
+- Q3: the `golfy_app` label and window title became their own issue, [#138](https://github.com/aellington89/golfy/issues/138), done right after this one.
+- Q4: a separate debug-build icon left for a follow-up.
 - Q5: the stock-hash guard test kept.
 
 Departures:

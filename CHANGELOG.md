@@ -25,6 +25,14 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ### Changed
 
+- **The app is called Golfy everywhere you see its name** ([#138]). The
+  Android launcher showed `golfy_app` under the icon (`golfy_app (debug)` for
+  a debug build). On Windows, the same name was in the window title, the
+  taskbar and the file description. All of them now say **Golfy**, or
+  **Golfy (debug)**. It's the same app underneath: the Android package name
+  is unchanged, so an update installs over the existing app and keeps all
+  your rounds.
+
 - **The score distribution names every result** ([#59]). The dashboard card
   used to fold anything at two under or better into **Eagles** and anything
   at two over or worse into **Double+**. It now has a row each for **Condor**
@@ -1143,3 +1151,4 @@ Phase 1 — data layer and navigation shell.
 [#131]: https://github.com/aellington89/golfy/pull/131
 [#133]: https://github.com/aellington89/golfy/pull/133
 [#134]: https://github.com/aellington89/golfy/pull/134
+[#138]: https://github.com/aellington89/golfy/issues/138
