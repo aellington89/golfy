@@ -8,6 +8,25 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-24
+
+A release that makes Golfy look like itself. The stock Flutter icon is gone
+from the Android launcher and from the Windows taskbar, title bar and Explorer
+([#71]). In its place is Golfy's own flag-on-the-green, which takes your
+launcher's shape and follows themed icons on Android. Android also shows the
+flag while the app starts, on the light or dark background it opens with,
+instead of a plain white or black screen. Wherever the app's name shows, it
+now reads **Golfy**, not `golfy_app` ([#138]). The package name hasn't
+changed, so the update installs over the existing app and keeps every round.
+
+The dashboard's score distribution also stops folding results together
+([#59]). Instead of **Eagles** and **Double+** catch-alls, every score from
+**Condor** to **Quadruple+ bogey** has its own row, and an **Ace** row counts
+holes-in-one.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. The
+release is a **minor**, for the `### Added` and `### Changed` entries below.
+
 ### Added
 
 - **Golfy has its own icon and launch screen** ([#71]). The stock Flutter
@@ -1076,7 +1095,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/aellington89/golfy/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/aellington89/golfy/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/aellington89/golfy/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/aellington89/golfy/compare/v0.6.0...v0.7.0

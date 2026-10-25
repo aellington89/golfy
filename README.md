@@ -25,15 +25,24 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.8.0
+## Status — v0.9.0
 
-**v0.8.0** is the latest release, and it lets a backup back onto a device.
-**Settings → Restore from a backup** picks a backup file, shows what it holds
-next to what the device holds now, and on your say-so puts its courses, tee and
-pin sets, rounds, holes, shots and events in place of the device's own — with a
-**Back up first** button when there is anything to lose. A damaged, edited or
-newer-than-the-app file is refused before anything changes, and every backup
-Golfy has written restores, from v0.4.0 on. The schema stays at v9.
+**v0.9.0** is the latest release, and it gives Golfy its own face. The stock
+Flutter icon is replaced on Android and Windows by a flag on the green, adaptive
+on Android 8+ and themed-icon aware on Android 13+, and Android shows that flag
+on a light or dark launch screen while the app starts. The launcher and the
+Windows title bar now say **Golfy** rather than `golfy_app`; the package name is
+unchanged, so the update installs over the old app. The dashboard's score
+distribution gives every result from **Condor** to **Quadruple+ bogey** its own
+row, plus an **Ace** row for holes-in-one. The schema stays at v9.
+
+**v0.8.0** let a backup back onto a device. **Settings → Restore from a
+backup** picks a backup file, shows what it holds next to what the device holds
+now, and on your say-so puts its courses, tee and pin sets, rounds, holes,
+shots and events in place of the device's own — with a **Back up first** button
+when there is anything to lose. A damaged, edited or newer-than-the-app file is
+refused before anything changes, and every backup Golfy has written restores,
+from v0.4.0 on.
 
 **v0.7.1** fixed the course editor opening on the wrong sets: it now starts on
 the tee set and pin set of the round you last played on that course, so yards
