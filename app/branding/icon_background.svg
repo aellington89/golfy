@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Golfy adaptive-icon BACKGROUND layer: sky over two rolling fairways.
+  Full bleed on the 108dp adaptive canvas (1024 = 108dp). Launchers crop and
+  mask this freely, so nothing important lives here. See README.md.
+
+  Each fairway's curve runs from x = 171 to x = 853, the 72dp a launcher
+  actually shows; outside that it's a straight run to the edge of the bleed.
+  icon.svg reuses exactly those curves.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1024">
+      <stop offset="0" stop-color="#1E88E5"/>
+      <stop offset="1" stop-color="#1565C0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#sky)"/>
+  <!-- Far fairway: lighter, as distance washes it out. -->
+  <path d="M0,550 L171,540 C330,490 450,520 560,555 C680,592 780,560 853,538 L1024,528 L1024,1024 L0,1024 Z" fill="#43A047"/>
+  <!-- Near fairway: the brand fairway green. -->
+  <path d="M0,650 L171,640 C320,610 460,628 600,660 C720,688 800,665 853,652 L1024,645 L1024,1024 L0,1024 Z" fill="#2E7D32"/>
+</svg>
