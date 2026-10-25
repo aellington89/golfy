@@ -61,8 +61,13 @@ class DashboardDao extends DatabaseAccessor<GolfyDatabase>
     LIMIT 1
   ''';
 
+  /// One row per `score - par` value. `aces` counts the holes-in-one
+  /// (`score = 1`) inside each bucket, so an ace stays attributable to the
+  /// eagle / albatross / condor bucket it also belongs to (#59).
   static const _scoreDistSql = '''
-    SELECT (score - par) AS bucket, COUNT(*) AS c
+    SELECT (score - par) AS bucket,
+           COUNT(*) AS c,
+           SUM(CASE WHEN score = 1 THEN 1 ELSE 0 END) AS aces
     FROM hole_results
     GROUP BY bucket
     ORDER BY bucket
@@ -131,6 +136,7 @@ class DashboardDao extends DatabaseAccessor<GolfyDatabase>
         .map((r) => ScoreBucket(
               scoreVsPar: r.read<int>('bucket'),
               count: r.read<int>('c'),
+              aces: r.read<int>('aces'),
             ))
         .toList(growable: false);
     final bestRound = bestRoundRows.isEmpty
