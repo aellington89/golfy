@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -249,32 +251,81 @@ class _ScoreDistributionSection extends StatelessWidget {
     final total = categories
         .where((c) => !c.isAce)
         .fold<int>(0, (s, c) => s + c.count);
+    final measuredLabelWidth = _widestLabel(
+      context,
+      [for (final c in categories) c.label],
+      theme.textTheme.bodyMedium,
+    );
 
     return _StatSection(
       title: 'Score distribution',
       children: [
-        for (final c in categories) ...[
-          _DistributionBar(
-            label: c.label,
-            count: c.count,
-            total: total,
-            maxCount: maxCount,
-            barColor: c.isAce ? theme.colorScheme.tertiary : null,
-            countKey: ValueKey(_countKeys[c.label]!),
-            percentKey: ValueKey('${_countKeys[c.label]!}_pct'),
-          ),
-          if (c.isAce) const Divider(height: 12),
-        ],
-        const SizedBox(height: 4),
-        Text(
-          'Aces also count in their Eagle, Albatross or Condor row.',
-          key: const ValueKey('dist_ace_note'),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Every row shares one label width: the widest label as rendered
+            // in this platform's font and text scale, so none is cut off. It
+            // is capped so a narrow phone at a large text size still leaves
+            // the bars room; past the cap a label ellipsises.
+            final labelWidth = math.min(
+              measuredLabelWidth,
+              constraints.maxWidth * _maxLabelShare,
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final c in categories) ...[
+                  _DistributionBar(
+                    label: c.label,
+                    labelWidth: labelWidth,
+                    count: c.count,
+                    total: total,
+                    maxCount: maxCount,
+                    barColor: c.isAce ? theme.colorScheme.tertiary : null,
+                    countKey: ValueKey(_countKeys[c.label]!),
+                    percentKey: ValueKey('${_countKeys[c.label]!}_pct'),
+                  ),
+                  if (c.isAce) const Divider(height: 12),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  'Aces also count in their Eagle, Albatross or Condor row.',
+                  key: const ValueKey('dist_ace_note'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
+  }
+
+  /// The most of a row's width the label column may take.
+  static const _maxLabelShare = 0.45;
+
+  /// The width of the widest of [labels] laid out in [style] at the ambient
+  /// text scale, plus a small gap before the bar.
+  static double _widestLabel(
+    BuildContext context,
+    List<String> labels,
+    TextStyle? style,
+  ) {
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    );
+    var widest = 0.0;
+    for (final label in labels) {
+      painter
+        ..text = TextSpan(text: label, style: style)
+        ..layout();
+      widest = math.max(widest, painter.width);
+    }
+    painter.dispose();
+    return widest.ceilToDouble() + 8;
   }
 }
 
@@ -285,9 +336,11 @@ class _ScoreDistributionSection extends StatelessWidget {
 /// the percentage use different denominators on purpose — the bar reads
 /// relatively (against the tallest category), the percentage absolutely.
 /// [barColor] overrides the fill (the theme's primary) for a highlighted row.
+/// [labelWidth] is shared by every row so the bars line up.
 class _DistributionBar extends StatelessWidget {
   const _DistributionBar({
     required this.label,
+    required this.labelWidth,
     required this.count,
     required this.total,
     required this.maxCount,
@@ -297,6 +350,7 @@ class _DistributionBar extends StatelessWidget {
   });
 
   final String label;
+  final double labelWidth;
   final int count;
   final int total;
   final int maxCount;
@@ -313,9 +367,8 @@ class _DistributionBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          // Wide enough for the longest label, "Quadruple+ bogey".
           SizedBox(
-            width: 120,
+            width: labelWidth,
             child: Text(
               label,
               maxLines: 1,

@@ -237,4 +237,7 @@ Departures, all small:
 - **Steps 2 and 3 are one commit.** On its own, step 2's relabelling would have made the dashboard crash on `_countKeys[c.label]!` until step 3 landed, so the two go together to keep every commit runnable.
 - **The par-relative rows come from a const `score - par → label` map** (`_parRelativeLabels` in `stat_format.dart`), and each bucket is clamped to its first and last keys. This replaces a nine-arm if/else. It keeps both ends open (Condor at -4 or better, Quadruple+ at +4 or worse) as designed.
 - **There is no "every label has a key" unit test.** `_countKeys` is private, so the widget test that renders all ten rows is the guard.
-- **Added a phone-width widget test** (360 dp, no overflow, "Quadruple+ bogey" visible). It stands in for the manual narrow-window check of the 120 px label column.
+- **The label column is measured, not fixed at 120 px.** The Windows smoke test showed "Quadruple+ bog…" cut off: Segoe UI is wider than the widget-test font and Roboto, so 120 px wasn't enough. The label column is now the widest label as `TextPainter` lays it out in the ambient font and text scale, plus an 8 px gap, so every row shares one width. It is capped at 45% of the row, so a narrow phone at a large text size still leaves the bars room. Past the cap, a label ellipsises.
+- **Two layout widget tests replace the planned manual narrow-window check.**
+  - At desktop width, no label's `RenderParagraph` exceeds its line. This test fails against the old 120 px column.
+  - At 360 dp and 2× text size, nothing overflows.

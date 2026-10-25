@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -199,7 +200,38 @@ void main() {
     expect(find.byKey(const ValueKey('dist_ace_note')), findsOneWidget);
   });
 
-  testWidgets('distribution rows fit a phone-width screen without overflow',
+  testWidgets('no distribution label is cut off when the card has room',
+      (tester) async {
+    final rid = await seedRound();
+    await fx.upsertHole(rid, 1, par: 4, score: 4);
+
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    resizeTall(tester);
+    await tester.pumpWidget(wrap(container));
+    await settle(tester);
+
+    // The label column is sized to the widest label, so even the longest
+    // one lays out on one line without its ellipsis.
+    for (final label in const [
+      'Ace',
+      'Condor',
+      'Albatross',
+      'Eagle',
+      'Birdie',
+      'Par',
+      'Bogey',
+      'Double bogey',
+      'Triple bogey',
+      'Quadruple+ bogey',
+    ]) {
+      final paragraph = tester.renderObject<RenderParagraph>(find.text(label));
+      expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+    }
+  });
+
+  testWidgets('distribution rows fit a phone at a large text size',
       (tester) async {
     final rid = await seedRound();
     await fx.upsertHole(rid, 1, par: 4, score: 8); // fills Quadruple+ bogey
@@ -207,11 +239,14 @@ void main() {
     final container = makeContainer();
     addTearDown(container.dispose);
 
-    // 360 dp — a small Android phone. A RenderFlex overflow from the
-    // widened label column would fail the test.
-    tester.view.physicalSize = const Size(360, 2600);
+    // 360 dp — a small Android phone — at double text size. The label column
+    // is capped there, so the bars keep their room and nothing overflows (a
+    // RenderFlex overflow would fail the test).
+    tester.view.physicalSize = const Size(360, 4000);
     tester.view.devicePixelRatio = 1.0;
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
     addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(wrap(container));
     await settle(tester);
 
