@@ -12,10 +12,14 @@ committed.
 | `icon_background.svg` / `.png` | Adaptive-icon background layer: sky over two fairways, full bleed | `flutter_launcher_icons` (`adaptive_icon_background`) |
 | `icon_foreground.svg` / `.png` | Adaptive-icon foreground layer: green, flag, cup, ball, on transparency | `flutter_launcher_icons` (`adaptive_icon_foreground`), `flutter_native_splash` (Android 12+ splash) |
 | `icon_monochrome.svg` / `.png` | One-colour silhouette for Android 13+ themed icons | `flutter_launcher_icons` (`adaptive_icon_monochrome`) |
-| `icon.svg` / `.png` | The two layers composed into a rounded tile | `flutter_launcher_icons` (legacy Android icon), `flutter_native_splash` (pre-Android-12 splash), and the Windows `.ico` (built separately, below) |
+| `icon.svg` / `.png` | The two layers composed into a rounded tile | `flutter_launcher_icons` (legacy Android icon) and the Windows `.ico` (built separately, below) |
+| `splash.svg` / `.png` | The foreground on a fairway-green circle, which is what Android 12+ draws from `icon_foreground.png` | `flutter_native_splash` (pre-Android-12 splash) |
 
-The SVGs are the source. The PNGs are 1024 × 1024 exports of them, committed so
-that a fresh clone and CI never need an SVG renderer.
+The SVGs are the source. The PNGs are exports of them, committed so that a
+fresh clone and CI never need an SVG renderer. They're 1024 × 1024, except
+`splash.png`, which is 640 × 640: `flutter_native_splash` treats its image as
+xxxhdpi, and 640 px there is 160 dp, the size of the Android 12+ splash
+circle.
 
 ## Palette
 
@@ -44,23 +48,27 @@ icon canvas**.
   the Windows icon and the adaptive icon all frame the scene the same way.
 - **Android 12+ splash:** the system draws the foreground image at 240 dp under
   a 160 dp circle, which keeps the middle two thirds. That's wider than the
-  66/108 safe zone, so nothing gets clipped.
+  66/108 safe zone, so nothing gets clipped. `splash.svg` is that same picture,
+  for Android versions before 12: a circle of radius 341 (two thirds of the
+  canvas) cropped to its own bounds, `viewBox` 171..853.
 
 `icon.svg` repeats the shapes of the two layer files instead of referencing
 them, and it draws its rounded corners into the shapes because Qt's SVG
 renderer ignores `clipPath`. **If you edit a layer, make the same edit in
-`icon.svg`**, and in `icon_monochrome.svg` if the edit touches the foreground.
+`icon.svg`.** If the edit touches the foreground, make it in
+`icon_monochrome.svg` and `splash.svg` too.
 
 ## Changing the artwork
 
 1. Edit the SVGs.
-2. Export each one to a 1024 × 1024 PNG beside it, keeping transparency. For
-   example, with Inkscape:
+2. Export each one to a PNG beside it, keeping transparency: 1024 × 1024, or
+   640 × 640 for `splash`. For example, with Inkscape:
 
    ```powershell
    foreach ($n in 'icon','icon_background','icon_foreground','icon_monochrome') {
      inkscape "$n.svg" --export-type=png --export-width=1024 --export-height=1024 --export-filename="$n.png"
    }
+   inkscape splash.svg --export-type=png --export-width=640 --export-height=640 --export-filename=splash.png
    ```
 
    Any renderer that honours the `viewBox` works. The committed PNGs were
