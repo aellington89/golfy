@@ -4,7 +4,7 @@ import 'shell/app_shell.dart';
 
 /// Golf-palette seeds: a fairway green primary with flag-yellow and sky-blue
 /// accents. Anchoring hues only — Material 3 tonally normalises each into its
-/// scheme roles (see [_golfyScheme]). Shades are deliberately chosen so the
+/// scheme roles (see [golfyColorScheme]). Shades are deliberately chosen so the
 /// yellow accent stays distinct from the orange-amber "one over par" score band.
 const Color _kFairwayGreen = Color(0xFF2E7D32);
 const Color _kFlagYellow = Color(0xFFFBC02D);
@@ -32,7 +32,7 @@ class GolfyApp extends StatelessWidget {
 ThemeData _golfyTheme(Brightness brightness) {
   return ThemeData(
     useMaterial3: true,
-    colorScheme: _golfyScheme(brightness),
+    colorScheme: golfyColorScheme(brightness),
   );
 }
 
@@ -47,7 +47,12 @@ ThemeData _golfyTheme(Brightness brightness) {
 /// keeps its contrast pair correct in both light and dark; surfaces, outlines
 /// and the error red stay from the green base (error is red-family for any
 /// non-red seed, so score-band red still tracks the theme).
-ColorScheme _golfyScheme(Brightness brightness) {
+///
+/// Visible for testing so the native Android splash (#71), whose background
+/// must equal the first frame's [ColorScheme.surface], can be checked against
+/// it without pumping the whole app.
+@visibleForTesting
+ColorScheme golfyColorScheme(Brightness brightness) {
   final base = ColorScheme.fromSeed(
     seedColor: _kFairwayGreen,
     brightness: brightness,

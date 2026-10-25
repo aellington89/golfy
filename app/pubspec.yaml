@@ -66,6 +66,8 @@ dev_dependencies:
   # committed Android / Windows resources. See branding/README.md.
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.8
+  # SHA-256 in test/branding/, which checks no stock Flutter icon is back (#71).
+  crypto: ^3.0.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
