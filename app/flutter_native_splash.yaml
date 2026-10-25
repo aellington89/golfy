@@ -1,0 +1,31 @@
+# Splash screen generator config (#71). Run from app/:
+#   dart run flutter_native_splash:create
+# Android only: there's no iOS or web target, and Windows needs no splash
+# because its window stays hidden until Flutter draws its first frame
+# (windows/runner/flutter_window.cpp). The generated Android drawables and
+# styles are committed and shouldn't be hand-edited. See branding/README.md.
+#
+# The background colours are the app theme's surface colours, which are
+# what the first Flutter frame paints: the colorScheme.surface built in
+# lib/app.dart. So the launch window hands over to the app without a change
+# of colour, in light and dark mode. test/branding/splash_test.dart fails if
+# the theme and these colours drift apart. Regenerate when that happens.
+flutter_native_splash:
+  android: true
+  ios: false
+  web: false
+
+  # Before Android 12: the mark on its green circle, centred (160dp).
+  color: "#F7FBF1"
+  color_dark: "#10140F"
+  image: branding/splash.png
+
+  # Android 12+ (SplashScreen API): the system draws the adaptive foreground
+  # under a 160dp circle in icon_background_color, which looks the same as
+  # branding/splash.png.
+  android_12:
+    color: "#F7FBF1"
+    color_dark: "#10140F"
+    image: branding/icon_foreground.png
+    icon_background_color: "#2E7D32"
+    icon_background_color_dark: "#2E7D32"
