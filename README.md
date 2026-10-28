@@ -184,7 +184,8 @@ releases.
 - **SQLite** — embedded local-only storage; no network, no sync
 - **share_plus / file_selector** — the system share sheet (Android) and save
   dialog (Windows) a data backup is handed to; **package_info_plus** for the
-  installed version
+  installed version; **url_launcher** to open the privacy policy and Help &
+  feedback in the browser
 
 The database is a single SQLite file, `golfy.sqlite`, kept in the app's private
 documents directory — nothing is ever sent over the network. On Android each
@@ -297,6 +298,21 @@ restore closes the round open in Hole Entry; open it again from Rounds.
 The format is documented in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), the
 contract both Export and Restore keep.
 
+## Privacy
+
+Golfy collects nothing. Everything stays on the device, and the Android app
+has no permission to use the internet. Nothing leaves unless you send it: a
+backup you export, or a problem report you file. The full policy is
+[`PRIVACY.md`](PRIVACY.md), and **Settings → About → Privacy policy** opens it.
+
+## Help & feedback
+
+**Settings → About → Help & feedback** opens a new
+[GitHub issue](https://github.com/aellington89/golfy/issues) with your Golfy
+version and platform already filled in. Say what happened and what you
+expected. Your version is also shown under **Settings → About → Version**.
+Issues are public, so leave out anything you don't want published.
+
 ## Build & run
 
 All Flutter commands run from `app/`. See [`app/README.md`](app/README.md) for
@@ -337,7 +353,8 @@ golfy/
 │   │   └── main.dart    # entry point
 │   ├── branding/        # launcher icon + splash source art (SVG); the Android
 │   │                    #   and Windows icon resources are generated from it
-│   ├── tool/            # release version calculator (no app code)
+│   ├── tool/            # release version calculator, APK permission check
+│   │                    #   (no app code)
 │   └── test/            # widget + DAO + schema-constraint tests
 ├── .github/
 │   ├── workflows/       # CI build+test, and the tag-driven signed release
@@ -347,6 +364,7 @@ golfy/
 ├── CHANGELOG.md         # Keep a Changelog; the input to the next version
 ├── RELEASING.md         # how a release is cut and its version derived
 ├── BACKUP_FORMAT.md     # the backup file format — a contract, read before changing
+├── PRIVACY.md           # the privacy policy every build links to — never move it
 ├── docs/plans/          # design notes written before a non-trivial feature
 └── README.md            # you are here
 ```
@@ -363,4 +381,7 @@ now lives in `app/lib/data/tables/`.
 
 ## License
 
-Private project — no license granted. Reach out before reuse.
+Private project — no license granted. Reach out before reuse, through a
+[GitHub issue](https://github.com/aellington89/golfy/issues). The open-source
+packages Golfy is built with are listed, with their licenses, under
+**Settings → About → Open-source licenses**.

@@ -1,9 +1,11 @@
 # Implementation plan — #72 Settings / About: version, licences, privacy policy and help
 
-> **Status: planned, not started.** Written 2026-10-28 against `master` at
-> `9426b23` (v0.9.0, `0.9.0+50`, schema v9, 885 tests). The planning container
-> has no Flutter toolchain, so nothing below was run: repo facts come from
-> reading the code at that commit, and outside facts are cited in §1.3.
+> **Status: implemented** on `ccr-6b3b6657-pbrxus`, 2026-10-28. The plan was
+> written the same day against `master` at `9426b23` (v0.9.0, `0.9.0+50`,
+> schema v9, 885 tests), before any toolchain was installed. Repo facts came
+> from reading the code at that commit, and outside facts are cited in §1.3.
+> The plan text is left as written; "What was built" at the end records where
+> the work departed from it.
 >
 > Issue: [#72](https://github.com/aellington89/golfy/issues/72) ·
 > Depends on [#77](https://github.com/aellington89/golfy/issues/77) (privacy
@@ -812,6 +814,18 @@ over a policy whose claims have already been checked.
 
 ## Open questions
 
+**Resolved (2026-10-28):**
+- Q1: `PRIVACY.md` here.
+- Q2: GitHub Issues for now.
+- Q3: fix the back button.
+- Q4: the neutral legal line.
+- Q5: add the CI guard.
+- Q6: no icon.
+
+All six went to the recommended option. For Q2 that's the interim one: GitHub
+Issues until there's a dedicated address. The questions are kept below for the
+record.
+
 1. **Publish the privacy policy here?**
    - #77 is open, and this row can't link to a policy that doesn't exist yet.
    - **Recommended:** write `PRIVACY.md` at the repo root in this PR, and link
@@ -873,4 +887,67 @@ The longest step is the policy text. It isn't long, but it needs your sign-off.
 
 ---
 
-_A "What was built" section is added here when the work lands._
+## What was built, and where it departed from this plan
+
+Steps 1–5 landed as five commits after the plan's: the version reader; the
+link seam and `url_launcher`; the policy and its guards; the About section
+and back button; and these docs. Q1–Q6 were decided as recorded under Open
+questions. Departures:
+
+- **The permission guard runs in both workflows, not only `flutter-build.yml`.**
+  The debug APK always has `INTERNET`, from the flutter tool's debug manifest,
+  so a check on it alone could never notice `INTERNET` reaching a shipped
+  build. The logic is one script, `tool/assert_permissions.sh`:
+  - `flutter-build.yml` runs it on the debug APK, allowing `INTERNET`.
+  - `release.yml` runs it on the signed release APK, allowing nothing.
+  - It was exercised here against simulated `aapt2` output: six cases (debug
+    and release, with and without an unexpected permission, including
+    `maxSdkVersion` and `uses-permission-sdk-23` forms), plus a missing APK and
+    a malformed one.
+- **The policy guards are their own file, `test/privacy_policy_test.dart`.**
+  It also checks that the policy's contact is the issue tracker Help &
+  feedback opens, and that the main manifest has no `<uses-permission>`. That
+  catches a permission added by hand, locally, without an Android SDK.
+- **`platformLabel` is its own file** (`platform_label.dart`), so the restore
+  dialog doesn't import `url_launcher` to name a platform.
+- **Four named tiles share one private `_openLink`,** not a generic
+  `LinkTile`: Help & feedback needs the version when it's tapped, which a
+  plain `Uri` parameter can't carry.
+- **Section headers are marked `Semantics(header: true)`,** which costs nothing
+  ahead of #73.
+- **Tests override the version with `overrideWithValue`,** so no create
+  function and no retry is involved. The provider still declares `retry`
+  returning `null` for the real read.
+- **The prefilled report's prompt is an HTML comment**
+  (`<!-- What happened… -->`), which GitHub hides when the issue renders. Only
+  the version line shows.
+- **`.gitattributes` pins `app/tool/*.sh` to LF,** so Git Bash on Windows can
+  run the script.
+
+**Verified here** on Flutter 3.47.6 (the CI pin), installed for this work:
+
+- `flutter analyze` is clean, and the suite is **909 passing**: 885 before,
+  plus 24 new.
+- `dart run tool/next_version.dart` reports **MINOR, `0.10.0+51`**.
+- Mutation checks:
+  - Putting `drawer:` back on Settings fails the back-button test.
+  - Moving `PRIVACY.md` fails two policy tests.
+  - Adding `<uses-permission>` to the main manifest fails the third.
+- No plugin in the lock declares an Android permission. That was read from
+  each plugin's manifest in the pub cache.
+- Settings and the licence page were rendered with real fonts in a throwaway
+  test, in light and dark: the back arrow, the four rows, the open-externally
+  icons, and the licence header with the version and legal line.
+
+### What could not be verified here, and by what it will be
+
+There's no Android SDK in this container (`dl.google.com` isn't reachable), so
+no APK was built, and no device was connected.
+
+| Not verified | Covered by |
+|---|---|
+| The permission guard on real `aapt2` output, and the debug APK's actual list (R4) | The first CI run on a pull request. If AndroidX's `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` isn't there, nothing changes; if something unexpected is, the step names it |
+| The release workflow's new step | The next `workflow_dispatch` dry run, or the tag |
+| Links opening in the browser from a signed release APK, and the copy fallback with no browser or mail app | The §4.6 device checklist |
+| Windows: the back arrow, links opening in the default browser, the version matching the exe's Product version | The §4.6 device checklist |
+| The real licence list, and TalkBack reading the rows | The §4.6 device checklist |

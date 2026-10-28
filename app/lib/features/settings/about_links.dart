@@ -11,8 +11,7 @@ import '../../data/app_version.dart';
 /// has to keep working for as long as any of them is installed: never move or
 /// rename `PRIVACY.md`, and never rename `master`. It points at `master`
 /// rather than a tag on purpose, so the policy can be corrected without a
-/// release. `test/features/settings/about_links_test.dart` fails if the file
-/// goes.
+/// release. `test/privacy_policy_test.dart` fails if the file goes.
 final Uri privacyPolicyUrl =
     Uri.https('github.com', '/aellington89/golfy/blob/master/PRIVACY.md');
 
