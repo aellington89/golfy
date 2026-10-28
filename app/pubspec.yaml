@@ -48,6 +48,10 @@ dependencies:
   share_plus: ^13.3.1
   file_selector: ^1.1.0
   package_info_plus: ^10.2.2
+  # Settings → About (#72): opens the privacy policy and Help & feedback in
+  # the browser — always as another app, never inside Golfy, whose release
+  # build has no INTERNET permission. See lib/features/settings/about_links.dart.
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
