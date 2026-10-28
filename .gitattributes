@@ -20,6 +20,12 @@ app/windows/flutter/generated_plugins.cmake        text eol=lf
 app/test/data/backup/golden/*.json text eol=lf
 
 ###############################################################################
+# Shell scripts run under bash, which chokes on a CRLF line ending. Pin LF so a
+# Windows checkout can still run them in Git Bash.
+###############################################################################
+app/tool/*.sh text eol=lf
+
+###############################################################################
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by

@@ -8,6 +8,37 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+
+- **Settings shows which Golfy you have, and where to get help** ([#72]).
+  Under Data, an **About** section lists the installed **version** and build
+  number, read from the device rather than written into the app. It opens
+  Flutter's page of **open-source licenses** for every package Golfy is built
+  with, and links to Golfy's new **privacy policy**. **Help & feedback** opens
+  a new issue on Golfy's GitHub with your version and platform already filled
+  in. Both links open in your browser, never inside Golfy, so the app still
+  asks for no permissions and never goes online itself.
+
+### Fixed
+
+- **Settings can be left on Windows** ([#72]). It showed a menu button where
+  the back arrow belongs, and Windows has no system back, so the only way out
+  was to close the app. It now has a back arrow, as Courses does. On Android
+  the arrow replaces the menu button, and the system back gesture works as
+  before.
+
+### Internal
+
+- **The privacy policy is checked against the app** ([#72]). `PRIVACY.md`
+  says Golfy collects nothing, never goes online and asks for no Android
+  permissions. CI now fails if the debug APK asks for anything beyond the
+  `INTERNET` permission Flutter's own tooling needs, or if the signed release
+  APK asks for anything at all (`tool/assert_permissions.sh`). A test checks
+  `PRIVACY.md` stays where every build links to it. `url_launcher` is the one
+  new dependency, and it adds no permission. The About section and a
+  backup's manifest read the installed version through one helper, so they
+  always agree; the manifest's string is unchanged.
+
 ## [0.9.0] - 2026-10-24
 
 A release that makes Golfy look like itself. The stock Flutter icon is gone

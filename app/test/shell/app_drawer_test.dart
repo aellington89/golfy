@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golfy_app/data/app_version.dart';
 import 'package:golfy_app/data/database.dart';
 import 'package:golfy_app/data/database_provider.dart';
 import 'package:golfy_app/data/models/round_with_course.dart';
@@ -36,6 +37,10 @@ void main() {
             .overrideWith((ref) => Stream.value(const <Course>[])),
         eventsStreamProvider
             .overrideWith((ref) => Stream.value(const <Event>[])),
+        // …and its About section shows the installed version (#72).
+        appVersionProvider.overrideWithValue(
+          const AsyncData(AppVersion(version: '0.10.0', buildNumber: '51')),
+        ),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -75,13 +80,34 @@ void main() {
 
     expect(find.byKey(const ValueKey('drawer_settings')), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Back up, restore & about'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('drawer_settings')));
     await tester.pumpAndSettle();
 
-    // Landed on Settings, which is where backup and restore live (#69, #70).
+    // Landed on Settings, which is where backup and restore live (#69, #70)…
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(find.text('Back up your data'), findsOneWidget);
     expect(find.text('Restore from a backup'), findsOneWidget);
+
+    // …and, further down, the About section (#72).
+    await tester.scrollUntilVisible(
+      find.text('Help & feedback'),
+      200,
+      scrollable: find.descendant(
+        of: find.byType(SettingsScreen),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(find.text('About'), findsOneWidget);
+    expect(find.text('0.10.0 (build 51)'), findsOneWidget);
+
+    // And back again — by the app bar's back button, since Windows has no
+    // system back (#72).
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingsScreen), findsNothing);
+    expect(find.text('Home'), findsOneWidget);
   });
 }

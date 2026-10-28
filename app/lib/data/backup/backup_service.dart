@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:package_info_plus/package_info_plus.dart';
-
+import '../app_version.dart';
 import '../repository.dart';
 import 'backup_codec.dart';
 import 'backup_destination.dart';
@@ -152,9 +151,7 @@ String backupFileName(DateTime when) {
   return 'golfy-backup-$stamp.json';
 }
 
-Future<String> _appVersionFromPackageInfo() async {
-  final info = await PackageInfo.fromPlatform();
-  return info.buildNumber.isEmpty
-      ? info.version
-      : '${info.version}+${info.buildNumber}';
-}
+/// The installed version as a manifest records it, through the same reader
+/// Settings shows (#72), so a backup and the About section always agree.
+Future<String> _appVersionFromPackageInfo() async =>
+    (await AppVersion.fromPlatform()).full;

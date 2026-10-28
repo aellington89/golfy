@@ -45,6 +45,8 @@ pre-suffix combined debug install, clear it once with
 ```
 app/lib/
 ├── data/
+│   ├── app_version.dart           # the installed version — one reader for Settings
+│   │                              #   and a backup's manifest (#72)
 │   ├── database.dart              # @DriftDatabase root
 │   ├── database_provider.dart     # Riverpod provider for the DB
 │   ├── repository.dart            # GolfyRepository (single facade)
@@ -66,7 +68,8 @@ app/lib/
 │   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
 │   │                              #   one-screen course setup (par + stroke index +
 │   │                              #   tee sets and pin sets, #36/#81)
-│   ├── settings/                  # Settings screen + the Export backup tile (#69)
+│   ├── settings/                  # Settings: Data (export / restore, #69, #70) and About
+│   │                              #   (version, licences, privacy policy, help, #72)
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
 │   ├── hole_entry/                # 18-card per-hole entry form, in-memory HoleDraft,
@@ -89,15 +92,20 @@ app/flutter_native_splash.yaml     # splash generator config
 
 app/tool/                          # release tooling — not part of the app
 ├── release_rules.dart             # pure version rules (imports nothing)
-└── next_version.dart              # CLI: next version, and the CI tag guard
+├── next_version.dart              # CLI: next version, and the CI tag guard
+└── assert_permissions.sh          # CI: an APK asks for no permission PRIVACY.md
+                                   #   doesn't mention (#72)
 
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
 ├── migration_test.dart            # drift SchemaVerifier: every vN -> vN+1 step
 ├── widget_test.dart               # AppShell smoke test
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
+├── privacy_policy_test.dart       # PRIVACY.md is where every build links, and stays
+│                                  #   true: no permissions in the manifest (#72)
 ├── branding/                      # committed icon + splash resources: no stock Flutter
 │                                  #   icon, sizes/layers, splash colour = theme surface (#71)
+├── data/app_version_test.dart     # the installed-version reader (#72)
 ├── data/backup/                  # format: codec (write), decode (read), guards,
 │   │                              #   golden files — the backup contract (#69)
 ├── data/upgrades/                # the frozen v7 -> v8 putt and v8 -> v9 yardage rules
@@ -123,7 +131,8 @@ app/test/
 │   ├── hole_entry/                # hole_entry_screen, hole_card, hole_draft,
 │   │                              #   hole_rules + shot_inference (pure rules)
 │   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
-│   ├── settings/                  # settings_screen (backup tile, snackbars, #69)
+│   ├── settings/                  # settings_screen (backup tiles, About section),
+│   │                              #   about_links (#69, #70, #72)
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
 ├── tool/                          # release_rules (version derivation + tag guards)
@@ -192,6 +201,14 @@ app/test/
   Both directions of the codec ship together, so the file is provably readable
   before anyone holds one; see [Data backup](#data-backup-export) and
   [`BACKUP_FORMAT.md`](../BACKUP_FORMAT.md).
+- **Links leave the app.** Settings → About (#72) opens the privacy policy and
+  Help & feedback through a `LinkOpener`
+  ([`about_links.dart`](lib/features/settings/about_links.dart)), which always
+  hands the link to another app (`LaunchMode.externalApplication`). By default
+  Android would open a web link inside Golfy, and url_launcher's WebView
+  fallback needs the INTERNET permission the release build doesn't have.
+  Both addresses ship in every build, so they are a contract; see
+  [Settings → About](#settings--about).
 - **Theme is system-driven.** [`app.dart`](lib/app.dart) builds light + dark
   `ThemeData` from one deep-purple seed and sets `themeMode: ThemeMode.system`;
   there's no in-app toggle. Empty screens use the shared
@@ -210,6 +227,8 @@ flutter test test/database_test.dart   # schema-constraint suite only
 flutter test test/tool                 # release version rules (no database)
 flutter test test/data/backup          # backup format: codec, decode, guards, goldens
 flutter test test/branding             # launcher icon + splash resources (no database)
+flutter test test/features/settings    # Settings: backup tiles, About section, links
+flutter test test/privacy_policy_test.dart   # PRIVACY.md is where builds link, and true
 ```
 
 The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
@@ -422,13 +441,71 @@ Then read the diff as carefully as you would read a migration.
 
 `share_plus` (Android share sheet), `file_selector` (desktop save dialog, and
 the file *open* dialog both platforms will use for #70) and
-`package_info_plus` (the real installed version, for the manifest — also
-[#72](https://github.com/aellington89/golfy/issues/72)'s). These are the
-project's first plugins with native code, so `flutter pub get` now regenerates
+`package_info_plus` (the real installed version, for the manifest and for
+Settings → About, [#72](https://github.com/aellington89/golfy/issues/72)).
+These are the project's first plugins with native code, so `flutter pub get` now regenerates
 the Windows plugin glue under `windows/flutter/` — those files are committed
 and LF-pinned (see [`.gitattributes`](../.gitattributes)). No Android manifest
 change and no runtime permission: nothing is written outside app-private
 storage.
+
+## Settings → About
+
+The About section (#72) shows the installed version, and opens the licence
+page, the privacy policy and Help & feedback. Its tiles are in
+[`about_tiles.dart`](lib/features/settings/about_tiles.dart).
+
+- **The version is read, never written down.**
+  [`AppVersion`](lib/data/app_version.dart) wraps `package_info_plus`.
+  - `label` is what Settings shows: `0.10.0 (build 51)`.
+  - `full` is what a backup's manifest records: `0.10.0+51`. Both come from
+    the same reader, so Settings and a backup can't disagree.
+  - Android debug builds report `…-debug`, from `versionNameSuffix`.
+  - The provider never retries: Riverpod 3 would otherwise keep re-asking a
+    platform that can't answer.
+- **The licence page is Flutter's.** `showLicensePage` lists every package
+  from the licences gathered when the app is built, so there's nothing to
+  maintain. Widget tests see no licences, because the test binding registers
+  none, so a test registers its own with `LicenseRegistry.addLicense`.
+- **The two links are a contract with every installed build.**
+  `privacyPolicyUrl` is `PRIVACY.md` on `master`, as GitHub shows it.
+  `supportUri` is a new GitHub issue, prefilled with the version and platform.
+  An installed build can't be given a new address, so:
+  - **Never move or rename `PRIVACY.md`, and never rename `master`.**
+    [`test/privacy_policy_test.dart`](test/privacy_policy_test.dart) fails if
+    the file goes.
+  - **To host the policy elsewhere** (GitHub Pages for #77, say), keep
+    `PRIVACY.md` as the source, or as a pointer to the new page.
+  - **Changing either constant only reaches new builds.** Old ones keep the old
+    link, so it has to keep working.
+  - **Switching Help & feedback to email** (Play will want a contact address,
+    #77 and #78) is a change to `supportUri` and to `PRIVACY.md`'s Contact
+    section. The test above checks the two agree. Build a `mailto:` query with
+    `encodeQueryParameters`, not `Uri.queryParameters`, which turns spaces
+    into `+`.
+- **The privacy policy's claims are checked.** The same test checks that the
+  app's own manifest requests no permissions. Plugins' permissions only appear
+  in the built APK, so CI runs
+  [`tool/assert_permissions.sh`](tool/assert_permissions.sh) on it:
+  - the debug APK may ask for `INTERNET`, which the flutter tool needs;
+  - the release APK may ask for nothing;
+  - both may have AndroidX's app-private
+    `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which grants no access.
+
+  **When it fails,** a dependency asked for a permission. Decide whether
+  that's acceptable. If it is, update `PRIVACY.md`, #77's Play Data Safety
+  answers and the workflow's allow-list in the same pull request.
+- **Adding a row.** Anything that opens a link goes through the same
+  `_openLink`, so it opens in another app and fails visibly, with a snackbar
+  offering the link to copy. Add a widget test on the tall surface the About
+  tests use; the list builds lazily, so rows below the fold aren't there to
+  find otherwise.
+
+`url_launcher` is the one dependency #72 added:
+- Its Windows half was already compiled in through `share_plus`, so the
+  committed plugin glue didn't change.
+- It needs no Android manifest change or permission. The About links never
+  call `canLaunchUrl`, which is the call that needs `<queries>` entries.
 
 ## Release signing
 
@@ -472,7 +549,9 @@ branch described below — runs
 [`.github/workflows/flutter-build.yml`](../.github/workflows/flutter-build.yml):
 
 - **Linux job** — `flutter analyze`, the full `flutter test` suite, and
-  `flutter build apk --debug`, with the APK uploaded as a workflow artifact. The
+  `flutter build apk --debug`, with the APK uploaded as a workflow artifact.
+  The APK must ask for no permission beyond the debug-only `INTERNET`
+  ([`tool/assert_permissions.sh`](tool/assert_permissions.sh), #72). The
   runner installs `libsqlite3-dev` so drift's `NativeDatabase` tests can load
   SQLite, and the committed `*.g.dart` files mean CI never runs `build_runner`.
 - **Windows job** — `flutter build windows --debug` (build-only; the test suite
@@ -486,9 +565,10 @@ tool/next_version.dart --verify-release` compares it with
 link references, the previous release's build number and the drift schema
 snapshots, and fails before anything is built if they disagree. It then runs
 the test suite, builds a **signed** release APK from the
-`ANDROID_*` secrets (see [Release signing](#release-signing)), asserts it is
-release-signed and within an 80 MB sanity ceiling for the fat universal APK,
-and attaches it to a **draft** GitHub Release to publish after on-device
+`ANDROID_*` secrets (see [Release signing](#release-signing)), and asserts it
+is release-signed, within an 80 MB sanity ceiling for the fat universal APK,
+and asking for no permissions, as `PRIVACY.md` promises. Then it attaches the
+APK to a **draft** GitHub Release to publish after on-device
 validation. A manual `workflow_dispatch` run does the
 same build but uploads the APK as an artifact instead of creating a Release — use
 it to dry-run the signing pipeline before tagging; it also prints what the

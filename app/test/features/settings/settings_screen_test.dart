@@ -1,17 +1,25 @@
-// Settings screen + Export action (#69) + Restore action (#70).
+// Settings screen + Export action (#69) + Restore action (#70) + the About
+// section (#72).
 //
 // Pumps the real screen over an in-memory database with a fake destination
 // and a fake source, so the whole export runs — read, encode, self-check — and
 // the whole restore runs — read, check, confirm, replace — without a share
-// sheet, a save dialog or a file picker anywhere near the test.
+// sheet, a save dialog or a file picker anywhere near the test. The About
+// section reads a fixed version and opens links through a fake, so no
+// platform is asked for either.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart'
+    show LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golfy_app/data/app_version.dart';
 import 'package:golfy_app/data/backup/backup_codec.dart';
 import 'package:golfy_app/data/backup/backup_destination.dart';
 import 'package:golfy_app/data/backup/backup_provider.dart';
@@ -24,6 +32,9 @@ import 'package:golfy_app/data/models/round_with_course.dart';
 import 'package:golfy_app/data/repository.dart';
 import 'package:golfy_app/data/repository_provider.dart';
 import 'package:golfy_app/features/rounds/active_round_provider.dart';
+import 'package:golfy_app/features/settings/about_links.dart';
+import 'package:golfy_app/features/settings/about_tiles.dart';
+import 'package:golfy_app/features/settings/platform_label.dart';
 import 'package:golfy_app/features/settings/restore_confirm_dialog.dart';
 import 'package:golfy_app/features/settings/settings_screen.dart';
 
@@ -77,11 +88,26 @@ class FakeSource implements BackupSource {
   }
 }
 
+/// Records the links it is asked to open, and opens them or not as told —
+/// standing in for the browser.
+class FakeLinkOpener implements LinkOpener {
+  bool opens = true;
+  final opened = <Uri>[];
+
+  @override
+  Future<bool> open(Uri uri) async {
+    opened.add(uri);
+    return opens;
+  }
+}
+
 void main() {
   late GolfyDatabase db;
   late TestFixtures fixtures;
   late FakeDestination destination;
   late FakeSource source;
+  late FakeLinkOpener opener;
+  late AsyncValue<AppVersion> version;
   late ProviderContainer container;
 
   setUp(() {
@@ -89,6 +115,8 @@ void main() {
     fixtures = TestFixtures(db);
     destination = FakeDestination();
     source = FakeSource();
+    opener = FakeLinkOpener();
+    version = const AsyncData(AppVersion(version: '0.10.0', buildNumber: '51'));
   });
 
   tearDown(() async {
@@ -99,6 +127,7 @@ void main() {
     List<RoundWithCourse> rounds = const [],
     List<Course> courses = const [],
     List<Event> events = const [],
+    Widget home = const SettingsScreen(),
   }) {
     container = ProviderContainer(
       overrides: [
@@ -123,12 +152,16 @@ void main() {
               repository: GolfyRepository(db),
               source: source,
             )),
+        // The About section: a fixed version instead of the platform's, and
+        // links that go nowhere.
+        appVersionProvider.overrideWithValue(version),
+        linkOpenerProvider.overrideWithValue(opener),
       ],
     );
     addTearDown(container.dispose);
     return UncontrolledProviderScope(
       container: container,
-      child: const MaterialApp(home: SettingsScreen()),
+      child: MaterialApp(home: home),
     );
   }
 
@@ -482,6 +515,209 @@ void main() {
         findsOneWidget,
       );
       expect(await db.backupDao.readAll(), before);
+    });
+  });
+
+  group('about', () {
+    /// Tall, so the lazy list builds the About section below Data.
+    void tall(WidgetTester tester) {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('shows the version, the licences, the policy and help',
+        (tester) async {
+      tall(tester);
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      expect(find.text('About'), findsOneWidget);
+      expect(
+        find.textContaining('no account, no ads and no tracking'),
+        findsOneWidget,
+      );
+      expect(find.text('Version'), findsOneWidget);
+      expect(find.text('0.10.0 (build 51)'), findsOneWidget);
+      expect(find.text('Open-source licenses'), findsOneWidget);
+      expect(find.text('Privacy policy'), findsOneWidget);
+      expect(find.text('Help & feedback'), findsOneWidget);
+    });
+
+    testWidgets('says so when the version cannot be read, and still helps',
+        (tester) async {
+      tall(tester);
+      version = AsyncError<AppVersion>(
+        StateError('no package info'),
+        StackTrace.empty,
+      );
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      expect(find.text('Unavailable'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('settings_help_tile')));
+      await tester.pump();
+
+      expect(
+        opener.opened.single.queryParameters['body'],
+        contains('---\nGolfy · '),
+      );
+    });
+
+    testWidgets("opens the licence page with Golfy's name and version",
+        (tester) async {
+      tall(tester);
+      // A test build gathers no licences of its own; give the page one.
+      LicenseRegistry.addLicense(() => Stream.value(
+            const LicenseEntryWithLineBreaks(
+              ['golfy_test_package'],
+              'A licence, for the test.',
+            ),
+          ));
+      addTearDown(LicenseRegistry.reset);
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('settings_licenses_tile')));
+      await tester.pumpAndSettle();
+
+      final page = find.byType(LicensePage);
+      Finder onPage(String text) =>
+          find.descendant(of: page, matching: find.text(text));
+      expect(page, findsOneWidget);
+      expect(onPage('Golfy'), findsOneWidget);
+      expect(onPage('0.10.0 (build 51)'), findsOneWidget);
+      expect(onPage(licensePageLegalese), findsOneWidget);
+      expect(onPage('golfy_test_package'), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(page, findsNothing);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+    });
+
+    testWidgets('opens the privacy policy in another app', (tester) async {
+      tall(tester);
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('settings_privacy_tile')));
+      await tester.pump();
+
+      expect(opener.opened, [privacyPolicyUrl]);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('opens a problem report holding the version and platform',
+        (tester) async {
+      tall(tester);
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('settings_help_tile')));
+      await tester.pump();
+
+      expect(opener.opened, [
+        supportUri(
+          version: const AppVersion(version: '0.10.0', buildNumber: '51'),
+          platform: platformLabel(Platform.operatingSystem),
+        ),
+      ]);
+      expect(
+        opener.opened.single.queryParameters['body'],
+        contains('Golfy 0.10.0+51 · '),
+      );
+    });
+
+    testWidgets('offers the link to copy when nothing can open it',
+        (tester) async {
+      tall(tester);
+      String? copied;
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform,
+          (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String?;
+        }
+        return null;
+      });
+      addTearDown(() =>
+          messenger.setMockMethodCallHandler(SystemChannels.platform, null));
+      opener.opens = false;
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      await tester.tap(find.byKey(const ValueKey('settings_privacy_tile')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Nothing on this device can open that link'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Copy link'));
+      await tester.pumpAndSettle();
+
+      expect(copied, privacyPolicyUrl.toString());
+      expect(find.text('Link copied'), findsOneWidget);
+    });
+
+    testWidgets('fits a small phone at double text size', (tester) async {
+      // 360 dp — a small Android phone — at twice the text size: the long
+      // subtitles wrap rather than overflow (an overflow fails the test).
+      tester.view.physicalSize = const Size(360, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(wrap());
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      for (final key in [
+        'settings_version_tile',
+        'settings_licenses_tile',
+        'settings_privacy_tile',
+        'settings_help_tile',
+      ]) {
+        expect(find.byKey(ValueKey(key)), findsOneWidget);
+      }
+    });
+
+    testWidgets('can be left: it has a back button, not a menu',
+        (tester) async {
+      await tester.pumpWidget(wrap(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                ),
+                child: const Text('Open Settings'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      // A drawer would put its menu button where the back button goes, and
+      // Windows has no system back to fall back on.
+      expect(find.byType(DrawerButton), findsNothing);
+      expect(find.byType(BackButton), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.text('Open Settings'), findsOneWidget);
     });
   });
 }
