@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -324,5 +325,57 @@ void main() {
       () => db.roundDao.watchAllWithCourse().first,
     );
     expect(rounds, hasLength(1));
+  });
+
+  // #73: each totals line is one screen-reader item, in words where the drawn
+  // text reads badly ("± Par +2", "GIR 2/3", "—").
+  testWidgets('totals read as label and value, in words', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final rid = await seedRound();
+    await fx.upsertHole(rid, 1, score: 5, gir: false);
+    await fx.upsertHole(rid, 2,
+        par: 3, score: 4, putts: 2, fairwayHit: null, gir: false);
+    await fx.upsertHole(rid, 3);
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    resizeTall(tester);
+    await tester.pumpWidget(wrap(container, rid));
+    await settle(tester);
+
+    Matcher reads(String label) => isSemantics(label: label);
+    SemanticsNode node(String key) =>
+        tester.getSemantics(find.byKey(ValueKey(key)));
+    expect(node('total_rel'), reads('To par\n2 over par'));
+    expect(node('total_gir'), reads('Greens in regulation\n1 of 3'));
+    expect(node('total_fairways'), reads('Fairways\n2 of 2'));
+    // No up-and-down attempts: "0 of 0", read the way it is drawn.
+    expect(node('total_updown'), reads('Up & down\n0 of 0'));
+    expect(
+      tester.getSemantics(find.text('Totals')),
+      isSemantics(label: 'Totals', isHeader: true),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('an empty round reads "no data", not "em dash"', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final rid = await seedRound();
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    resizeTall(tester);
+    await tester.pumpWidget(wrap(container, rid));
+    await settle(tester);
+
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('total_rel'))),
+      isSemantics(label: 'To par\nno data'),
+    );
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('scorecard_hole_1'))),
+      isSemantics(label: 'Hole 1, not entered.'),
+    );
+    semantics.dispose();
   });
 }

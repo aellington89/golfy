@@ -58,6 +58,7 @@ class RoundRow extends ConsumerWidget {
               Text(
                 formatRelativeToPar(round.relativeToPar),
                 key: ValueKey('round_score_${round.round.id}'),
+                semanticsLabel: spokenRelativeToPar(round.relativeToPar),
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: scoreToParColor(round.relativeToPar, theme.colorScheme),
                   fontWeight: FontWeight.bold,
@@ -67,6 +68,7 @@ class RoundRow extends ConsumerWidget {
             ],
             Text(
               '${round.holesEntered}/18',
+              semanticsLabel: '${round.holesEntered} of 18 holes',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(width: 4),

@@ -53,51 +53,85 @@ class HoleScorecardCard extends StatelessWidget {
       color: theme.colorScheme.onSurfaceVariant,
     );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 52,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('$holeNumber', style: theme.textTheme.titleLarge),
-                  Text(parText, style: mutedSmall),
-                ],
+    // One sentence for a screen reader in place of the cells, whose "FW",
+    // "✓" and "—" read as letters and symbol names (#73).
+    return Semantics(
+      container: true,
+      label: spokenHoleSummary(holeNumber, r),
+      excludeSemantics: true,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 52,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$holeNumber', style: theme.textTheme.titleLarge),
+                    Text(parText, style: mutedSmall),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(
-              width: 68,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    relText,
-                    style:
-                        theme.textTheme.titleMedium?.copyWith(color: relColor),
-                  ),
-                  Text(scoreText, style: mutedSmall),
-                ],
+              SizedBox(
+                width: 68,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      relText,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: relColor),
+                    ),
+                    Text(scoreText, style: mutedSmall),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _StatCell(label: 'FW', value: fairwayText),
-                  _StatCell(label: 'GIR', value: girText),
-                  _StatCell(label: 'Putts', value: puttsText),
-                  _StatCell(label: 'U/D', value: upDownText),
-                ],
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _StatCell(label: 'FW', value: fairwayText),
+                    _StatCell(label: 'GIR', value: girText),
+                    _StatCell(label: 'Putts', value: puttsText),
+                    _StatCell(label: 'U/D', value: upDownText),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// What a screen reader says for one scorecard row: "Hole 4, par 4. Score 5,
+/// bogey, 1 over par. Fairway hit. Green in regulation missed. 2 putts. No up
+/// and down." A hole not entered yet is "Hole 4, not entered." Par 3s leave
+/// the fairway out, as the card shows N/A (#73).
+String spokenHoleSummary(int holeNumber, HoleResult? r) {
+  if (r == null) return 'Hole $holeNumber, not entered.';
+  final diff = r.score - r.par;
+  // "Score 4, even par": "par, even par" would say it twice.
+  final name = diff == 0 ? null : holeScoreName(diff);
+  final fairwayHit = r.fairwayHit;
+  return [
+    'Hole $holeNumber, par ${r.par}',
+    'Score ${r.score}, ${name == null ? '' : '$name, '}'
+        '${spokenRelativeToPar(diff)}',
+    if (r.par != 3)
+      fairwayHit == null
+          ? 'Fairway not recorded'
+          : (fairwayHit ? 'Fairway hit' : 'Fairway missed'),
+    r.gir ? 'Green in regulation' : 'Green in regulation missed',
+    r.putts == 1 ? '1 putt' : '${r.putts} putts',
+    if (!r.upDownAttempt)
+      'No up and down'
+    else
+      r.upDownSuccess ? 'Up and down made' : 'Up and down missed',
+  ].map((part) => '$part.').join(' ');
 }
 
 /// A small labelled stat (label above value), used for the FW / GIR / Putts /

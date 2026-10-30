@@ -71,7 +71,14 @@ class _StatSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: theme.textTheme.titleLarge),
+            // A heading of its own (#73): as a bare annotation inside the
+            // Card it would take the card's loose text, such as the
+            // distribution's ace note, into the heading.
+            Semantics(
+              header: true,
+              container: true,
+              child: Text(title, style: theme.textTheme.titleLarge),
+            ),
             const SizedBox(height: 8),
             ...children,
           ],
@@ -82,34 +89,41 @@ class _StatSection extends StatelessWidget {
 }
 
 /// A single label + right-aligned value row. Mirrors the scorecard's
-/// `_TotalRow`; [valueKey] makes the value addressable in widget tests.
+/// `_TotalRow`; [valueKey] makes the value addressable in widget tests. A
+/// screen reader reads it as one item, with [semanticsValue] in place of the
+/// value where that reads badly ("+1.2"); an em dash reads "no data" (#73).
 class _StatRow extends StatelessWidget {
   const _StatRow({
     required this.label,
     required this.value,
+    this.semanticsValue,
     this.valueKey,
     this.valueColor,
   });
 
   final String label;
   final String value;
+  final String? semanticsValue;
   final Key? valueKey;
   final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-          Text(
-            value,
-            key: valueKey,
-            style: theme.textTheme.titleMedium?.copyWith(color: valueColor),
-          ),
-        ],
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+            Text(
+              value,
+              key: valueKey,
+              semanticsLabel: semanticsValue ?? spokenStat(value),
+              style: theme.textTheme.titleMedium?.copyWith(color: valueColor),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -146,6 +160,7 @@ class _ScoringSection extends StatelessWidget {
         _StatRow(
           label: 'Avg score vs. par',
           value: formatSignedAverage(stats.avgScoreVsPar),
+          semanticsValue: spokenSignedAverage(stats.avgScoreVsPar),
           valueColor: avgVsParColor,
           valueKey: const ValueKey('stat_avg_vs_par'),
         ),
@@ -180,33 +195,37 @@ class _BestRoundRow extends StatelessWidget {
     // Same green / amber / red bands as the rounds list and scorecard.
     final color = scoreToParColor(best.toPar, theme.colorScheme);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Best round', style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 2),
-                Text(
-                  '${best.courseName} · ${_formatDate(best.date)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+    // Read as one item: "Best round, Augusta · May 25, 2026, 2 under par".
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Best round', style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${best.courseName} · ${_formatDate(best.date)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            formatRelativeToPar(best.toPar),
-            key: const ValueKey('stat_best_round'),
-            style: theme.textTheme.titleMedium?.copyWith(color: color),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              formatRelativeToPar(best.toPar),
+              key: const ValueKey('stat_best_round'),
+              semanticsLabel: spokenRelativeToPar(best.toPar),
+              style: theme.textTheme.titleMedium?.copyWith(color: color),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -362,7 +381,21 @@ class _DistributionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final fraction = maxCount == 0 ? 0.0 : count / maxCount;
+    final percent = formatPercent(total == 0 ? null : count / total);
 
+    // One spoken item per row, "Eagle: 3 holes, 12.5%", where the label, the
+    // percentage and the count would otherwise be three stops and the bar
+    // none at all (#73).
+    return Semantics(
+      container: true,
+      label: '$label: $count ${count == 1 ? 'hole' : 'holes'}, '
+          '${spokenStat(percent)}',
+      excludeSemantics: true,
+      child: _bar(theme, fraction, percent),
+    );
+  }
+
+  Widget _bar(ThemeData theme, double fraction, String percent) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -400,7 +433,7 @@ class _DistributionBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  formatPercent(total == 0 ? null : count / total),
+                  percent,
                   key: percentKey,
                   textAlign: TextAlign.end,
                   style: theme.textTheme.titleMedium,

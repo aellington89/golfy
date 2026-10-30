@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/database.dart';
 import '../../stats/score_color.dart';
 import '../../stats/score_format.dart';
+import '../../stats/stat_format.dart';
 
 /// Column totals for a round, aggregated from the entered holes only.
 ///
@@ -106,7 +107,13 @@ class ScorecardTotalsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Totals', style: theme.textTheme.titleLarge),
+            // Its own node: inside the card, a bare header annotation would
+            // take the card's other loose text into the heading (#73).
+            Semantics(
+              header: true,
+              container: true,
+              child: Text('Totals', style: theme.textTheme.titleLarge),
+            ),
             const SizedBox(height: 8),
             _TotalRow(
               label: 'Score',
@@ -120,18 +127,26 @@ class ScorecardTotalsCard extends StatelessWidget {
             ),
             _TotalRow(
               label: '± Par',
+              semanticsLabel: 'To par',
               value: relText,
+              semanticsValue:
+                  empty ? null : spokenRelativeToPar(t.relativeToPar),
               valueColor: relColor,
               valueKey: const ValueKey('total_rel'),
             ),
             _TotalRow(
               label: 'Fairways',
               value: fairwayText,
+              semanticsValue: t.fairwayEligible == 0
+                  ? null
+                  : '${t.fairwayHits} of ${t.fairwayEligible}',
               valueKey: const ValueKey('total_fairways'),
             ),
             _TotalRow(
               label: 'GIR',
+              semanticsLabel: 'Greens in regulation',
               value: girText,
+              semanticsValue: empty ? null : '${t.gir} of ${t.holesEntered}',
               valueKey: const ValueKey('total_gir'),
             ),
             _TotalRow(
@@ -142,6 +157,8 @@ class ScorecardTotalsCard extends StatelessWidget {
             _TotalRow(
               label: 'Up & down',
               value: upDownText,
+              semanticsValue:
+                  empty ? null : '${t.upDownMade} of ${t.upDownAttempts}',
               valueKey: const ValueKey('total_updown'),
             ),
           ],
@@ -151,33 +168,50 @@ class ScorecardTotalsCard extends StatelessWidget {
   }
 }
 
+/// One label + value line of the totals card, read by a screen reader as a
+/// single item (#73). [semanticsLabel] and [semanticsValue] replace what is
+/// drawn where it would read badly — "GIR", "2/4", "+3" — and an em dash
+/// always reads as "no data".
 class _TotalRow extends StatelessWidget {
   const _TotalRow({
     required this.label,
     required this.value,
+    this.semanticsLabel,
+    this.semanticsValue,
     this.valueKey,
     this.valueColor,
   });
 
   final String label;
   final String value;
+  final String? semanticsLabel;
+  final String? semanticsValue;
   final Key? valueKey;
   final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-          Text(
-            value,
-            key: valueKey,
-            style: theme.textTheme.titleMedium?.copyWith(color: valueColor),
-          ),
-        ],
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                semanticsLabel: semanticsLabel,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            Text(
+              value,
+              key: valueKey,
+              semanticsLabel: semanticsValue ?? spokenStat(value),
+              style: theme.textTheme.titleMedium?.copyWith(color: valueColor),
+            ),
+          ],
+        ),
       ),
     );
   }
