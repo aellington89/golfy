@@ -31,4 +31,43 @@ void main() {
       expect(formatRelativeToPar(-5), '-5');
     });
   });
+
+  group('spokenRelativeToPar', () {
+    test('zero is even par, not "E"', () {
+      expect(spokenRelativeToPar(0), 'even par');
+    });
+
+    test('over par', () {
+      expect(spokenRelativeToPar(1), '1 over par');
+      expect(spokenRelativeToPar(12), '12 over par');
+    });
+
+    test('under par drops the minus sign', () {
+      expect(spokenRelativeToPar(-3), '3 under par');
+    });
+  });
+
+  group('holeScoreName', () {
+    test('names every result from condor to quadruple bogey', () {
+      expect(
+        [for (var d = -4; d <= 4; d++) holeScoreName(d)],
+        [
+          'condor',
+          'albatross',
+          'eagle',
+          'birdie',
+          'par',
+          'bogey',
+          'double bogey',
+          'triple bogey',
+          'quadruple bogey',
+        ],
+      );
+    });
+
+    test('has no name past quadruple bogey', () {
+      expect(holeScoreName(5), isNull);
+      expect(holeScoreName(9), isNull);
+    });
+  });
 }
