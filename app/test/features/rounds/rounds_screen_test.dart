@@ -198,7 +198,8 @@ void main() {
       find.byKey(const ValueKey('round_score_5')),
     );
     expect(badge.data, '-2');
-    expect(badge.style?.color, Colors.green.shade700);
+    // The under-par band — the light theme's green (#73).
+    expect(badge.style?.color, const Color(0xFF006E1C));
   });
 
   testWidgets('partial round shows the score for entered holes only',

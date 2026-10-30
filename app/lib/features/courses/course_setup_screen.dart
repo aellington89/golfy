@@ -744,7 +744,8 @@ class _YardageIntro extends StatelessWidget {
         'with the tee set; tee-to-pin yards with the tee set and pin set '
         'together.',
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
+          // Not outline, which falls under WCAG AA as text (#73).
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );

@@ -276,7 +276,8 @@ void main() {
     // scorecard, not the theme's primary (#16 colour unification).
     Color? colorOfKey(String key) =>
         tester.widget<Text>(find.byKey(ValueKey(key))).style?.color;
-    expect(colorOfKey('stat_best_round'), Colors.green.shade700);
-    expect(colorOfKey('stat_avg_vs_par'), Colors.green.shade700);
+    const underParGreen = Color(0xFF006E1C); // the light theme's (#73)
+    expect(colorOfKey('stat_best_round'), underParGreen);
+    expect(colorOfKey('stat_avg_vs_par'), underParGreen);
   });
 }

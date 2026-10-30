@@ -129,14 +129,20 @@ class _RoundSubtitle extends StatelessWidget {
       children: [
         Flexible(child: Text(date, overflow: TextOverflow.ellipsis)),
         const SizedBox(width: 6),
-        Icon(Icons.straighten, size: 14, color: theme.colorScheme.outline),
+        // onSurfaceVariant, not outline: outline is a border colour and reads
+        // at about 4:1 as text, under WCAG AA (#73).
+        Icon(
+          Icons.straighten,
+          size: 14,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 3),
         Flexible(
           child: Text(
             setName,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),
