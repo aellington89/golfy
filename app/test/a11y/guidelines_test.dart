@@ -12,6 +12,9 @@ void main() {
   final guidelines = <String, AccessibilityGuideline>{
     // Text against its rendered background: 4.5:1, or 3:1 for large text.
     'text contrast meets WCAG AA': textContrastGuideline,
+    // Everything tappable says what it is: an icon-only button needs a
+    // tooltip, a gesture needs a name.
+    'every control has a label': labeledTapTargetGuideline,
   };
 
   for (final screen in a11yScreens) {

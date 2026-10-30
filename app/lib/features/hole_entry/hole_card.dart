@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/par_selector.dart';
+import '../../widgets/stepper_field.dart';
 
 import 'hole_draft.dart';
 import 'hole_rules.dart';
@@ -193,9 +194,12 @@ class _HoleCardState extends State<HoleCard> {
             children: [
               Row(
                 children: [
-                  Text(
-                    'Hole ${widget.holeNumber}',
-                    style: theme.textTheme.titleLarge,
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Hole ${widget.holeNumber}',
+                      style: theme.textTheme.titleLarge,
+                    ),
                   ),
                   const Spacer(),
                   if (widget.isSaved && !widget.isDirty)
@@ -428,9 +432,10 @@ class _HoleCardState extends State<HoleCard> {
 }
 
 /// A stage sub-header ("Hole", "Tee shot", "Approach & around the green",
-/// "Putting", "Score") that labels each group of fields. Purely visual — it makes the
+/// "Putting", "Score") that labels each group of fields. It makes the
 /// play-order sequence explicit and carries its own top spacing so sections
-/// are separated without extra `SizedBox`es around it.
+/// are separated without extra `SizedBox`es around it. A heading to a screen
+/// reader, so TalkBack can move section by section down the card (#73).
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.label);
 
@@ -441,11 +446,14 @@ class _SectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(
-        label,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w600,
+      child: Semantics(
+        header: true,
+        child: Text(
+          label,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -489,6 +497,9 @@ class _YardsRow extends StatelessWidget {
   }
 }
 
+/// A [StepperField] with a floor, for the card's two counts: penalty strokes
+/// and the score. Keeps the `<label>_dec` / `<label>_inc` button keys the
+/// widget tests tap.
 class _StepperRow extends StatelessWidget {
   const _StepperRow({
     super.key,
@@ -509,36 +520,15 @@ class _StepperRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        helperText: helperText,
-        errorText: errorText,
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            key: ValueKey('${label}_dec'),
-            onPressed: value <= min ? null : () => onChanged(value - 1),
-            icon: const Icon(Icons.remove),
-          ),
-          Expanded(
-            child: Center(
-              child: Text(
-                '$value',
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-          ),
-          IconButton(
-            key: ValueKey('${label}_inc'),
-            onPressed: () => onChanged(value + 1),
-            icon: const Icon(Icons.add),
-          ),
-        ],
-      ),
+    return StepperField(
+      label: label,
+      value: value,
+      decreaseKey: ValueKey('${label}_dec'),
+      increaseKey: ValueKey('${label}_inc'),
+      onDecrease: value <= min ? null : () => onChanged(value - 1),
+      onIncrease: () => onChanged(value + 1),
+      helperText: helperText,
+      errorText: errorText,
     );
   }
 }
@@ -1195,6 +1185,14 @@ class _ShotDropdown extends StatelessWidget {
     // Guard against a stored value not in the option list (keeps the dropdown
     // from asserting); such a value is treated as unset in the control.
     final selected = options.contains(value) ? value : null;
+    // Merged so a screen reader hears the field's name with its value —
+    // "Club, None, button" — rather than an unnamed "em dash" (#73).
+    return MergeSemantics(
+      child: _decorated(selected),
+    );
+  }
+
+  Widget _decorated(String? selected) {
     return InputDecorator(
       decoration: InputDecoration(labelText: label, isDense: true),
       child: DropdownButton<String?>(
@@ -1204,7 +1202,10 @@ class _ShotDropdown extends StatelessWidget {
         isExpanded: true,
         underline: const SizedBox.shrink(),
         items: [
-          const DropdownMenuItem<String?>(value: null, child: Text('—')),
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('—', semanticsLabel: 'None'),
+          ),
           for (final o in options)
             DropdownMenuItem<String?>(value: o, child: Text(o)),
         ],

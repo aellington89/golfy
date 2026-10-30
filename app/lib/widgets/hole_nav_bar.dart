@@ -22,6 +22,7 @@ class HoleNavBar extends StatefulWidget implements PreferredSizeWidget {
     required this.onTapHole,
     this.dirty = const {},
     this.keyPrefix = 'hole_chip',
+    this.completeState = 'saved',
   });
 
   final int holeCount;
@@ -44,6 +45,11 @@ class HoleNavBar extends StatefulWidget implements PreferredSizeWidget {
   /// Chip keys are `'<keyPrefix>_<holeNumber>'`. Distinct per screen so two
   /// strips on different screens don't collide in tests.
   final String keyPrefix;
+
+  /// What a [complete] hole is, spoken after its number — "Hole 4, saved" on
+  /// Hole Entry, "Hole 4, set" in the course editor. The check and pencil
+  /// icons say it only visually (#73).
+  final String completeState;
 
   @override
   Size get preferredSize => const Size.fromHeight(80);
@@ -97,6 +103,8 @@ class _HoleNavBarState extends State<HoleNavBar> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
             child: Text(
               '${widget.label}: $completeCount / ${widget.holeCount}',
+              semanticsLabel:
+                  '${widget.label}: $completeCount of ${widget.holeCount}',
               style: theme.textTheme.bodySmall,
             ),
           ),
@@ -122,7 +130,14 @@ class _HoleNavBarState extends State<HoleNavBar> {
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: ChoiceChip(
                     key: ValueKey('${widget.keyPrefix}_$hole'),
-                    label: Text('$hole'),
+                    label: Text(
+                      '$hole',
+                      semanticsLabel: isDirty
+                          ? 'Hole $hole, unsaved changes'
+                          : isComplete
+                              ? 'Hole $hole, ${widget.completeState}'
+                              : 'Hole $hole',
+                    ),
                     avatar: icon == null
                         ? null
                         : Icon(

@@ -31,6 +31,7 @@ class CoursesScreen extends ConsumerWidget {
         loading: () => null,
         error: (_, _) => null,
         data: (courses) => FloatingActionButton(
+          tooltip: 'New course',
           onPressed: () => _openAddCourseDialog(context, courses),
           child: const Icon(Icons.add),
         ),

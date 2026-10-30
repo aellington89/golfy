@@ -57,10 +57,14 @@ class EventPicker extends ConsumerWidget {
           style: TextStyle(color: theme.colorScheme.error),
         ),
       ),
-      data: (events) => InkWell(
-        onTap: () => _openPicker(context, events),
-        borderRadius: BorderRadius.circular(4),
-        child: field,
+      // A button to a screen reader: "Event, The Masters, button" (#73).
+      data: (events) => Semantics(
+        button: true,
+        child: InkWell(
+          onTap: () => _openPicker(context, events),
+          borderRadius: BorderRadius.circular(4),
+          child: field,
+        ),
       ),
     );
   }

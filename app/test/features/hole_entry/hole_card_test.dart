@@ -968,4 +968,28 @@ void main() {
       expect(find.text('Saved'), findsNothing);
     });
   });
+
+  // #73: a dropdown's empty choice is drawn as a dash; it reads "None", with
+  // the field's name.
+  testWidgets('an empty club reads "Club, None"', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: HoleDraft.initial());
+
+    expect(find.bySemanticsLabel('Club\nNone'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('the hole and its sections are headings', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: HoleDraft.initial());
+
+    for (final title in const ['Hole 1', 'Hole', 'Tee shot', 'Putting', 'Score']) {
+      expect(
+        tester.getSemantics(find.text(title).first),
+        isSemantics(label: title, isHeader: true),
+        reason: title,
+      );
+    }
+    semantics.dispose();
+  });
 }

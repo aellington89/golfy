@@ -36,6 +36,7 @@ class EventsScreen extends ConsumerWidget {
         loading: () => null,
         error: (_, _) => null,
         data: (events) => FloatingActionButton(
+          tooltip: 'New event',
           onPressed: () => _openAddEventDialog(context, events),
           child: const Icon(Icons.add),
         ),

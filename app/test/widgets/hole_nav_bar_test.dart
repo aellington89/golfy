@@ -92,4 +92,40 @@ void main() {
     expect(find.byKey(const ValueKey('course_hole_chip_1')), findsOneWidget);
     expect(find.byKey(const ValueKey('hole_chip_1')), findsNothing);
   });
+
+  // #73: the check and pencil only show a hole's state; its chip says it.
+  testWidgets('each chip and the counter read their state in words',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pump(tester, complete: {1, 2}, dirty: {2});
+
+    expect(find.bySemanticsLabel('Hole 1, saved'), findsOneWidget);
+    expect(find.bySemanticsLabel('Hole 2, unsaved changes'), findsOneWidget);
+    expect(find.bySemanticsLabel('Hole 3'), findsOneWidget);
+    expect(find.bySemanticsLabel('Holes saved: 2 of 18'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('a screen that sets holes says "set", not "saved"',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          bottom: HoleNavBar(
+            holeCount: 18,
+            currentIndex: 0,
+            complete: const {1},
+            label: 'Holes set',
+            completeState: 'set',
+            onTapHole: (_) {},
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Hole 1, set'), findsOneWidget);
+    semantics.dispose();
+  });
 }

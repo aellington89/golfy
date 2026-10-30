@@ -27,6 +27,7 @@ class RoundsScreen extends ConsumerWidget {
         loading: () => null,
         error: (_, _) => null,
         data: (rounds) => FloatingActionButton(
+          tooltip: 'New round',
           onPressed: () => _openNewRoundDialog(context, rounds),
           child: const Icon(Icons.add),
         ),

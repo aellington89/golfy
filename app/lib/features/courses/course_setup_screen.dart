@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
@@ -618,6 +619,7 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
           actions: [
             PopupMenuButton<_CourseMenuAction>(
               key: const ValueKey('course_menu'),
+              tooltip: 'Course options',
               onSelected: (a) =>
                   _onMenuAction(a, course, allCourses, roundCount),
               itemBuilder: (_) => const [
@@ -638,6 +640,7 @@ class _CourseSetupScreenState extends ConsumerState<CourseSetupScreen> {
             complete: _completeHoles,
             dirty: dirty,
             label: 'Holes set',
+            completeState: 'set',
             keyPrefix: 'course_hole_chip',
             onTapHole: _goToHole,
           ),
@@ -797,11 +800,27 @@ class _SetStrip extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: GestureDetector(
+                              // The long press is a gesture a screen reader
+                              // can't discover, and in the semantics tree it
+                              // was an unlabelled node; rename is a named
+                              // action on the chip instead (#73).
+                              excludeFromSemantics: true,
                               onLongPress: () =>
                                   onSetAction(_SetMenuAction.rename, s),
                               child: InputChip(
                                 key: ValueKey('${kind.name}_set_chip_${s.id}'),
-                                label: Text(s.name),
+                                // On the label, so the action merges into the
+                                // chip's own node rather than a node of its
+                                // own beside it.
+                                label: Semantics(
+                                  customSemanticsActions: {
+                                    CustomSemanticsAction(
+                                      label: 'Rename ${kind.noun}',
+                                    ): () =>
+                                        onSetAction(_SetMenuAction.rename, s),
+                                  },
+                                  child: Text(s.name),
+                                ),
                                 selected: s.id == activeId,
                                 showCheckmark: false,
                                 avatar: Icon(icon, size: 18),

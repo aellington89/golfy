@@ -74,6 +74,7 @@ class EventDetailScreen extends ConsumerWidget {
             actions: [
               PopupMenuButton<_EventMenuAction>(
                 key: const ValueKey('event_detail_menu'),
+                tooltip: 'Event options',
                 onSelected: (action) =>
                     _onMenuAction(context, ref, action, event, events),
                 itemBuilder: (_) => const [

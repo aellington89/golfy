@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -498,5 +499,23 @@ void main() {
       );
       semantics.dispose();
     });
+  });
+
+  // #73: swipe-to-delete has a named action TalkBack can reach, and it asks
+  // first just as the swipe does.
+  testWidgets('a round row offers "Delete round" as an action',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [makeRound(id: 5, holesEntered: 3)]);
+
+    tester.semantics.customAction(
+      find.semantics.byLabel(RegExp('Pebble — Round 1')),
+      const CustomSemanticsAction(label: 'Delete round'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete round?'), findsOneWidget);
+    semantics.dispose();
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -39,61 +40,83 @@ class RoundRow extends ConsumerWidget {
       confirmDismiss: (_) =>
           confirmDeleteRound(context, courseName: round.courseName),
       onDismissed: (_) => deleteRoundAndClearActive(ref, round.round.id),
-      child: ListTile(
-        onTap: () {
-          ref.read(activeRoundIdProvider.notifier).set(round.round.id);
-          ref.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
+      // Swipe-to-delete as a named action TalkBack lists, asking first just as
+      // the swipe does (#73).
+      child: Semantics(
+        customSemanticsActions: {
+          const CustomSemanticsAction(label: 'Delete round'): () async {
+            final confirmed = await confirmDeleteRound(
+              context,
+              courseName: round.courseName,
+            );
+            if (confirmed) await deleteRoundAndClearActive(ref, round.round.id);
+          },
         },
-        title: Text(
-          '${round.courseName} — Round ${round.round.roundNumber}',
-        ),
-        subtitle: _RoundSubtitle(
-          date: formattedDate,
-          yardageSet: round.yardageSetLabel,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (round.holesEntered > 0) ...[
-              Text(
-                formatRelativeToPar(round.relativeToPar),
-                key: ValueKey('round_score_${round.round.id}'),
-                semanticsLabel: spokenRelativeToPar(round.relativeToPar),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: scoreToParColor(round.relativeToPar, theme.colorScheme),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
+        child: _tile(context, ref, theme, formattedDate),
+      ),
+    );
+  }
+
+  Widget _tile(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    String formattedDate,
+  ) {
+    return ListTile(
+      onTap: () {
+        ref.read(activeRoundIdProvider.notifier).set(round.round.id);
+        ref.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
+      },
+      title: Text(
+        '${round.courseName} — Round ${round.round.roundNumber}',
+      ),
+      subtitle: _RoundSubtitle(
+        date: formattedDate,
+        yardageSet: round.yardageSetLabel,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (round.holesEntered > 0) ...[
             Text(
-              '${round.holesEntered}/18',
-              semanticsLabel: '${round.holesEntered} of 18 holes',
-              style: theme.textTheme.bodyMedium,
+              formatRelativeToPar(round.relativeToPar),
+              key: ValueKey('round_score_${round.round.id}'),
+              semanticsLabel: spokenRelativeToPar(round.relativeToPar),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: scoreToParColor(round.relativeToPar, theme.colorScheme),
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              key: ValueKey('round_edit_button_${round.round.id}'),
-              icon: const Icon(Icons.edit_outlined),
-              iconSize: 20,
-              tooltip: 'Edit round',
-              onPressed: () => openEditRoundDialog(context, ref, round),
-            ),
-            IconButton(
-              key: ValueKey('scorecard_button_${round.round.id}'),
-              icon: const Icon(Icons.scoreboard_outlined),
-              iconSize: 20,
-              tooltip: 'View scorecard',
-              onPressed: () {
-                Navigator.of(context, rootNavigator: true).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ScorecardScreen(roundId: round.round.id),
-                  ),
-                );
-              },
-            ),
+            const SizedBox(width: 12),
           ],
-        ),
+          Text(
+            '${round.holesEntered}/18',
+            semanticsLabel: '${round.holesEntered} of 18 holes',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            key: ValueKey('round_edit_button_${round.round.id}'),
+            icon: const Icon(Icons.edit_outlined),
+            iconSize: 20,
+            tooltip: 'Edit round',
+            onPressed: () => openEditRoundDialog(context, ref, round),
+          ),
+          IconButton(
+            key: ValueKey('scorecard_button_${round.round.id}'),
+            icon: const Icon(Icons.scoreboard_outlined),
+            iconSize: 20,
+            tooltip: 'View scorecard',
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ScorecardScreen(roundId: round.round.id),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
