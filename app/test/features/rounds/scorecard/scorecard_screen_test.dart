@@ -378,4 +378,26 @@ void main() {
     );
     semantics.dispose();
   });
+
+  // #73: the destructive action comes last, after the two edits.
+  testWidgets('the app bar reads the edits before Delete', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final rid = await seedRound();
+    final container = makeContainer();
+    addTearDown(container.dispose);
+
+    resizeTall(tester);
+    await tester.pumpWidget(wrap(container, rid));
+    await settle(tester);
+
+    expect(
+      tester.semantics.simulatedAccessibilityTraversal(),
+      containsAllInOrder(<Matcher>[
+        isSemantics(tooltip: 'Edit scores'),
+        isSemantics(tooltip: 'Edit round details'),
+        isSemantics(tooltip: 'Delete round'),
+      ]),
+    );
+    semantics.dispose();
+  });
 }

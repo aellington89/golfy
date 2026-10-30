@@ -251,7 +251,11 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
                 ? 'Hole $holeNumber saved · course updated'
                 : 'Hole $holeNumber saved',
           ),
-          duration: const Duration(seconds: 1),
+          // A second is enough to see it, not for TalkBack to finish saying
+          // it; with a screen reader on it stays the default 4 s (#73).
+          duration: MediaQuery.accessibleNavigationOf(context)
+              ? const Duration(seconds: 4)
+              : const Duration(seconds: 1),
         ),
       );
     } catch (e) {

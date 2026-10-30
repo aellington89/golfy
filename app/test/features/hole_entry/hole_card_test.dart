@@ -1009,4 +1009,31 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     semantics.dispose();
   });
+
+  // #73: TalkBack moves down the card in the order a hole is played: the
+  // hole (announced as a live region), each section's heading before its
+  // fields, and the Save row last.
+  testWidgets('a screen reader meets the card in playing order',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: HoleDraft.initial());
+
+    expect(
+      tester.semantics.simulatedAccessibilityTraversal(),
+      containsAllInOrder(<Matcher>[
+        isSemantics(label: 'Hole 1', isHeader: true, isLiveRegion: true),
+        isSemantics(label: 'Hole', isHeader: true),
+        isSemantics(label: 'Par 4', isSelected: true),
+        isSemantics(label: 'Tee shot', isHeader: true),
+        isSemantics(label: 'Approach & around the green', isHeader: true),
+        isSemantics(label: 'Putting', isHeader: true),
+        isSemantics(label: 'Score', isHeader: true),
+        isSemantics(label: 'Penalty strokes', value: '0'),
+        isSemantics(tooltip: 'Previous hole'),
+        isSemantics(label: 'Save Hole'),
+        isSemantics(tooltip: 'Next hole'),
+      ]),
+    );
+    semantics.dispose();
+  });
 }

@@ -199,8 +199,12 @@ class _HoleCardState extends State<HoleCard> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 runSpacing: 4,
                 children: [
+                  // A heading, and a live region: a new hole's card appearing
+                  // announces "Hole 5", however the player got there —
+                  // Next, a chip or a swipe (#73).
                   Semantics(
                     header: true,
+                    liveRegion: true,
                     child: Text(
                       'Hole ${widget.holeNumber}',
                       style: theme.textTheme.titleLarge,

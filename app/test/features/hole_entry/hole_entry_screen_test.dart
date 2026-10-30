@@ -1020,4 +1020,41 @@ void main() {
       expect(card.single.strokeIndex, 7);
     });
   });
+
+  // #73: a one-second "Hole 1 saved" is gone before TalkBack finishes
+  // saying it; with a screen reader on it stays the default four seconds.
+  for (final screenReader in const [false, true]) {
+    testWidgets(
+        'the saved message lasts '
+        '${screenReader ? '4 s with a screen reader' : '1 s without one'}',
+        (tester) async {
+      if (screenReader) {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(accessibleNavigation: true);
+        addTearDown(
+            tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      }
+      final seed = await seedRound();
+      final container = makeContainer(activeRoundId: seed.roundId);
+      addTearDown(container.dispose);
+
+      resizeForForm(tester);
+      await tester.pumpWidget(wrap(container));
+      await settle(tester);
+      await answerTee(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Hole'));
+      await settle(tester);
+      expect(find.textContaining('Hole 1 saved'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Hole 1 saved'),
+        screenReader ? findsOneWidget : findsNothing,
+      );
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Hole 1 saved'), findsNothing);
+    });
+  }
 }

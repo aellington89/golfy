@@ -37,10 +37,12 @@ class ScorecardScreen extends ConsumerWidget {
         // Grows with the text size so the date isn't clipped (#73).
         toolbarHeight: TwoLineTitle.toolbarHeight(context),
         title: _ScorecardTitle(roundAsync: roundAsync),
+        // Destructive last: a screen reader moving through the bar reaches
+        // the edits before Delete, and so does a sighted reader's eye (#73).
         actions: [
-          _DeleteButton(roundId: roundId),
           _EditButton(roundId: roundId),
           _EditDetailsButton(roundId: roundId),
+          _DeleteButton(roundId: roundId),
         ],
       ),
       body: holesAsync.when(
