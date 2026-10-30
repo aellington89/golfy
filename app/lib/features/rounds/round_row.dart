@@ -63,6 +63,31 @@ class RoundRow extends ConsumerWidget {
     ThemeData theme,
     String formattedDate,
   ) {
+    final score = round.holesEntered > 0
+        ? Text(
+            formatRelativeToPar(round.relativeToPar),
+            key: ValueKey('round_score_${round.round.id}'),
+            semanticsLabel: spokenRelativeToPar(round.relativeToPar),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: scoreToParColor(round.relativeToPar, theme.colorScheme),
+              fontWeight: FontWeight.bold,
+            ),
+          )
+        : null;
+    final holes = Text(
+      '${round.holesEntered}/18',
+      semanticsLabel: '${round.holesEntered} of 18 holes',
+      style: theme.textTheme.bodyMedium,
+    );
+    // At a large text size the score and hole count leave the trailing edge
+    // for a line under the date, so the title keeps room to be read rather
+    // than wrapping a word per line (#73).
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3;
+    final subtitle = _RoundSubtitle(
+      date: formattedDate,
+      yardageSet: round.yardageSetLabel,
+    );
+
     return ListTile(
       onTap: () {
         ref.read(activeRoundIdProvider.notifier).set(round.round.id);
@@ -71,31 +96,23 @@ class RoundRow extends ConsumerWidget {
       title: Text(
         '${round.courseName} — Round ${round.round.roundNumber}',
       ),
-      subtitle: _RoundSubtitle(
-        date: formattedDate,
-        yardageSet: round.yardageSetLabel,
-      ),
+      subtitle: largeText
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                subtitle,
+                Wrap(spacing: 12, children: [?score, holes]),
+              ],
+            )
+          : subtitle,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (round.holesEntered > 0) ...[
-            Text(
-              formatRelativeToPar(round.relativeToPar),
-              key: ValueKey('round_score_${round.round.id}'),
-              semanticsLabel: spokenRelativeToPar(round.relativeToPar),
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: scoreToParColor(round.relativeToPar, theme.colorScheme),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 12),
+          if (!largeText) ...[
+            if (score != null) ...[score, const SizedBox(width: 12)],
+            holes,
+            const SizedBox(width: 4),
           ],
-          Text(
-            '${round.holesEntered}/18',
-            semanticsLabel: '${round.holesEntered} of 18 holes',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(width: 4),
           IconButton(
             key: ValueKey('round_edit_button_${round.round.id}'),
             icon: const Icon(Icons.edit_outlined),

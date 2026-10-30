@@ -53,6 +53,44 @@ class HoleScorecardCard extends StatelessWidget {
       color: theme.colorScheme.onSurfaceVariant,
     );
 
+    final hole = ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 52),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$holeNumber', style: theme.textTheme.titleLarge),
+          Text(parText, style: mutedSmall),
+        ],
+      ),
+    );
+    final score = ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 60),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            relText,
+            style: theme.textTheme.titleMedium?.copyWith(color: relColor),
+          ),
+          Text(scoreText, style: mutedSmall),
+        ],
+      ),
+    );
+    final stats = Wrap(
+      alignment: WrapAlignment.spaceEvenly,
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        _StatCell(label: 'FW', value: fairwayText),
+        _StatCell(label: 'GIR', value: girText),
+        _StatCell(label: 'Putts', value: puttsText),
+        _StatCell(label: 'U/D', value: upDownText),
+      ],
+    );
+    // One line at the default size. At a large text size the hole and score
+    // sit above the stats, which then have the card's full width (#73).
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3;
+
     // One sentence for a screen reader in place of the cells, whose "FW",
     // "✓" and "—" read as letters and symbol names (#73).
     return Semantics(
@@ -62,45 +100,23 @@ class HoleScorecardCard extends StatelessWidget {
       child: Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 52,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: largeText
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('$holeNumber', style: theme.textTheme.titleLarge),
-                    Text(parText, style: mutedSmall),
+                    Wrap(spacing: 16, runSpacing: 4, children: [hole, score]),
+                    const SizedBox(height: 8),
+                    stats,
+                  ],
+                )
+              : Row(
+                  children: [
+                    hole,
+                    const SizedBox(width: 8),
+                    score,
+                    Expanded(child: stats),
                   ],
                 ),
-              ),
-              SizedBox(
-                width: 68,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      relText,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: relColor),
-                    ),
-                    Text(scoreText, style: mutedSmall),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _StatCell(label: 'FW', value: fairwayText),
-                    _StatCell(label: 'GIR', value: girText),
-                    _StatCell(label: 'Putts', value: puttsText),
-                    _StatCell(label: 'U/D', value: upDownText),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

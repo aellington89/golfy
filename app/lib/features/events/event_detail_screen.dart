@@ -194,20 +194,26 @@ class _ResultHeader extends StatelessWidget {
     final recorded = hasRecordedResult(event);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-      child: Row(
+      // Wraps rather than overflowing at a large text size: the badge, then
+      // Edit, move to the next line (#73).
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Icon(
-            Icons.emoji_events_outlined,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
           // "Result, tied for 3rd" as one item for a screen reader (#73).
           MergeSemantics(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text('Result', style: theme.textTheme.titleMedium),
-                const SizedBox(width: 12),
+                Icon(
+                  Icons.emoji_events_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text('Result', style: theme.textTheme.titleMedium),
+                ),
                 if (recorded)
                   EventResultBadge(event: event)
                 else
@@ -220,7 +226,6 @@ class _ResultHeader extends StatelessWidget {
               ],
             ),
           ),
-          const Spacer(),
           TextButton.icon(
             key: const ValueKey('event_detail_edit_result'),
             onPressed: onEdit,

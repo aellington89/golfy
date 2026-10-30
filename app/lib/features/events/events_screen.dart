@@ -179,10 +179,11 @@ class _EventTile extends StatelessWidget {
     final avg = stats.avgVsPar!;
     final best = stats.bestToPar!;
     // The dots are only visual separators; a screen reader hears "3 rounds,
-    // average 1.2 over par, best round 2 under par" (#73).
-    return Row(
+    // average 1.2 over par, best round 2 under par". A Wrap, so a large text
+    // size breaks the line between segments instead of overflowing (#73).
+    return Wrap(
       children: [
-        Flexible(child: Text(countText, overflow: TextOverflow.ellipsis)),
+        Text(countText),
         const ExcludeSemantics(child: Text(' · ')),
         Text(
           formatSignedAverage(avg),

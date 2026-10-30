@@ -192,7 +192,12 @@ class _HoleCardState extends State<HoleCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
+              // A Wrap, not a Row: at a large text size the Saved chip moves
+              // under the title instead of overflowing past it (#73).
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 4,
                 children: [
                   Semantics(
                     header: true,
@@ -201,7 +206,6 @@ class _HoleCardState extends State<HoleCard> {
                       style: theme.textTheme.titleLarge,
                     ),
                   ),
-                  const Spacer(),
                   if (widget.isSaved && !widget.isDirty)
                     Chip(
                       avatar: Icon(
@@ -820,9 +824,11 @@ class _IssueBox extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: foreground),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: text.titleSmall?.copyWith(color: foreground),
+              Expanded(
+                child: Text(
+                  title,
+                  style: text.titleSmall?.copyWith(color: foreground),
+                ),
               ),
             ],
           ),
@@ -914,6 +920,29 @@ class _ShotCardState extends State<_ShotCard> {
   Widget build(BuildContext context) {
     final s = widget.shot;
     final i = widget.index;
+    final club = _ShotDropdown(
+      fieldKey: ValueKey('shot_club_$i'),
+      label: 'Club',
+      value: s.club,
+      options: shotClubs,
+      onChanged: (v) => widget.onChanged(s.copyWith(club: v)),
+    );
+    final distance = TextField(
+      key: ValueKey('shot_distance_$i'),
+      controller: _distance,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(
+        labelText: 'To pin',
+        isDense: true,
+        suffixText: 'yds',
+      ),
+      onChanged: (v) {
+        final text = v.trim();
+        final yards =
+            text.isEmpty ? null : (int.tryParse(text) ?? 0).clamp(0, 100000);
+        widget.onChanged(s.copyWith(distanceYards: yards));
+      },
+    );
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -923,28 +952,44 @@ class _ShotCardState extends State<_ShotCard> {
           children: [
             Row(
               children: [
-                Text(
-                  'Shot ${i + 1}',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                if (widget.holed) ...[
-                  const SizedBox(width: 8),
-                  Chip(
-                    key: ValueKey('shot_holed_$i'),
-                    avatar: const Icon(Icons.flag, size: 16),
-                    label: const Text('Holed'),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-                const Spacer(),
-                // No compact density on the controls in this row: it shrinks
-                // their tap targets to 40 dp, under the 48 dp minimum (#73).
-                FilterChip(
-                  key: ValueKey('shot_penalty_$i'),
-                  label: const Text('Penalty'),
-                  selected: s.isPenalty,
-                  onSelected: (on) => widget.onChanged(
-                    s.copyWith(result: on ? penaltyResult : null),
+                // The title, the Holed badge and Penalty wrap onto a second
+                // line at a large text size rather than overflowing; delete
+                // stays at the end of the first (#73).
+                Expanded(
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    runSpacing: 4,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            'Shot ${i + 1}',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          if (widget.holed)
+                            Chip(
+                              key: ValueKey('shot_holed_$i'),
+                              avatar: const Icon(Icons.flag, size: 16),
+                              label: const Text('Holed'),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                        ],
+                      ),
+                      // No compact density on the controls in this row: it
+                      // shrinks their tap targets to 40 dp, under the 48 dp
+                      // minimum (#73).
+                      FilterChip(
+                        key: ValueKey('shot_penalty_$i'),
+                        label: const Text('Penalty'),
+                        selected: s.isPenalty,
+                        onSelected: (on) => widget.onChanged(
+                          s.copyWith(result: on ? penaltyResult : null),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 if (widget.onDelete != null)
@@ -972,47 +1017,37 @@ class _ShotCardState extends State<_ShotCard> {
               ),
             ],
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _ShotDropdown(
-                    fieldKey: ValueKey('shot_club_$i'),
-                    label: 'Club',
-                    value: s.club,
-                    options: shotClubs,
-                    onChanged: (v) => widget.onChanged(s.copyWith(club: v)),
-                  ),
+            // Side by side, the distance gets a fixed 96 px; at a large text
+            // size that can't hold its label and a number, so the two stack
+            // (#73).
+            if (_isLargeText(context))
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [club, const SizedBox(height: 8), distance],
                 ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 96,
-                  child: TextField(
-                    key: ValueKey('shot_distance_$i'),
-                    controller: _distance,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'To pin',
-                      isDense: true,
-                      suffixText: 'yds',
-                    ),
-                    onChanged: (v) {
-                      final text = v.trim();
-                      final yards = text.isEmpty
-                          ? null
-                          : (int.tryParse(text) ?? 0).clamp(0, 100000);
-                      widget.onChanged(s.copyWith(distanceYards: yards));
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(child: club),
+                  const SizedBox(width: 12),
+                  SizedBox(width: 96, child: distance),
+                  const SizedBox(width: 8),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 }
+
+/// Whether the text is scaled up enough (past 1.3×) that a row of fixed-width
+/// fields should stack instead (#73).
+bool _isLargeText(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3;
 
 /// One putt's card: its distance to the hole, in feet, and a delete action.
 /// Club and lie aren't asked — every putt is a putter from the green. The last
@@ -1124,7 +1159,9 @@ class _PuttCardState extends State<_PuttCard> {
             Align(
               alignment: Alignment.centerLeft,
               child: SizedBox(
-                width: 140,
+                // Full width at a large text size, where 140 px can't hold the
+                // label, a number and "ft" (#73).
+                width: _isLargeText(context) ? double.infinity : 140,
                 child: TextField(
                   key: ValueKey('putt_distance_$i'),
                   controller: _distance,

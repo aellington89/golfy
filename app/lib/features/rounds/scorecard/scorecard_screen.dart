@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/round_with_course.dart';
 import '../../../data/repository_provider.dart';
 import '../../../shell/tab_index_provider.dart';
+import '../../../widgets/two_line_title.dart';
 import '../active_round_provider.dart';
 import '../delete_round.dart';
 import '../edit_round_dialog.dart';
@@ -33,6 +34,8 @@ class ScorecardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // Grows with the text size so the date isn't clipped (#73).
+        toolbarHeight: TwoLineTitle.toolbarHeight(context),
         title: _ScorecardTitle(roundAsync: roundAsync),
         actions: [
           _DeleteButton(roundId: roundId),
@@ -84,20 +87,9 @@ class _ScorecardTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final round = roundAsync.value;
     if (round == null) return const Text('Scorecard');
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          round.courseName,
-          style: Theme.of(context).textTheme.titleLarge,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          _formatDate(round.round.date),
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+    return TwoLineTitle(
+      title: round.courseName,
+      subtitle: _formatDate(round.round.date),
     );
   }
 

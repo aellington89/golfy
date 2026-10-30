@@ -128,4 +128,82 @@ void main() {
     expect(find.bySemanticsLabel('Hole 1, set'), findsOneWidget);
     semantics.dispose();
   });
+
+  test('is 80 dp tall at the default text size', () {
+    expect(HoleNavBar.heightFor(TextScaler.noScaling), 80);
+  });
+
+  // #73: at a fixed 80 dp, a large text size squeezed the chips until their
+  // numbers were clipped.
+  for (final scale in const [1.5, 2.0]) {
+    testWidgets('grows so the counter and chips fit at $scale× text',
+        (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              bottom: HoleNavBar(
+                holeCount: 18,
+                currentIndex: 0,
+                complete: const {1},
+                dirty: const {2},
+                label: 'Holes saved',
+                onTapHole: (_) {},
+                textScaler: MediaQuery.textScalerOf(context),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final bar = tester.getRect(find.byType(HoleNavBar));
+      expect(bar.height, greaterThan(80));
+      final counter = tester.getRect(find.textContaining('Holes saved'));
+      expect(counter.top, greaterThanOrEqualTo(bar.top));
+      for (final hole in const [1, 2, 3]) {
+        final label = tester.getRect(find.descendant(
+          of: find.byKey(ValueKey('hole_chip_$hole')),
+          matching: find.text('$hole'),
+        ));
+        expect(label.top, greaterThan(counter.bottom), reason: 'hole $hole');
+        expect(label.bottom, lessThanOrEqualTo(bar.bottom),
+            reason: 'hole $hole');
+      }
+    });
+  }
+
+  testWidgets('moving to a far hole scrolls its chip into view',
+      (tester) async {
+    Future<void> show(int index) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(
+            bottom: HoleNavBar(
+              holeCount: 18,
+              currentIndex: index,
+              complete: const {},
+              label: 'Holes saved',
+              onTapHole: (_) {},
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await show(0);
+    for (var i = 1; i <= 17; i++) {
+      await show(i);
+    }
+
+    final chip = tester.getRect(find.byKey(const ValueKey('hole_chip_18')));
+    expect(chip.left, greaterThanOrEqualTo(0));
+    expect(chip.right, lessThanOrEqualTo(360));
+  });
 }
