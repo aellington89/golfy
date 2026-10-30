@@ -992,4 +992,21 @@ void main() {
     }
     semantics.dispose();
   });
+
+  // #73: every control on the card, the issue panel's fix buttons and a
+  // deletable shot and putt included, is at least 48 dp to tap.
+  testWidgets('every control on the card meets the 48 dp tap target',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: answeredPar4());
+    await tapKey(tester, 'add_shot');
+    await tapKey(tester, 'Score_inc');
+    await tapKey(tester, 'Score_inc');
+    expect(find.byKey(const ValueKey('fix_add_shots')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shot_delete_1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('putt_delete_0')), findsOneWidget);
+
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    semantics.dispose();
+  });
 }

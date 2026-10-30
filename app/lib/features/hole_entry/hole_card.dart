@@ -839,10 +839,9 @@ class _IssueBox extends StatelessWidget {
                   for (final fix in issue.fixes)
                     TextButton(
                       key: ValueKey('fix_${fix.id}'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: foreground,
-                        visualDensity: VisualDensity.compact,
-                      ),
+                      // Standard density: compact shrinks the tap target to
+                      // 40 dp, under the 48 dp minimum (#73).
+                      style: TextButton.styleFrom(foregroundColor: foreground),
                       onPressed: () => onFix(fix),
                       child: Text(fix.label),
                     ),
@@ -938,11 +937,12 @@ class _ShotCardState extends State<_ShotCard> {
                   ),
                 ],
                 const Spacer(),
+                // No compact density on the controls in this row: it shrinks
+                // their tap targets to 40 dp, under the 48 dp minimum (#73).
                 FilterChip(
                   key: ValueKey('shot_penalty_$i'),
                   label: const Text('Penalty'),
                   selected: s.isPenalty,
-                  visualDensity: VisualDensity.compact,
                   onSelected: (on) => widget.onChanged(
                     s.copyWith(result: on ? penaltyResult : null),
                   ),
@@ -952,7 +952,6 @@ class _ShotCardState extends State<_ShotCard> {
                     key: ValueKey('shot_delete_$i'),
                     icon: const Icon(Icons.close),
                     tooltip: 'Remove shot',
-                    visualDensity: VisualDensity.compact,
                     onPressed: widget.onDelete,
                   )
                 else
@@ -1117,7 +1116,7 @@ class _PuttCardState extends State<_PuttCard> {
                   key: ValueKey('putt_delete_$i'),
                   icon: const Icon(Icons.close),
                   tooltip: 'Remove putt',
-                  visualDensity: VisualDensity.compact,
+                  // Standard density for a 48 dp tap target (#73).
                   onPressed: widget.onDelete,
                 ),
               ],
@@ -1195,10 +1194,10 @@ class _ShotDropdown extends StatelessWidget {
   Widget _decorated(String? selected) {
     return InputDecorator(
       decoration: InputDecoration(labelText: label, isDense: true),
+      // Not dense: a dense button is only 24 dp tall to tap (#73).
       child: DropdownButton<String?>(
         key: fieldKey,
         value: selected,
-        isDense: true,
         isExpanded: true,
         underline: const SizedBox.shrink(),
         items: [
