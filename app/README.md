@@ -81,7 +81,8 @@ app/lib/
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
 ├── shell/                         # AppShell + tabIndexProvider (bottom-nav state)
 ├── widgets/                       # shared presentational widgets (EmptyState, ParSelector,
-│                                  #   HoleNavBar — used by both course setup and hole entry)
+│                                  #   HoleNavBar — used by both course setup and hole entry —
+│                                  #   StepperField, TwoLineTitle)
 ├── app.dart                       # MaterialApp + light/dark theme (ThemeMode.system)
 └── main.dart                      # runApp + ProviderScope
 
@@ -103,6 +104,8 @@ app/test/
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
 ├── privacy_policy_test.dart       # PRIVACY.md is where every build links, and stays
 │                                  #   true: no permissions in the manifest (#72)
+├── a11y/                          # every screen against flutter_test's accessibility
+│                                  #   guidelines, light + dark, and at 2× text (#73)
 ├── branding/                      # committed icon + splash resources: no stock Flutter
 │                                  #   icon, sizes/layers, splash colour = theme surface (#71)
 ├── data/app_version_test.dart     # the installed-version reader (#72)
@@ -137,7 +140,7 @@ app/test/
 │   └── stats/                     # score_format, score_color, stat_format
 ├── tool/                          # release_rules (version derivation + tag guards)
 └── widgets/                       # shared-widget tests (empty_state, par_selector,
-                                   #   hole_nav_bar)
+                                   #   hole_nav_bar, stepper_field, two_line_title)
 ```
 
 ## Architecture notes
@@ -210,8 +213,9 @@ app/test/
   Both addresses ship in every build, so they are a contract; see
   [Settings → About](#settings--about).
 - **Theme is system-driven.** [`app.dart`](lib/app.dart) builds light + dark
-  `ThemeData` from one deep-purple seed and sets `themeMode: ThemeMode.system`;
-  there's no in-app toggle. Empty screens use the shared
+  `ThemeData` from the golf palette (a fairway-green seed with flag-yellow and
+  sky-blue accents) and sets `themeMode: ThemeMode.system`; there's no in-app
+  toggle. Empty screens use the shared
   [`EmptyState`](lib/widgets/empty_state.dart) widget (icon + message + optional
   action) — reuse it rather than hand-rolling a centered column.
 
@@ -220,7 +224,7 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (885 tests)
+flutter test                           # everything (1083 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
@@ -229,6 +233,7 @@ flutter test test/data/backup          # backup format: codec, decode, guards, g
 flutter test test/branding             # launcher icon + splash resources (no database)
 flutter test test/features/settings    # Settings: backup tiles, About section, links
 flutter test test/privacy_policy_test.dart   # PRIVACY.md is where builds link, and true
+flutter test test/a11y                 # accessibility: guidelines + 2× text, every screen
 ```
 
 The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
@@ -506,6 +511,60 @@ page, the privacy policy and Help & feedback. Its tiles are in
   committed plugin glue didn't change.
 - It needs no Android manifest change or permission. The About links never
   call `canLaunchUrl`, which is the call that needs `<queries>` entries.
+
+## Accessibility
+
+Golfy is meant to be usable with TalkBack, at the largest font size, and by
+anyone who can't tell its colours apart (#73). The plan and the audit behind
+these rules are in
+[`docs/plans/issue-73-accessibility.md`](../docs/plans/issue-73-accessibility.md).
+
+- **Everything tappable says what it is.** An icon-only button has a
+  `tooltip`, which is also its spoken label. A gesture (a swipe, a long press)
+  also has a named `CustomSemanticsAction`, which TalkBack lists in its actions
+  menu: "Delete round" on a round row, "Rename tee set" on a set chip.
+- **Say it in words.** Text that reads badly aloud gets a `semanticsLabel`
+  from the spoken helpers beside the formatters: `spokenRelativeToPar` ("2 over
+  par", not "+2"; "even par", not "E"), `spokenSignedAverage`, `spokenStat`
+  (the no-data dash reads "no data") and `spokenEventResult` ("tied for 3rd",
+  not "T-3"). A read-only card or row that would read as a string of fragments
+  is one `Semantics(container: true, label: …, excludeSemantics: true)` with a
+  sentence, like a scorecard hole. A label and its value read together inside
+  a `MergeSemantics`. The drawn `Text` and its `ValueKey` stay, so widget tests
+  find them as before.
+- **Titles are headings.** Section and card titles are `Semantics(header:
+  true)`, so TalkBack can move heading by heading. Inside a `Card`, add
+  `container: true`, or the heading takes the card's other loose text into
+  itself.
+- **Colour is never the only signal, and it meets AA.** Each score colour is
+  backed by the `+2` / `E` / `-1` text and its spoken label, and every band
+  meets 4.5:1 on the surface and the card colour in both themes (checked in
+  `score_color_test.dart`). Don't draw text in `outline`: it is a border colour
+  and reads about 4:1.
+- **48 dp to tap.** Don't set `VisualDensity.compact` on anything tappable: it
+  shrinks the tap target to 40 dp. The theme already uses compact density on
+  desktop. Status chips that can't be tapped may keep it.
+- **Measure, don't fix, sizes that hold text.** A fixed width or height that
+  fits the default text size clips or overflows at 2×. Let rows `Wrap`, stack
+  them past 1.3× text, or measure with a `TextPainter` at
+  `MediaQuery.textScalerOf(context)`, as the dashboard's distribution columns
+  and `TwoLineTitle.toolbarHeight` do. Never cap the text scale.
+
+**The suite.** [`test/a11y/`](test/a11y) pumps every screen in the app's real
+theme. `guidelines_test.dart` runs flutter_test's `textContrastGuideline`,
+`labeledTapTargetGuideline` and `androidTapTargetGuideline` in light and dark.
+`large_text_test.dart` runs at 1.3× and 2× text on a 360 dp phone and fails
+on any overflow, or on text outside a toolbar or chip strip. A new screen goes
+in the list in [`_harness.dart`](test/a11y/_harness.dart), seeded so that each
+kind of widget it can show is on screen. `textContrastGuideline` skips text
+that a `ListTile` or `Card` merges into one node, so a colour drawn there needs
+its own contrast test, as the score bands have.
+
+**By hand, before a release that changes a screen:** on an Android 14+ device
+at the largest font size and display size, open each changed screen and look
+for clipping. Then, with TalkBack on, create a round, enter and save a hole,
+finish the round, and read its scorecard and the dashboard. Run Google's
+Accessibility Scanner over the changed screens in light and dark.
 
 ## Release signing
 

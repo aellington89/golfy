@@ -282,3 +282,54 @@ kept for the record.
 3. **Spoken wording on scorecard holes:** the name plus the number ("bogey, 1
    over par"); totals and averages say "N over par".
 4. **One PR,** with ordered commits.
+
+## What was built, and where it departed from this plan
+
+Steps 1–8 landed as eight commits; the manual pass (step 10) is in the PR
+checklist. Every guideline and the large-text suite pass on every screen.
+
+**Measured first.** Before fixing anything, a throwaway run put every screen
+through all three guidelines and 2× text. Contrast already passed (after step
+1); labels failed on seven screens, 48 dp on Hole Entry only, and 2× text
+overflowed on seven. Two problems raised no error and were found by
+measuring: the two-line app bar titles and the hole chip strip were clipped
+silently. The fixes followed those results rather than the predictions, which
+is where most departures come from.
+
+Departures:
+
+- **`textContrastGuideline` doesn't guard the score colours.** It skips text
+  that a `ListTile` or `Card` merges into one semantics node, which is where
+  every score is drawn: with the old colours put back it still passed. The
+  unit test against the real scheme is the guard (it fails on the old
+  shades); the guideline stays as a backstop for standalone text.
+- **Card titles are headings in their own node** (`container: true`). As a
+  bare annotation inside a `Card`, a heading took the card's other loose text
+  into itself: the dashboard's ace note became part of "Score distribution".
+- **The stepper's drawn label is out of the semantics tree.** The value node
+  carries the name ("Score, 5"); with the decorator's label read too, TalkBack
+  said "Score" twice.
+- **Rename lives on the chip's label.** On a wrapper around the chip, the
+  custom action became an unlabelled node of its own beside it, which
+  TalkBack may not focus.
+- **Par options read "Par 4"**, a small addition: a bare "4" was ambiguous in
+  the course editor's column of cards.
+- **The hole chips kept their compact density.** The guideline measured them
+  at 48 dp already; only the Penalty chip, Remove shot / putt, the fix buttons
+  and the dense club / lie dropdowns (24 dp) failed.
+- **More rows stack past 1.3× than planned:** the scorecard hole card (stats
+  under the hole and score) and each score-distribution row (label and share
+  above the bar), as well as the shot's club and distance. The test font is
+  much wider than Roboto or Segoe UI, so a row that only just fitted on a
+  device overflowed in tests; stacking doesn't depend on the font.
+- **The chip strip computes its height** from the text scale its screen
+  passes in, since an `AppBar` reads `preferredSize` before building it; it
+  can't measure itself. It scrolls to the current chip with
+  `Scrollable.ensureVisible`, keeping the old estimate only for a chip not yet
+  built.
+- **No `+build` bump.** Since #86 the version is set when a release is cut
+  (`RELEASING.md`), as #72 did; `dart run tool/next_version.dart` reports
+  MINOR, 0.10.0.
+- **The live region on "Hole N"** passes in tests; whether TalkBack speaks it
+  on every hole change is the one thing left for the device check, with
+  `SemanticsService.sendAnnouncement` as the fallback.
