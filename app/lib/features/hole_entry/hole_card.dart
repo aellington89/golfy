@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/par_selector.dart';
+import '../../widgets/stepper_field.dart';
 
 import 'hole_draft.dart';
 import 'hole_rules.dart';
@@ -191,13 +192,24 @@ class _HoleCardState extends State<HoleCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
+              // A Wrap, not a Row: at a large text size the Saved chip moves
+              // under the title instead of overflowing past it (#73).
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 4,
                 children: [
-                  Text(
-                    'Hole ${widget.holeNumber}',
-                    style: theme.textTheme.titleLarge,
+                  // A heading, and a live region: a new hole's card appearing
+                  // announces "Hole 5", however the player got there —
+                  // Next, a chip or a swipe (#73).
+                  Semantics(
+                    header: true,
+                    liveRegion: true,
+                    child: Text(
+                      'Hole ${widget.holeNumber}',
+                      style: theme.textTheme.titleLarge,
+                    ),
                   ),
-                  const Spacer(),
                   if (widget.isSaved && !widget.isDirty)
                     Chip(
                       avatar: Icon(
@@ -428,9 +440,10 @@ class _HoleCardState extends State<HoleCard> {
 }
 
 /// A stage sub-header ("Hole", "Tee shot", "Approach & around the green",
-/// "Putting", "Score") that labels each group of fields. Purely visual — it makes the
+/// "Putting", "Score") that labels each group of fields. It makes the
 /// play-order sequence explicit and carries its own top spacing so sections
-/// are separated without extra `SizedBox`es around it.
+/// are separated without extra `SizedBox`es around it. A heading to a screen
+/// reader, so TalkBack can move section by section down the card (#73).
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.label);
 
@@ -441,11 +454,14 @@ class _SectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(
-        label,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w600,
+      child: Semantics(
+        header: true,
+        child: Text(
+          label,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -489,6 +505,9 @@ class _YardsRow extends StatelessWidget {
   }
 }
 
+/// A [StepperField] with a floor, for the card's two counts: penalty strokes
+/// and the score. Keeps the `<label>_dec` / `<label>_inc` button keys the
+/// widget tests tap.
 class _StepperRow extends StatelessWidget {
   const _StepperRow({
     super.key,
@@ -509,36 +528,15 @@ class _StepperRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        helperText: helperText,
-        errorText: errorText,
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            key: ValueKey('${label}_dec'),
-            onPressed: value <= min ? null : () => onChanged(value - 1),
-            icon: const Icon(Icons.remove),
-          ),
-          Expanded(
-            child: Center(
-              child: Text(
-                '$value',
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-          ),
-          IconButton(
-            key: ValueKey('${label}_inc'),
-            onPressed: () => onChanged(value + 1),
-            icon: const Icon(Icons.add),
-          ),
-        ],
-      ),
+    return StepperField(
+      label: label,
+      value: value,
+      decreaseKey: ValueKey('${label}_dec'),
+      increaseKey: ValueKey('${label}_inc'),
+      onDecrease: value <= min ? null : () => onChanged(value - 1),
+      onIncrease: () => onChanged(value + 1),
+      helperText: helperText,
+      errorText: errorText,
     );
   }
 }
@@ -830,9 +828,11 @@ class _IssueBox extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: foreground),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: text.titleSmall?.copyWith(color: foreground),
+              Expanded(
+                child: Text(
+                  title,
+                  style: text.titleSmall?.copyWith(color: foreground),
+                ),
               ),
             ],
           ),
@@ -849,10 +849,9 @@ class _IssueBox extends StatelessWidget {
                   for (final fix in issue.fixes)
                     TextButton(
                       key: ValueKey('fix_${fix.id}'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: foreground,
-                        visualDensity: VisualDensity.compact,
-                      ),
+                      // Standard density: compact shrinks the tap target to
+                      // 40 dp, under the 48 dp minimum (#73).
+                      style: TextButton.styleFrom(foregroundColor: foreground),
                       onPressed: () => onFix(fix),
                       child: Text(fix.label),
                     ),
@@ -925,6 +924,29 @@ class _ShotCardState extends State<_ShotCard> {
   Widget build(BuildContext context) {
     final s = widget.shot;
     final i = widget.index;
+    final club = _ShotDropdown(
+      fieldKey: ValueKey('shot_club_$i'),
+      label: 'Club',
+      value: s.club,
+      options: shotClubs,
+      onChanged: (v) => widget.onChanged(s.copyWith(club: v)),
+    );
+    final distance = TextField(
+      key: ValueKey('shot_distance_$i'),
+      controller: _distance,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(
+        labelText: 'To pin',
+        isDense: true,
+        suffixText: 'yds',
+      ),
+      onChanged: (v) {
+        final text = v.trim();
+        final yards =
+            text.isEmpty ? null : (int.tryParse(text) ?? 0).clamp(0, 100000);
+        widget.onChanged(s.copyWith(distanceYards: yards));
+      },
+    );
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -934,27 +956,44 @@ class _ShotCardState extends State<_ShotCard> {
           children: [
             Row(
               children: [
-                Text(
-                  'Shot ${i + 1}',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                if (widget.holed) ...[
-                  const SizedBox(width: 8),
-                  Chip(
-                    key: ValueKey('shot_holed_$i'),
-                    avatar: const Icon(Icons.flag, size: 16),
-                    label: const Text('Holed'),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-                const Spacer(),
-                FilterChip(
-                  key: ValueKey('shot_penalty_$i'),
-                  label: const Text('Penalty'),
-                  selected: s.isPenalty,
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (on) => widget.onChanged(
-                    s.copyWith(result: on ? penaltyResult : null),
+                // The title, the Holed badge and Penalty wrap onto a second
+                // line at a large text size rather than overflowing; delete
+                // stays at the end of the first (#73).
+                Expanded(
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    runSpacing: 4,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            'Shot ${i + 1}',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          if (widget.holed)
+                            Chip(
+                              key: ValueKey('shot_holed_$i'),
+                              avatar: const Icon(Icons.flag, size: 16),
+                              label: const Text('Holed'),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                        ],
+                      ),
+                      // No compact density on the controls in this row: it
+                      // shrinks their tap targets to 40 dp, under the 48 dp
+                      // minimum (#73).
+                      FilterChip(
+                        key: ValueKey('shot_penalty_$i'),
+                        label: const Text('Penalty'),
+                        selected: s.isPenalty,
+                        onSelected: (on) => widget.onChanged(
+                          s.copyWith(result: on ? penaltyResult : null),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 if (widget.onDelete != null)
@@ -962,7 +1001,6 @@ class _ShotCardState extends State<_ShotCard> {
                     key: ValueKey('shot_delete_$i'),
                     icon: const Icon(Icons.close),
                     tooltip: 'Remove shot',
-                    visualDensity: VisualDensity.compact,
                     onPressed: widget.onDelete,
                   )
                 else
@@ -983,47 +1021,37 @@ class _ShotCardState extends State<_ShotCard> {
               ),
             ],
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _ShotDropdown(
-                    fieldKey: ValueKey('shot_club_$i'),
-                    label: 'Club',
-                    value: s.club,
-                    options: shotClubs,
-                    onChanged: (v) => widget.onChanged(s.copyWith(club: v)),
-                  ),
+            // Side by side, the distance gets a fixed 96 px; at a large text
+            // size that can't hold its label and a number, so the two stack
+            // (#73).
+            if (_isLargeText(context))
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [club, const SizedBox(height: 8), distance],
                 ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 96,
-                  child: TextField(
-                    key: ValueKey('shot_distance_$i'),
-                    controller: _distance,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'To pin',
-                      isDense: true,
-                      suffixText: 'yds',
-                    ),
-                    onChanged: (v) {
-                      final text = v.trim();
-                      final yards = text.isEmpty
-                          ? null
-                          : (int.tryParse(text) ?? 0).clamp(0, 100000);
-                      widget.onChanged(s.copyWith(distanceYards: yards));
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(child: club),
+                  const SizedBox(width: 12),
+                  SizedBox(width: 96, child: distance),
+                  const SizedBox(width: 8),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 }
+
+/// Whether the text is scaled up enough (past 1.3×) that a row of fixed-width
+/// fields should stack instead (#73).
+bool _isLargeText(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3;
 
 /// One putt's card: its distance to the hole, in feet, and a delete action.
 /// Club and lie aren't asked — every putt is a putter from the green. The last
@@ -1127,7 +1155,7 @@ class _PuttCardState extends State<_PuttCard> {
                   key: ValueKey('putt_delete_$i'),
                   icon: const Icon(Icons.close),
                   tooltip: 'Remove putt',
-                  visualDensity: VisualDensity.compact,
+                  // Standard density for a 48 dp tap target (#73).
                   onPressed: widget.onDelete,
                 ),
               ],
@@ -1135,7 +1163,9 @@ class _PuttCardState extends State<_PuttCard> {
             Align(
               alignment: Alignment.centerLeft,
               child: SizedBox(
-                width: 140,
+                // Full width at a large text size, where 140 px can't hold the
+                // label, a number and "ft" (#73).
+                width: _isLargeText(context) ? double.infinity : 140,
                 child: TextField(
                   key: ValueKey('putt_distance_$i'),
                   controller: _distance,
@@ -1195,16 +1225,27 @@ class _ShotDropdown extends StatelessWidget {
     // Guard against a stored value not in the option list (keeps the dropdown
     // from asserting); such a value is treated as unset in the control.
     final selected = options.contains(value) ? value : null;
+    // Merged so a screen reader hears the field's name with its value —
+    // "Club, None, button" — rather than an unnamed "em dash" (#73).
+    return MergeSemantics(
+      child: _decorated(selected),
+    );
+  }
+
+  Widget _decorated(String? selected) {
     return InputDecorator(
       decoration: InputDecoration(labelText: label, isDense: true),
+      // Not dense: a dense button is only 24 dp tall to tap (#73).
       child: DropdownButton<String?>(
         key: fieldKey,
         value: selected,
-        isDense: true,
         isExpanded: true,
         underline: const SizedBox.shrink(),
         items: [
-          const DropdownMenuItem<String?>(value: null, child: Text('—')),
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('—', semanticsLabel: 'None'),
+          ),
           for (final o in options)
             DropdownMenuItem<String?>(value: o, child: Text(o)),
         ],

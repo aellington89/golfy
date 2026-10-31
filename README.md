@@ -365,9 +365,12 @@ golfy/
 ├── RELEASING.md         # how a release is cut and its version derived
 ├── BACKUP_FORMAT.md     # the backup file format — a contract, read before changing
 ├── PRIVACY.md           # the privacy policy every build links to — never move it
-├── docs/plans/          # design notes written before a non-trivial feature
 └── README.md            # you are here
 ```
+
+Implementation plans for non-trivial features (written before the work,
+finished with what was actually built) live in the
+[wiki's Plans page](https://github.com/aellington89/golfy/wiki/Plans), not in the repo.
 
 ## History
 

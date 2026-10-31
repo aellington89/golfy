@@ -71,7 +71,14 @@ class _StatSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: theme.textTheme.titleLarge),
+            // A heading of its own (#73): as a bare annotation inside the
+            // Card it would take the card's loose text, such as the
+            // distribution's ace note, into the heading.
+            Semantics(
+              header: true,
+              container: true,
+              child: Text(title, style: theme.textTheme.titleLarge),
+            ),
             const SizedBox(height: 8),
             ...children,
           ],
@@ -82,34 +89,41 @@ class _StatSection extends StatelessWidget {
 }
 
 /// A single label + right-aligned value row. Mirrors the scorecard's
-/// `_TotalRow`; [valueKey] makes the value addressable in widget tests.
+/// `_TotalRow`; [valueKey] makes the value addressable in widget tests. A
+/// screen reader reads it as one item, with [semanticsValue] in place of the
+/// value where that reads badly ("+1.2"); an em dash reads "no data" (#73).
 class _StatRow extends StatelessWidget {
   const _StatRow({
     required this.label,
     required this.value,
+    this.semanticsValue,
     this.valueKey,
     this.valueColor,
   });
 
   final String label;
   final String value;
+  final String? semanticsValue;
   final Key? valueKey;
   final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-          Text(
-            value,
-            key: valueKey,
-            style: theme.textTheme.titleMedium?.copyWith(color: valueColor),
-          ),
-        ],
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+            Text(
+              value,
+              key: valueKey,
+              semanticsLabel: semanticsValue ?? spokenStat(value),
+              style: theme.textTheme.titleMedium?.copyWith(color: valueColor),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -146,6 +160,7 @@ class _ScoringSection extends StatelessWidget {
         _StatRow(
           label: 'Avg score vs. par',
           value: formatSignedAverage(stats.avgScoreVsPar),
+          semanticsValue: spokenSignedAverage(stats.avgScoreVsPar),
           valueColor: avgVsParColor,
           valueKey: const ValueKey('stat_avg_vs_par'),
         ),
@@ -180,33 +195,37 @@ class _BestRoundRow extends StatelessWidget {
     // Same green / amber / red bands as the rounds list and scorecard.
     final color = scoreToParColor(best.toPar, theme.colorScheme);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Best round', style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 2),
-                Text(
-                  '${best.courseName} · ${_formatDate(best.date)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+    // Read as one item: "Best round, Augusta · May 25, 2026, 2 under par".
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Best round', style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${best.courseName} · ${_formatDate(best.date)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            formatRelativeToPar(best.toPar),
-            key: const ValueKey('stat_best_round'),
-            style: theme.textTheme.titleMedium?.copyWith(color: color),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              formatRelativeToPar(best.toPar),
+              key: const ValueKey('stat_best_round'),
+              semanticsLabel: spokenRelativeToPar(best.toPar),
+              style: theme.textTheme.titleMedium?.copyWith(color: color),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -251,6 +270,12 @@ class _ScoreDistributionSection extends StatelessWidget {
     final total = categories
         .where((c) => !c.isAce)
         .fold<int>(0, (s, c) => s + c.count);
+    // The percentage column fits "100.0%" at the ambient text size, so a
+    // share never breaks mid-number; 60 px at the default size (#73).
+    final percentWidth = math.max(
+      60.0,
+      _widestLabel(context, const ['100.0%'], theme.textTheme.titleMedium) - 8,
+    );
     final measuredLabelWidth = _widestLabel(
       context,
       [for (final c in categories) c.label],
@@ -277,6 +302,7 @@ class _ScoreDistributionSection extends StatelessWidget {
                   _DistributionBar(
                     label: c.label,
                     labelWidth: labelWidth,
+                    percentWidth: percentWidth,
                     count: c.count,
                     total: total,
                     maxCount: maxCount,
@@ -336,11 +362,13 @@ class _ScoreDistributionSection extends StatelessWidget {
 /// the percentage use different denominators on purpose — the bar reads
 /// relatively (against the tallest category), the percentage absolutely.
 /// [barColor] overrides the fill (the theme's primary) for a highlighted row.
-/// [labelWidth] is shared by every row so the bars line up.
+/// [labelWidth] and [percentWidth] are shared by every row so the bars line
+/// up.
 class _DistributionBar extends StatelessWidget {
   const _DistributionBar({
     required this.label,
     required this.labelWidth,
+    required this.percentWidth,
     required this.count,
     required this.total,
     required this.maxCount,
@@ -351,6 +379,7 @@ class _DistributionBar extends StatelessWidget {
 
   final String label;
   final double labelWidth;
+  final double percentWidth;
   final int count;
   final int total;
   final int maxCount;
@@ -362,6 +391,86 @@ class _DistributionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final fraction = maxCount == 0 ? 0.0 : count / maxCount;
+    final percent = formatPercent(total == 0 ? null : count / total);
+
+    // One spoken item per row, "Eagle: 3 holes, 12.5%", where the label, the
+    // percentage and the count would otherwise be three stops and the bar
+    // none at all (#73).
+    return Semantics(
+      container: true,
+      label: '$label: $count ${count == 1 ? 'hole' : 'holes'}, '
+          '${spokenStat(percent)}',
+      excludeSemantics: true,
+      child: _bar(context, theme, fraction, percent),
+    );
+  }
+
+  Widget _bar(
+    BuildContext context,
+    ThemeData theme,
+    double fraction,
+    String percent,
+  ) {
+    final track = ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        height: 12,
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: fraction,
+          child: ColoredBox(
+            color: barColor ?? theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+    final percentText = Text(
+      percent,
+      key: percentKey,
+      textAlign: TextAlign.end,
+      maxLines: 1,
+      style: theme.textTheme.titleMedium,
+    );
+    final countText = Text(
+      '$count',
+      key: countKey,
+      textAlign: TextAlign.end,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
+
+    // Past 1.3× text the label, the bar and the share can't all share one
+    // line on a phone, so the row stacks: label and share above, the bar and
+    // count below (#73).
+    if (MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(label, style: theme.textTheme.bodyMedium),
+                ),
+                const SizedBox(width: 8),
+                percentText,
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(child: track),
+                const SizedBox(width: 8),
+                countText,
+              ],
+            ),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -376,44 +485,14 @@ class _DistributionBar extends StatelessWidget {
               style: theme.textTheme.bodyMedium,
             ),
           ),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                height: 12,
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: fraction,
-                  child: ColoredBox(
-                    color: barColor ?? theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          Expanded(child: track),
           const SizedBox(width: 8),
           SizedBox(
-            width: 60,
+            width: percentWidth,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatPercent(total == 0 ? null : count / total),
-                  key: percentKey,
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.titleMedium,
-                ),
-                Text(
-                  '$count',
-                  key: countKey,
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+              children: [percentText, countText],
             ),
           ),
         ],

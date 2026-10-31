@@ -276,7 +276,92 @@ void main() {
     // scorecard, not the theme's primary (#16 colour unification).
     Color? colorOfKey(String key) =>
         tester.widget<Text>(find.byKey(ValueKey(key))).style?.color;
-    expect(colorOfKey('stat_best_round'), Colors.green.shade700);
-    expect(colorOfKey('stat_avg_vs_par'), Colors.green.shade700);
+    const underParGreen = Color(0xFF006E1C); // the light theme's (#73)
+    expect(colorOfKey('stat_best_round'), underParGreen);
+    expect(colorOfKey('stat_avg_vs_par'), underParGreen);
+  });
+
+  // #73: what TalkBack reads on the dashboard.
+  group('screen reader', () {
+    testWidgets('a distribution row is one item with its count and share',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      final rid = await seedRound();
+      await fx.upsertHole(rid, 1, par: 4, score: 5); // bogey
+      await fx.upsertHole(rid, 2, par: 4, score: 5); // bogey
+      await fx.upsertHole(rid, 3, par: 4, score: 4); // par
+      await fx.upsertHole(rid, 4, par: 3, score: 1, putts: 0, fairwayHit: null);
+
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      resizeTall(tester);
+      await tester.pumpWidget(wrap(container));
+      await settle(tester);
+
+      SemanticsNode row(String key) =>
+          tester.getSemantics(find.byKey(ValueKey(key)));
+      Matcher reads(String label) => isSemantics(label: label);
+      expect(row('dist_bogey'), reads('Bogey: 2 holes, 50.0%'));
+      expect(row('dist_par'), reads('Par: 1 hole, 25.0%'));
+      expect(row('dist_ace'), reads('Ace: 1 hole, 25.0%'));
+      expect(row('dist_condor'), reads('Condor: 0 holes, 0.0%'));
+      semantics.dispose();
+    });
+
+    testWidgets('scores to par read in words; section titles are headings',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      final rid = await seedRound();
+      await fx.upsertHole(rid, 1, par: 4, score: 6, gir: false);
+
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      resizeTall(tester);
+      await tester.pumpWidget(wrap(container));
+      await settle(tester);
+
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('stat_avg_vs_par'))),
+        isSemantics(label: 'Avg score vs. par\n2.0 over par'),
+      );
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('stat_best_round'))),
+        isSemantics(
+          label: 'Best round\nAugusta · May 25, 2026\n2 over par',
+        ),
+      );
+      for (final title in const [
+        'Scoring',
+        'Score distribution',
+        'Accuracy',
+        'Around the green',
+      ]) {
+        // Each title alone: the ace note stays out of its heading.
+        expect(
+          tester.getSemantics(find.text(title)),
+          matchesSemantics(label: title, isHeader: true),
+          reason: title,
+        );
+      }
+      semantics.dispose();
+    });
+
+    testWidgets('a stat with no data reads "no data"', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final rid = await seedRound();
+      await fx.upsertHole(rid, 1, par: 4, score: 4); // no up-and-down attempts
+
+      final container = makeContainer();
+      addTearDown(container.dispose);
+      resizeTall(tester);
+      await tester.pumpWidget(wrap(container));
+      await settle(tester);
+
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('stat_updown_pct'))),
+        isSemantics(label: 'Up & down conversion %\nno data'),
+      );
+      semantics.dispose();
+    });
   });
 }

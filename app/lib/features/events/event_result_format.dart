@@ -23,6 +23,17 @@ String formatEventResult(Event event) {
   return event.tied ? 'T-$position' : ordinal(position);
 }
 
+/// What a screen reader says for an event's result: `"won"`, `"finished
+/// 2nd"`, `"tied for 3rd"`, `"missed the cut"`, or `"not recorded"`. The badge's
+/// `"T-3"` otherwise reads as "T minus 3" (#73).
+String spokenEventResult(Event event) {
+  if (event.missedCut) return 'missed the cut';
+  final position = event.finishPosition;
+  if (position == null) return 'not recorded';
+  if (event.tied) return 'tied for ${ordinal(position)}';
+  return position == 1 ? 'won' : 'finished ${ordinal(position)}';
+}
+
 /// Whether [event] has a result worth showing as a badge (i.e. it is not in the
 /// "not recorded yet" state). Lets the UI hide the badge entirely rather than
 /// render an em dash where that would read oddly.

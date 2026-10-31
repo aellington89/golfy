@@ -42,6 +42,8 @@ class EventResultBadge extends StatelessWidget {
       ),
       child: Text(
         formatEventResult(event),
+        // "tied for 3rd", not "T minus 3" (#73).
+        semanticsLabel: spokenEventResult(event),
         style: theme.textTheme.labelMedium
             ?.copyWith(color: fg, fontWeight: FontWeight.bold),
       ),

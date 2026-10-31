@@ -34,6 +34,24 @@ String formatSignedAverage(double? value) {
   return rounded > 0 ? '+$magnitude' : '-$magnitude';
 }
 
+/// What a screen reader says for [formatSignedAverage]'s output: `"1.2 over
+/// par"`, `"even par"`, `"0.4 under par"`, or `"no data"` for null. Rounded the
+/// same way, so the spoken value always matches the one on screen (#73).
+String spokenSignedAverage(double? value) {
+  if (value == null) return _noData;
+  final rounded = (value * 10).round() / 10;
+  if (rounded == 0) return 'even par';
+  final magnitude = rounded.abs().toStringAsFixed(1);
+  return rounded > 0 ? '$magnitude over par' : '$magnitude under par';
+}
+
+/// What a screen reader says for any formatted stat: the em dash that stands
+/// for "no data" reads as "no data" rather than "em dash"; anything else reads
+/// as shown (#73).
+String spokenStat(String formatted) => formatted == _dash ? _noData : formatted;
+
+const String _noData = 'no data';
+
 /// One row of the dashboard's score-distribution chart: a display label and the
 /// number of holes that fell in that category.
 class ScoreCategoryCount {

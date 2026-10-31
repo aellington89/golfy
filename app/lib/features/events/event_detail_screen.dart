@@ -74,6 +74,7 @@ class EventDetailScreen extends ConsumerWidget {
             actions: [
               PopupMenuButton<_EventMenuAction>(
                 key: const ValueKey('event_detail_menu'),
+                tooltip: 'Event options',
                 onSelected: (action) =>
                     _onMenuAction(context, ref, action, event, events),
                 itemBuilder: (_) => const [
@@ -193,25 +194,38 @@ class _ResultHeader extends StatelessWidget {
     final recorded = hasRecordedResult(event);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-      child: Row(
+      // Wraps rather than overflowing at a large text size: the badge, then
+      // Edit, move to the next line (#73).
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Icon(
-            Icons.emoji_events_outlined,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Text('Result', style: theme.textTheme.titleMedium),
-          const SizedBox(width: 12),
-          if (recorded)
-            EventResultBadge(event: event)
-          else
-            Text(
-              'Not recorded',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          // "Result, tied for 3rd" as one item for a screen reader (#73).
+          MergeSemantics(
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Icon(
+                  Icons.emoji_events_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text('Result', style: theme.textTheme.titleMedium),
+                ),
+                if (recorded)
+                  EventResultBadge(event: event)
+                else
+                  Text(
+                    'Not recorded',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
             ),
-          const Spacer(),
+          ),
           TextButton.icon(
             key: const ValueKey('event_detail_edit_result'),
             onPressed: onEdit,
@@ -250,7 +264,11 @@ class _EventStatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Event scoring', style: theme.textTheme.titleLarge),
+            Semantics(
+              header: true,
+              container: true,
+              child: Text('Event scoring', style: theme.textTheme.titleLarge),
+            ),
             const SizedBox(height: 8),
             _row(
               theme,
@@ -262,6 +280,7 @@ class _EventStatsCard extends StatelessWidget {
               theme,
               'Avg score vs. par',
               formatSignedAverage(stats.avgScoreVsPar),
+              semanticsValue: spokenSignedAverage(stats.avgScoreVsPar),
               valueKey: const ValueKey('event_stat_avg_vs_par'),
               color: avgColor,
             ),
@@ -270,6 +289,7 @@ class _EventStatsCard extends StatelessWidget {
                 theme,
                 'Best round',
                 formatRelativeToPar(best.toPar),
+                semanticsValue: spokenRelativeToPar(best.toPar),
                 valueKey: const ValueKey('event_stat_best'),
                 color: scoreToParColor(best.toPar, theme.colorScheme),
                 subtitle: '${best.courseName} · ${_formatDate(best.date)}',
@@ -280,43 +300,49 @@ class _EventStatsCard extends StatelessWidget {
     );
   }
 
+  /// One label + value line, read by a screen reader as a single item with
+  /// [semanticsValue] in place of the drawn value ("+1.2") when given (#73).
   Widget _row(
     ThemeData theme,
     String label,
     String value, {
+    String? semanticsValue,
     Key? valueKey,
     Color? color,
     String? subtitle,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: theme.textTheme.bodyMedium),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: theme.textTheme.bodyMedium),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            value,
-            key: valueKey,
-            style: theme.textTheme.titleMedium?.copyWith(color: color),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              value,
+              key: valueKey,
+              semanticsLabel: semanticsValue ?? spokenStat(value),
+              style: theme.textTheme.titleMedium?.copyWith(color: color),
+            ),
+          ],
+        ),
       ),
     );
   }

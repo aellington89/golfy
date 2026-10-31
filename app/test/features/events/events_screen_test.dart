@@ -192,4 +192,32 @@ void main() {
 
     expect(find.byType(EventDetailScreen), findsOneWidget);
   });
+
+  // #73: the tile is one screen-reader item; its scoring line reads in
+  // words and its result badge as "tied for 3rd", not "+2.0" and "T-3".
+  testWidgets('a scored tile reads its average, best and result in words',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    final event = makeEvent(id: 9, finishPosition: 3, tied: true);
+    await tester.pumpWidget(wrap());
+    await emit(
+      tester,
+      events: [event],
+      rounds: [
+        makeRound(
+            id: 1, event: event, holesEntered: 18, totalScore: 74, totalPar: 72),
+        makeRound(
+            id: 2, event: event, holesEntered: 18, totalScore: 71, totalPar: 72),
+      ],
+    );
+
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('event_tile_9'))),
+      isSemantics(
+        label: 'Club Championship (Season 1)\n2 rounds\n'
+            'average 0.5 over par\nbest round 1 under par\ntied for 3rd',
+      ),
+    );
+    semantics.dispose();
+  });
 }
