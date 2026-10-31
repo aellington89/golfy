@@ -516,8 +516,8 @@ page, the privacy policy and Help & feedback. Its tiles are in
 
 Golfy is meant to be usable with TalkBack, at the largest font size, and by
 anyone who can't tell its colours apart (#73). The plan and the audit behind
-these rules are in
-[`docs/plans/issue-73-accessibility.md`](../docs/plans/issue-73-accessibility.md).
+these rules are in the
+[#73 plan](https://github.com/aellington89/golfy/wiki/Plan-73-accessibility) in the wiki.
 
 - **Everything tappable says what it is.** An icon-only button has a
   `tooltip`, which is also its spoken label. A gesture (a swipe, a long press)

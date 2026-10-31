@@ -87,6 +87,11 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   the three two-line app bar titles one `TwoLineTitle`. The house rules are
   in `app/README.md` under Accessibility.
 
+- **Implementation plans live in the wiki** ([#143]). The six plans under
+  `docs/plans/` (#59, #69 to #73) moved to the repo's
+  [wiki](https://github.com/aellington89/golfy/wiki/Plans), and `docs/` is gone. The READMEs link
+  there; each wiki page links back to its last version in the repo.
+
 ## [0.9.0] - 2026-10-24
 
 A release that makes Golfy look like itself. The stock Flutter icon is gone
@@ -1252,3 +1257,4 @@ Phase 1 — data layer and navigation shell.
 [#133]: https://github.com/aellington89/golfy/pull/133
 [#134]: https://github.com/aellington89/golfy/pull/134
 [#138]: https://github.com/aellington89/golfy/issues/138
+[#143]: https://github.com/aellington89/golfy/pull/143
