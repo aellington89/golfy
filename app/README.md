@@ -45,6 +45,8 @@ pre-suffix combined debug install, clear it once with
 ```
 app/lib/
 ├── data/
+│   ├── app_version.dart           # the installed version — one reader for Settings
+│   │                              #   and a backup's manifest (#72)
 │   ├── database.dart              # @DriftDatabase root
 │   ├── database_provider.dart     # Riverpod provider for the DB
 │   ├── repository.dart            # GolfyRepository (single facade)
@@ -66,7 +68,8 @@ app/lib/
 │   ├── courses/                   # CoursePicker bottom sheet, add/edit course dialogs,
 │   │                              #   one-screen course setup (par + stroke index +
 │   │                              #   tee sets and pin sets, #36/#81)
-│   ├── settings/                  # Settings screen + the Export backup tile (#69)
+│   ├── settings/                  # Settings: Data (export / restore, #69, #70) and About
+│   │                              #   (version, licences, privacy policy, help, #72)
 │   ├── rounds/                    # rounds list, new-round dialog, delete + active-round helpers
 │   │   └── scorecard/             # read-only per-round scorecard (totals + per-hole cards)
 │   ├── hole_entry/                # 18-card per-hole entry form, in-memory HoleDraft,
@@ -78,19 +81,34 @@ app/lib/
 │   └── stats/                     # pure score/stat formatters + score-to-par colour bands
 ├── shell/                         # AppShell + tabIndexProvider (bottom-nav state)
 ├── widgets/                       # shared presentational widgets (EmptyState, ParSelector,
-│                                  #   HoleNavBar — used by both course setup and hole entry)
+│                                  #   HoleNavBar — used by both course setup and hole entry —
+│                                  #   StepperField, TwoLineTitle)
 ├── app.dart                       # MaterialApp + light/dark theme (ThemeMode.system)
 └── main.dart                      # runApp + ProviderScope
 
+app/branding/                      # icon + splash source art (SVG + PNG exports), build-time
+                                   #   only, not a Flutter asset; see Branding below (#71)
+app/flutter_launcher_icons.yaml    # launcher icon generator config
+app/flutter_native_splash.yaml     # splash generator config
+
 app/tool/                          # release tooling — not part of the app
 ├── release_rules.dart             # pure version rules (imports nothing)
-└── next_version.dart              # CLI: next version, and the CI tag guard
+├── next_version.dart              # CLI: next version, and the CI tag guard
+└── assert_permissions.sh          # CI: an APK asks for no permission PRIVACY.md
+                                   #   doesn't mention (#72)
 
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
 ├── migration_test.dart            # drift SchemaVerifier: every vN -> vN+1 step
 ├── widget_test.dart               # AppShell smoke test
 ├── app_theme_test.dart            # light/dark theme + system-brightness switching
+├── privacy_policy_test.dart       # PRIVACY.md is where every build links, and stays
+│                                  #   true: no permissions in the manifest (#72)
+├── a11y/                          # every screen against flutter_test's accessibility
+│                                  #   guidelines, light + dark, and at 2× text (#73)
+├── branding/                      # committed icon + splash resources: no stock Flutter
+│                                  #   icon, sizes/layers, splash colour = theme surface (#71)
+├── data/app_version_test.dart     # the installed-version reader (#72)
 ├── data/backup/                  # format: codec (write), decode (read), guards,
 │   │                              #   golden files — the backup contract (#69)
 ├── data/upgrades/                # the frozen v7 -> v8 putt and v8 -> v9 yardage rules
@@ -116,12 +134,13 @@ app/test/
 │   ├── hole_entry/                # hole_entry_screen, hole_card, hole_draft,
 │   │                              #   hole_rules + shot_inference (pure rules)
 │   ├── events/                    # event_picker, add_event_dialog, event_result_format, edit_event_result_dialog
-│   ├── settings/                  # settings_screen (backup tile, snackbars, #69)
+│   ├── settings/                  # settings_screen (backup tiles, About section),
+│   │                              #   about_links (#69, #70, #72)
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
 ├── tool/                          # release_rules (version derivation + tag guards)
 └── widgets/                       # shared-widget tests (empty_state, par_selector,
-                                   #   hole_nav_bar)
+                                   #   hole_nav_bar, stepper_field, two_line_title)
 ```
 
 ## Architecture notes
@@ -185,9 +204,18 @@ app/test/
   Both directions of the codec ship together, so the file is provably readable
   before anyone holds one; see [Data backup](#data-backup-export) and
   [`BACKUP_FORMAT.md`](../BACKUP_FORMAT.md).
+- **Links leave the app.** Settings → About (#72) opens the privacy policy and
+  Help & feedback through a `LinkOpener`
+  ([`about_links.dart`](lib/features/settings/about_links.dart)), which always
+  hands the link to another app (`LaunchMode.externalApplication`). By default
+  Android would open a web link inside Golfy, and url_launcher's WebView
+  fallback needs the INTERNET permission the release build doesn't have.
+  Both addresses ship in every build, so they are a contract; see
+  [Settings → About](#settings--about).
 - **Theme is system-driven.** [`app.dart`](lib/app.dart) builds light + dark
-  `ThemeData` from one deep-purple seed and sets `themeMode: ThemeMode.system`;
-  there's no in-app toggle. Empty screens use the shared
+  `ThemeData` from the golf palette (a fairway-green seed with flag-yellow and
+  sky-blue accents) and sets `themeMode: ThemeMode.system`; there's no in-app
+  toggle. Empty screens use the shared
   [`EmptyState`](lib/widgets/empty_state.dart) widget (icon + message + optional
   action) — reuse it rather than hand-rolling a centered column.
 
@@ -196,12 +224,16 @@ app/test/
 Tests run against an in-memory drift database — no platform setup required.
 
 ```powershell
-flutter test                           # everything (867 tests)
+flutter test                           # everything (1083 tests)
 flutter test test/dao                  # DAO suites only
 flutter test test/features             # widget + formatter suites only
 flutter test test/database_test.dart   # schema-constraint suite only
 flutter test test/tool                 # release version rules (no database)
 flutter test test/data/backup          # backup format: codec, decode, guards, goldens
+flutter test test/branding             # launcher icon + splash resources (no database)
+flutter test test/features/settings    # Settings: backup tiles, About section, links
+flutter test test/privacy_policy_test.dart   # PRIVACY.md is where builds link, and true
+flutter test test/a11y                 # accessibility: guidelines + 2× text, every screen
 ```
 
 The dashboard aggregation suite seeds a hand-designed 2-round, 36-hole fixture
@@ -231,6 +263,42 @@ so the generated `toJson()` / `fromJson()` key by SQL column name
 (`game_title`, not `gameTitle`). Nothing but the backup file (#69) serializes
 rows, so that option *is* the backup's key naming — changing it changes a file
 format users already hold. See [Data backup](#data-backup-export).
+
+## Branding (launcher icon & splash)
+
+The launcher icon and the Android splash screen are **generated** from the
+source art in [`branding/`](branding), and the output is committed, like the
+drift code above (#71). [`branding/README.md`](branding/README.md) has the
+palette, the safe-zone geometry and the full regenerate procedure. In short,
+after editing an SVG and re-exporting its PNG:
+
+```powershell
+dart run flutter_launcher_icons          # Android mipmaps + adaptive / themed icon
+dart run flutter_native_splash:create    # Android splash, pre-12 and 12+, light + dark
+flutter test test/branding               # check the result
+```
+
+and rebuild `windows/runner/resources/app_icon.ico` as `branding/README.md`
+describes. `flutter_launcher_icons` would write only a single 256 px image
+there, so its Windows output is turned off.
+
+- **Don't hand-edit the generated resources**: `android/app/src/main/res/`
+  `mipmap-*`, `drawable*/` and `values*/styles.xml`, and `app_icon.ico`. The
+  next run overwrites them.
+- **The splash background is the theme's surface colour**, the colour the
+  first Flutter frame paints, so the launch screen hands over without a
+  change of colour. [`test/branding/splash_test.dart`](test/branding/splash_test.dart)
+  compares the config and the generated output with `golfyColorScheme(...)`
+  in [`lib/app.dart`](lib/app.dart). If you change the theme's seed colours,
+  it fails until you put the new surface colours into
+  `flutter_native_splash.yaml` and regenerate.
+- **Windows has no splash.** Its window stays hidden until Flutter draws the
+  first frame (`windows/runner/flutter_window.cpp`).
+- **Dependencies:** `flutter_launcher_icons` and `flutter_native_splash` are
+  dev dependencies that run only when you invoke them, so nothing is added to
+  the APK and there's no manifest change. `crypto` is a dev dependency for
+  the stock-icon hash check in
+  [`test/branding/launcher_icon_test.dart`](test/branding/launcher_icon_test.dart).
 
 ## Database migrations
 
@@ -378,13 +446,125 @@ Then read the diff as carefully as you would read a migration.
 
 `share_plus` (Android share sheet), `file_selector` (desktop save dialog, and
 the file *open* dialog both platforms will use for #70) and
-`package_info_plus` (the real installed version, for the manifest — also
-[#72](https://github.com/aellington89/golfy/issues/72)'s). These are the
-project's first plugins with native code, so `flutter pub get` now regenerates
+`package_info_plus` (the real installed version, for the manifest and for
+Settings → About, [#72](https://github.com/aellington89/golfy/issues/72)).
+These are the project's first plugins with native code, so `flutter pub get` now regenerates
 the Windows plugin glue under `windows/flutter/` — those files are committed
 and LF-pinned (see [`.gitattributes`](../.gitattributes)). No Android manifest
 change and no runtime permission: nothing is written outside app-private
 storage.
+
+## Settings → About
+
+The About section (#72) shows the installed version, and opens the licence
+page, the privacy policy and Help & feedback. Its tiles are in
+[`about_tiles.dart`](lib/features/settings/about_tiles.dart).
+
+- **The version is read, never written down.**
+  [`AppVersion`](lib/data/app_version.dart) wraps `package_info_plus`.
+  - `label` is what Settings shows: `0.10.0 (build 51)`.
+  - `full` is what a backup's manifest records: `0.10.0+51`. Both come from
+    the same reader, so Settings and a backup can't disagree.
+  - Android debug builds report `…-debug`, from `versionNameSuffix`.
+  - The provider never retries: Riverpod 3 would otherwise keep re-asking a
+    platform that can't answer.
+- **The licence page is Flutter's.** `showLicensePage` lists every package
+  from the licences gathered when the app is built, so there's nothing to
+  maintain. Widget tests see no licences, because the test binding registers
+  none, so a test registers its own with `LicenseRegistry.addLicense`.
+- **The two links are a contract with every installed build.**
+  `privacyPolicyUrl` is `PRIVACY.md` on `master`, as GitHub shows it.
+  `supportUri` is a new GitHub issue, prefilled with the version and platform.
+  An installed build can't be given a new address, so:
+  - **Never move or rename `PRIVACY.md`, and never rename `master`.**
+    [`test/privacy_policy_test.dart`](test/privacy_policy_test.dart) fails if
+    the file goes.
+  - **To host the policy elsewhere** (GitHub Pages for #77, say), keep
+    `PRIVACY.md` as the source, or as a pointer to the new page.
+  - **Changing either constant only reaches new builds.** Old ones keep the old
+    link, so it has to keep working.
+  - **Switching Help & feedback to email** (Play will want a contact address,
+    #77 and #78) is a change to `supportUri` and to `PRIVACY.md`'s Contact
+    section. The test above checks the two agree. Build a `mailto:` query with
+    `encodeQueryParameters`, not `Uri.queryParameters`, which turns spaces
+    into `+`.
+- **The privacy policy's claims are checked.** The same test checks that the
+  app's own manifest requests no permissions. Plugins' permissions only appear
+  in the built APK, so CI runs
+  [`tool/assert_permissions.sh`](tool/assert_permissions.sh) on it:
+  - the debug APK may ask for `INTERNET`, which the flutter tool needs;
+  - the release APK may ask for nothing;
+  - both may have AndroidX's app-private
+    `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which grants no access.
+
+  **When it fails,** a dependency asked for a permission. Decide whether
+  that's acceptable. If it is, update `PRIVACY.md`, #77's Play Data Safety
+  answers and the workflow's allow-list in the same pull request.
+- **Adding a row.** Anything that opens a link goes through the same
+  `_openLink`, so it opens in another app and fails visibly, with a snackbar
+  offering the link to copy. Add a widget test on the tall surface the About
+  tests use; the list builds lazily, so rows below the fold aren't there to
+  find otherwise.
+
+`url_launcher` is the one dependency #72 added:
+- Its Windows half was already compiled in through `share_plus`, so the
+  committed plugin glue didn't change.
+- It needs no Android manifest change or permission. The About links never
+  call `canLaunchUrl`, which is the call that needs `<queries>` entries.
+
+## Accessibility
+
+Golfy is meant to be usable with TalkBack, at the largest font size, and by
+anyone who can't tell its colours apart (#73). The plan and the audit behind
+these rules are in the
+[#73 plan](https://github.com/aellington89/golfy/wiki/Plan-73-accessibility) in the wiki.
+
+- **Everything tappable says what it is.** An icon-only button has a
+  `tooltip`, which is also its spoken label. A gesture (a swipe, a long press)
+  also has a named `CustomSemanticsAction`, which TalkBack lists in its actions
+  menu: "Delete round" on a round row, "Rename tee set" on a set chip.
+- **Say it in words.** Text that reads badly aloud gets a `semanticsLabel`
+  from the spoken helpers beside the formatters: `spokenRelativeToPar` ("2 over
+  par", not "+2"; "even par", not "E"), `spokenSignedAverage`, `spokenStat`
+  (the no-data dash reads "no data") and `spokenEventResult` ("tied for 3rd",
+  not "T-3"). A read-only card or row that would read as a string of fragments
+  is one `Semantics(container: true, label: …, excludeSemantics: true)` with a
+  sentence, like a scorecard hole. A label and its value read together inside
+  a `MergeSemantics`. The drawn `Text` and its `ValueKey` stay, so widget tests
+  find them as before.
+- **Titles are headings.** Section and card titles are `Semantics(header:
+  true)`, so TalkBack can move heading by heading. Inside a `Card`, add
+  `container: true`, or the heading takes the card's other loose text into
+  itself.
+- **Colour is never the only signal, and it meets AA.** Each score colour is
+  backed by the `+2` / `E` / `-1` text and its spoken label, and every band
+  meets 4.5:1 on the surface and the card colour in both themes (checked in
+  `score_color_test.dart`). Don't draw text in `outline`: it is a border colour
+  and reads about 4:1.
+- **48 dp to tap.** Don't set `VisualDensity.compact` on anything tappable: it
+  shrinks the tap target to 40 dp. The theme already uses compact density on
+  desktop. Status chips that can't be tapped may keep it.
+- **Measure, don't fix, sizes that hold text.** A fixed width or height that
+  fits the default text size clips or overflows at 2×. Let rows `Wrap`, stack
+  them past 1.3× text, or measure with a `TextPainter` at
+  `MediaQuery.textScalerOf(context)`, as the dashboard's distribution columns
+  and `TwoLineTitle.toolbarHeight` do. Never cap the text scale.
+
+**The suite.** [`test/a11y/`](test/a11y) pumps every screen in the app's real
+theme. `guidelines_test.dart` runs flutter_test's `textContrastGuideline`,
+`labeledTapTargetGuideline` and `androidTapTargetGuideline` in light and dark.
+`large_text_test.dart` runs at 1.3× and 2× text on a 360 dp phone and fails
+on any overflow, or on text outside a toolbar or chip strip. A new screen goes
+in the list in [`_harness.dart`](test/a11y/_harness.dart), seeded so that each
+kind of widget it can show is on screen. `textContrastGuideline` skips text
+that a `ListTile` or `Card` merges into one node, so a colour drawn there needs
+its own contrast test, as the score bands have.
+
+**By hand, before a release that changes a screen:** on an Android 14+ device
+at the largest font size and display size, open each changed screen and look
+for clipping. Then, with TalkBack on, create a round, enter and save a hole,
+finish the round, and read its scorecard and the dashboard. Run Google's
+Accessibility Scanner over the changed screens in light and dark.
 
 ## Release signing
 
@@ -428,7 +608,9 @@ branch described below — runs
 [`.github/workflows/flutter-build.yml`](../.github/workflows/flutter-build.yml):
 
 - **Linux job** — `flutter analyze`, the full `flutter test` suite, and
-  `flutter build apk --debug`, with the APK uploaded as a workflow artifact. The
+  `flutter build apk --debug`, with the APK uploaded as a workflow artifact.
+  The APK must ask for no permission beyond the debug-only `INTERNET`
+  ([`tool/assert_permissions.sh`](tool/assert_permissions.sh), #72). The
   runner installs `libsqlite3-dev` so drift's `NativeDatabase` tests can load
   SQLite, and the committed `*.g.dart` files mean CI never runs `build_runner`.
 - **Windows job** — `flutter build windows --debug` (build-only; the test suite
@@ -442,9 +624,10 @@ tool/next_version.dart --verify-release` compares it with
 link references, the previous release's build number and the drift schema
 snapshots, and fails before anything is built if they disagree. It then runs
 the test suite, builds a **signed** release APK from the
-`ANDROID_*` secrets (see [Release signing](#release-signing)), asserts it is
-release-signed and within an 80 MB sanity ceiling for the fat universal APK,
-and attaches it to a **draft** GitHub Release to publish after on-device
+`ANDROID_*` secrets (see [Release signing](#release-signing)), and asserts it
+is release-signed, within an 80 MB sanity ceiling for the fat universal APK,
+and asking for no permissions, as `PRIVACY.md` promises. Then it attaches the
+APK to a **draft** GitHub Release to publish after on-device
 validation. A manual `workflow_dispatch` run does the
 same build but uploads the APK as an artifact instead of creating a Release — use
 it to dry-run the signing pipeline before tagging; it also prints what the

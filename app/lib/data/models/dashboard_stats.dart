@@ -59,7 +59,7 @@ class DashboardStats {
 
   /// One entry per distinct `score - par` bucket, ordered ascending. Empty
   /// list when no hole_results exist. The dashboard UI labels and groups the
-  /// buckets (Eagle, Birdie, Par, Bogey, Double+).
+  /// buckets (Ace, Condor … Quadruple+ bogey) via `groupScoreDistribution`.
   final List<ScoreBucket> scoreDistribution;
 
   /// The single round with the lowest cumulative `score - par`. Null when
@@ -69,12 +69,21 @@ class DashboardStats {
 
 /// One row of the score-distribution histogram.
 class ScoreBucket {
-  const ScoreBucket({required this.scoreVsPar, required this.count});
+  const ScoreBucket({
+    required this.scoreVsPar,
+    required this.count,
+    this.aces = 0,
+  });
 
   /// The bucket key: `score - par`. Negative = under par, 0 = par, positive
   /// = over par.
   final int scoreVsPar;
   final int count;
+
+  /// Holes-in-one (`score == 1`) within this bucket; always ≤ [count]. An ace
+  /// is a subset of its bucket, not a bucket of its own: on a par 3 / 4 / 5 it
+  /// lands in -2 / -3 / -4 (eagle / albatross / condor).
+  final int aces;
 
   @override
   bool operator ==(Object other) =>
@@ -82,13 +91,16 @@ class ScoreBucket {
       other is ScoreBucket &&
           runtimeType == other.runtimeType &&
           scoreVsPar == other.scoreVsPar &&
-          count == other.count;
+          count == other.count &&
+          aces == other.aces;
 
   @override
-  int get hashCode => Object.hash(scoreVsPar, count);
+  int get hashCode => Object.hash(scoreVsPar, count, aces);
 
   @override
-  String toString() => 'ScoreBucket($scoreVsPar: $count)';
+  String toString() => aces == 0
+      ? 'ScoreBucket($scoreVsPar: $count)'
+      : 'ScoreBucket($scoreVsPar: $count, aces: $aces)';
 }
 
 /// Lifetime-best round summary returned by the dashboard.

@@ -968,4 +968,72 @@ void main() {
       expect(find.text('Saved'), findsNothing);
     });
   });
+
+  // #73: a dropdown's empty choice is drawn as a dash; it reads "None", with
+  // the field's name.
+  testWidgets('an empty club reads "Club, None"', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: HoleDraft.initial());
+
+    expect(find.bySemanticsLabel('Club\nNone'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('the hole and its sections are headings', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: HoleDraft.initial());
+
+    for (final title in const ['Hole 1', 'Hole', 'Tee shot', 'Putting', 'Score']) {
+      expect(
+        tester.getSemantics(find.text(title).first),
+        isSemantics(label: title, isHeader: true),
+        reason: title,
+      );
+    }
+    semantics.dispose();
+  });
+
+  // #73: every control on the card, the issue panel's fix buttons and a
+  // deletable shot and putt included, is at least 48 dp to tap.
+  testWidgets('every control on the card meets the 48 dp tap target',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: answeredPar4());
+    await tapKey(tester, 'add_shot');
+    await tapKey(tester, 'Score_inc');
+    await tapKey(tester, 'Score_inc');
+    expect(find.byKey(const ValueKey('fix_add_shots')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shot_delete_1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('putt_delete_0')), findsOneWidget);
+
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    semantics.dispose();
+  });
+
+  // #73: TalkBack moves down the card in the order a hole is played: the
+  // hole (announced as a live region), each section's heading before its
+  // fields, and the Save row last.
+  testWidgets('a screen reader meets the card in playing order',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, initial: HoleDraft.initial());
+
+    expect(
+      tester.semantics.simulatedAccessibilityTraversal(),
+      containsAllInOrder(<Matcher>[
+        isSemantics(label: 'Hole 1', isHeader: true, isLiveRegion: true),
+        isSemantics(label: 'Hole', isHeader: true),
+        isSemantics(label: 'Par 4', isSelected: true),
+        isSemantics(label: 'Tee shot', isHeader: true),
+        isSemantics(label: 'Approach & around the green', isHeader: true),
+        isSemantics(label: 'Putting', isHeader: true),
+        isSemantics(label: 'Score', isHeader: true),
+        isSemantics(label: 'Penalty strokes', value: '0'),
+        isSemantics(tooltip: 'Previous hole'),
+        isSemantics(label: 'Save Hole'),
+        isSemantics(tooltip: 'Next hole'),
+      ]),
+    );
+    semantics.dispose();
+  });
 }

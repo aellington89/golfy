@@ -54,4 +54,15 @@ void main() {
     await pump(tester, value: 4, onChanged: (_) {}, labelText: 'Hole par');
     expect(find.text('Hole par'), findsOneWidget);
   });
+
+  testWidgets('each option reads with its name, "Par 4", not a bare "4"',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pump(tester, value: 4, onChanged: (_) {});
+
+    for (final par in const [3, 4, 5]) {
+      expect(find.bySemanticsLabel('Par $par'), findsOneWidget);
+    }
+    semantics.dispose();
+  });
 }

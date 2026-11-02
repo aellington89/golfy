@@ -22,6 +22,8 @@ class HoleNavBar extends StatefulWidget implements PreferredSizeWidget {
     required this.onTapHole,
     this.dirty = const {},
     this.keyPrefix = 'hole_chip',
+    this.completeState = 'saved',
+    this.textScaler = TextScaler.noScaling,
   });
 
   final int holeCount;
@@ -45,8 +47,29 @@ class HoleNavBar extends StatefulWidget implements PreferredSizeWidget {
   /// strips on different screens don't collide in tests.
   final String keyPrefix;
 
+  /// What a [complete] hole is, spoken after its number — "Hole 4, saved" on
+  /// Hole Entry, "Hole 4, set" in the course editor. The check and pencil
+  /// icons say it only visually (#73).
+  final String completeState;
+
+  /// The text scale the strip is drawn at — pass
+  /// `MediaQuery.textScalerOf(context)`. An [AppBar] reads [preferredSize]
+  /// before it builds its bottom, so the strip can't measure itself; it works
+  /// its height out from this instead (#73).
+  final TextScaler textScaler;
+
   @override
-  Size get preferredSize => const Size.fromHeight(80);
+  Size get preferredSize => Size.fromHeight(heightFor(textScaler));
+
+  /// 80 dp at the default text size: the counter's 16 dp line (12 sp text), the
+  /// chips' 20 dp label line (14 sp) and padding. At a larger text size both
+  /// lines grow and the padding doesn't. A fixed 80 dp squeezed the chips until
+  /// their numbers were clipped (#73).
+  static double heightFor(TextScaler scaler) {
+    double growth(double fontSize, double lineHeight) =>
+        (scaler.scale(fontSize) - fontSize) * lineHeight / fontSize;
+    return 80 + growth(12, 16) + growth(14, 20);
+  }
 
   @override
   State<HoleNavBar> createState() => _HoleNavBarState();
@@ -54,11 +77,23 @@ class HoleNavBar extends StatefulWidget implements PreferredSizeWidget {
 
 class _HoleNavBarState extends State<HoleNavBar> {
   final ScrollController _scrollController = ScrollController();
+
+  /// Each chip's key, so the current one can be scrolled to wherever it is:
+  /// chips are wider with an icon and at a larger text size.
+  late List<GlobalKey> _chipKeys = _keysFor(widget.holeCount);
+
+  static List<GlobalKey> _keysFor(int count) =>
+      List.generate(count, (_) => GlobalKey());
+
+  /// Where a chip is assumed to sit when it isn't built yet, far off screen.
   static const double _chipExtent = 52;
 
   @override
   void didUpdateWidget(covariant HoleNavBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.holeCount != widget.holeCount) {
+      _chipKeys = _keysFor(widget.holeCount);
+    }
     if (oldWidget.currentIndex != widget.currentIndex) {
       _scrollToCurrent();
     }
@@ -66,6 +101,17 @@ class _HoleNavBarState extends State<HoleNavBar> {
 
   void _scrollToCurrent() {
     if (!_scrollController.hasClients) return;
+    const duration = Duration(milliseconds: 200);
+    final chip = _chipKeys[widget.currentIndex].currentContext;
+    if (chip != null) {
+      Scrollable.ensureVisible(
+        chip,
+        alignment: 0.5,
+        duration: duration,
+        curve: Curves.easeOut,
+      );
+      return;
+    }
     final viewport = _scrollController.position.viewportDimension;
     final target =
         widget.currentIndex * _chipExtent - viewport / 2 + _chipExtent / 2;
@@ -73,7 +119,7 @@ class _HoleNavBarState extends State<HoleNavBar> {
         target.clamp(0.0, _scrollController.position.maxScrollExtent);
     _scrollController.animateTo(
       clamped,
-      duration: const Duration(milliseconds: 200),
+      duration: duration,
       curve: Curves.easeOut,
     );
   }
@@ -89,7 +135,7 @@ class _HoleNavBarState extends State<HoleNavBar> {
     final theme = Theme.of(context);
     final completeCount = widget.complete.length;
     return SizedBox(
-      height: 80,
+      height: widget.preferredSize.height,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -97,7 +143,13 @@ class _HoleNavBarState extends State<HoleNavBar> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
             child: Text(
               '${widget.label}: $completeCount / ${widget.holeCount}',
+              semanticsLabel:
+                  '${widget.label}: $completeCount of ${widget.holeCount}',
               style: theme.textTheme.bodySmall,
+              // One line, as the height allows for: a large text size on a
+              // narrow screen ellipsises rather than pushing the chips down.
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -119,10 +171,18 @@ class _HoleNavBarState extends State<HoleNavBar> {
                         ? Icons.check
                         : null;
                 return Padding(
+                  key: _chipKeys[i],
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: ChoiceChip(
                     key: ValueKey('${widget.keyPrefix}_$hole'),
-                    label: Text('$hole'),
+                    label: Text(
+                      '$hole',
+                      semanticsLabel: isDirty
+                          ? 'Hole $hole, unsaved changes'
+                          : isComplete
+                              ? 'Hole $hole, ${widget.completeState}'
+                              : 'Hole $hole',
+                    ),
                     avatar: icon == null
                         ? null
                         : Icon(

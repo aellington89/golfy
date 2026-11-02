@@ -8,6 +8,158 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Added
+
+- **Settings shows which Golfy you have, and where to get help** ([#72]).
+  Under Data, an **About** section lists the installed **version** and build
+  number, read from the device rather than written into the app. It opens
+  Flutter's page of **open-source licenses** for every package Golfy is built
+  with, and links to Golfy's new **privacy policy**. **Help & feedback** opens
+  a new issue on Golfy's GitHub with your version and platform already filled
+  in. Both links open in your browser, never inside Golfy, so the app still
+  asks for no permissions and never goes online itself.
+
+- **Golfy works with TalkBack** ([#73]). Scores are read in words: "2 over
+  par" and "even par" rather than "+2" and "E", "tied for 3rd" rather than
+  "T-3", and "no data" rather than "em dash". Each scorecard hole is one
+  sentence ("Hole 4, par 4. Score 5, bogey, 1 over par. Fairway missed…"),
+  each score-distribution row says its count and share, and a label and its
+  value are read together. Every button says what it does, including the new
+  round, event and course buttons, the score and round-number steppers
+  ("Decrease score"), and the hole chips ("Hole 4, saved"). Section titles
+  are headings, so you can jump between them. Swiping a round away and
+  long-pressing a tee or pin set to rename it are also in TalkBack's actions
+  menu, as **Delete round** and **Rename tee set**. Moving to another hole
+  announces it, and the steppers announce each new number.
+
+### Changed
+
+- **Score colours are easier to read in light mode** ([#73]). The green for
+  under par and the amber for one over were too pale on a light background
+  for the contrast that accessibility guidelines ask of text. Both are darker
+  now; red, and every dark-mode colour, are unchanged. Two grey captions (the
+  yardage set on a round, and the course editor's note on yardage sets) are
+  darker too.
+
+- **Hole Entry's small controls are bigger on Android** ([#73]). The
+  Penalty chip, the buttons that remove a shot or a putt, the club and lie
+  menus, and the buttons that fix a problem with a hole were smaller than
+  the 48 dp a fingertip needs. On Windows they are as before.
+
+- **The scorecard's Delete button is last** ([#73]). It came before Edit
+  scores and Edit round details; now the two edits come first.
+
+### Fixed
+
+- **Every screen fits the largest font size** ([#73]). With the phone's text
+  at its largest, rows ran off the edge of the screen on Hole Entry, the
+  scorecard, the Rounds and Events lists, an event's page and the course
+  editor, and the second line of the title on Hole Entry, the scorecard and
+  the course editor was cut off. They now wrap or stack instead, and the
+  title bar and the strip of hole chips grow with the text. The "Hole saved"
+  message also stays up for four seconds instead of one while TalkBack is
+  on, long enough to be read out.
+
+- **Settings can be left on Windows** ([#72]). It showed a menu button where
+  the back arrow belongs, and Windows has no system back, so the only way out
+  was to close the app. It now has a back arrow, as Courses does. On Android
+  the arrow replaces the menu button, and the system back gesture works as
+  before.
+
+### Internal
+
+- **The privacy policy is checked against the app** ([#72]). `PRIVACY.md`
+  says Golfy collects nothing, never goes online and asks for no Android
+  permissions. CI now fails if the debug APK asks for anything beyond the
+  `INTERNET` permission Flutter's own tooling needs, or if the signed release
+  APK asks for anything at all (`tool/assert_permissions.sh`). A test checks
+  `PRIVACY.md` stays where every build links to it. `url_launcher` is the one
+  new dependency, and it adds no permission. The About section and a
+  backup's manifest read the installed version through one helper, so they
+  always agree; the manifest's string is unchanged.
+
+- **Accessibility is tested on every screen** ([#73]). `test/a11y/` pumps
+  each screen in the app's real theme and runs flutter_test's contrast,
+  labelled-control and 48 dp tap-target guidelines in light and dark, and
+  checks every screen for overflow or clipped text at 1.3× and 2× text on a
+  360 dp phone. A unit test holds every score colour to WCAG AA against the
+  real colour scheme. The three − / + steppers are one `StepperField`, and
+  the three two-line app bar titles one `TwoLineTitle`. The house rules are
+  in `app/README.md` under Accessibility.
+
+- **Implementation plans live in the wiki** ([#143]). The six plans under
+  `docs/plans/` (#59, #69 to #73) moved to the repo's
+  [wiki](https://github.com/aellington89/golfy/wiki/Plans), and `docs/` is gone. The READMEs link
+  there; each wiki page links back to its last version in the repo.
+
+## [0.9.0] - 2026-10-24
+
+A release that makes Golfy look like itself. The stock Flutter icon is gone
+from the Android launcher and from the Windows taskbar, title bar and Explorer
+([#71]). In its place is Golfy's own flag-on-the-green, which takes your
+launcher's shape and follows themed icons on Android. Android also shows the
+flag while the app starts, on the light or dark background it opens with,
+instead of a plain white or black screen. Wherever the app's name shows, it
+now reads **Golfy**, not `golfy_app` ([#138]). The package name hasn't
+changed, so the update installs over the existing app and keeps every round.
+
+The dashboard's score distribution also stops folding results together
+([#59]). Instead of **Eagles** and **Double+** catch-alls, every score from
+**Condor** to **Quadruple+ bogey** has its own row, and an **Ace** row counts
+holes-in-one.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. The
+release is a **minor**, for the `### Added` and `### Changed` entries below.
+
+### Added
+
+- **Golfy has its own icon and launch screen** ([#71]). The stock Flutter
+  icon is gone from the Android launcher and from the Windows taskbar, title
+  bar and Explorer. In its place is a flag-yellow pennant on a white pin in
+  the cup, with a ball on the green, under a blue sky. On Android 8 and later
+  it's an adaptive icon, so it takes whatever shape your launcher uses, and on
+  Android 13 and later it follows your **themed icons** colours when that
+  setting is on.
+
+  While Android starts the app, it now shows the same flag on a green circle,
+  on the background colour the app opens with, light or dark to match your
+  system setting. Before, it was plain white or black. Windows needs no launch
+  screen: its window appears once the app is ready, as before.
+
+### Changed
+
+- **The app is called Golfy everywhere you see its name** ([#138]). The
+  Android launcher showed `golfy_app` under the icon (`golfy_app (debug)` for
+  a debug build). On Windows, the same name was in the window title, the
+  taskbar and the file description. All of them now say **Golfy**, or
+  **Golfy (debug)**. It's the same app underneath: the Android package name
+  is unchanged, so an update installs over the existing app and keeps all
+  your rounds.
+
+- **The score distribution names every result** ([#59]). The dashboard card
+  used to fold anything at two under or better into **Eagles** and anything
+  at two over or worse into **Double+**. It now has a row each for **Condor**
+  (-4), **Albatross** (-3), **Eagle**, **Birdie**, **Par**, **Bogey**,
+  **Double bogey**, **Triple bogey** and **Quadruple+ bogey** (+4 or worse),
+  always in that order and shown at zero when empty.
+
+  An **Ace** row sits above them, highlighted, counting holes-in-one. An ace is
+  also counted in the row its score falls in: Eagle on a par 3, Albatross on a
+  par 4, Condor on a par 5. A note on the card says so. The percentages are
+  each row's share of holes played, and the Ace row isn't added to that total,
+  so the nine score rows still add up to 100%.
+
+### Internal
+
+- **The icon and splash are generated from source art, and tested** ([#71]).
+  The artwork is SVG under `app/branding/`. `flutter_launcher_icons` and
+  `flutter_native_splash`, both dev dependencies only, turn it into the
+  committed Android resources, and the multi-size Windows `.ico` is built
+  from the same SVG. `test/branding/` fails if a stock Flutter icon comes
+  back in any variant, or if the splash colours stop matching the theme's
+  surface colours. Nothing new runs in the app: no new runtime dependency,
+  permission or code path.
+
 ## [0.8.0] - 2026-10-24
 
 A release that brings a backup back ([#70]). Since v0.4.0, **Settings → Back
@@ -1027,7 +1179,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/aellington89/golfy/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/aellington89/golfy/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/aellington89/golfy/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/aellington89/golfy/compare/v0.6.0...v0.7.0
@@ -1081,13 +1234,16 @@ Phase 1 — data layer and navigation shell.
 [#55]: https://github.com/aellington89/golfy/issues/55
 [#47]: https://github.com/aellington89/golfy/issues/47
 [#56]: https://github.com/aellington89/golfy/issues/56
+[#59]: https://github.com/aellington89/golfy/issues/59
 [#63]: https://github.com/aellington89/golfy/issues/63
 [#81]: https://github.com/aellington89/golfy/issues/81
 [#79]: https://github.com/aellington89/golfy/issues/79
 [#86]: https://github.com/aellington89/golfy/issues/86
 [#69]: https://github.com/aellington89/golfy/issues/69
 [#70]: https://github.com/aellington89/golfy/issues/70
+[#71]: https://github.com/aellington89/golfy/issues/71
 [#72]: https://github.com/aellington89/golfy/issues/72
+[#73]: https://github.com/aellington89/golfy/issues/73
 [#111]: https://github.com/aellington89/golfy/pull/111
 [#112]: https://github.com/aellington89/golfy/pull/112
 [#114]: https://github.com/aellington89/golfy/issues/114
@@ -1100,3 +1256,5 @@ Phase 1 — data layer and navigation shell.
 [#131]: https://github.com/aellington89/golfy/pull/131
 [#133]: https://github.com/aellington89/golfy/pull/133
 [#134]: https://github.com/aellington89/golfy/pull/134
+[#138]: https://github.com/aellington89/golfy/issues/138
+[#143]: https://github.com/aellington89/golfy/pull/143

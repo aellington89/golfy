@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../data/backup/backup_codec.dart';
 import '../../data/backup/restore_service.dart';
+import 'platform_label.dart';
 
 /// What the user decided, looking at a backup they picked (#70).
 enum RestoreChoice {
@@ -58,7 +59,7 @@ class RestoreConfirmDialog extends StatelessWidget {
             Text(plan.fileName, style: theme.textTheme.bodySmall),
             Text(
               'Made $made by Golfy ${manifest.appVersion} on '
-              '${_platformName(manifest.platform)}',
+              '${platformLabel(manifest.platform)}',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 4),
@@ -129,12 +130,6 @@ class RestoreConfirmDialog extends StatelessWidget {
       ],
     );
   }
-
-  static String _platformName(String platform) => switch (platform) {
-        'android' => 'Android',
-        'windows' => 'Windows',
-        _ => platform,
-      };
 }
 
 /// "42 rounds · 3 courses · 4 events · 756 holes · 2980 shots", from rows per

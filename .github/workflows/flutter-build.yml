@@ -64,6 +64,11 @@ jobs:
           echo "Debug APK package: $PKG"
           test "$PKG" = "com.golfy.golfy_app.debug"
 
+      - name: Assert debug APK permissions    # #72: PRIVACY.md says Golfy asks for none
+        # INTERNET is debug-only: the flutter tool needs it to reach the app
+        # (src/debug and src/profile manifests). release.yml allows nothing.
+        run: bash tool/assert_permissions.sh build/app/outputs/flutter-apk/app-debug.apk android.permission.INTERNET
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:

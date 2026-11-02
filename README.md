@@ -25,15 +25,24 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.8.0
+## Status — v0.9.0
 
-**v0.8.0** is the latest release, and it lets a backup back onto a device.
-**Settings → Restore from a backup** picks a backup file, shows what it holds
-next to what the device holds now, and on your say-so puts its courses, tee and
-pin sets, rounds, holes, shots and events in place of the device's own — with a
-**Back up first** button when there is anything to lose. A damaged, edited or
-newer-than-the-app file is refused before anything changes, and every backup
-Golfy has written restores, from v0.4.0 on. The schema stays at v9.
+**v0.9.0** is the latest release, and it gives Golfy its own face. The stock
+Flutter icon is replaced on Android and Windows by a flag on the green, adaptive
+on Android 8+ and themed-icon aware on Android 13+, and Android shows that flag
+on a light or dark launch screen while the app starts. The launcher and the
+Windows title bar now say **Golfy** rather than `golfy_app`; the package name is
+unchanged, so the update installs over the old app. The dashboard's score
+distribution gives every result from **Condor** to **Quadruple+ bogey** its own
+row, plus an **Ace** row for holes-in-one. The schema stays at v9.
+
+**v0.8.0** let a backup back onto a device. **Settings → Restore from a
+backup** picks a backup file, shows what it holds next to what the device holds
+now, and on your say-so puts its courses, tee and pin sets, rounds, holes,
+shots and events in place of the device's own — with a **Back up first** button
+when there is anything to lose. A damaged, edited or newer-than-the-app file is
+refused before anything changes, and every backup Golfy has written restores,
+from v0.4.0 on.
 
 **v0.7.1** fixed the course editor opening on the wrong sets: it now starts on
 the tee set and pin set of the round you last played on that course, so yards
@@ -175,7 +184,8 @@ releases.
 - **SQLite** — embedded local-only storage; no network, no sync
 - **share_plus / file_selector** — the system share sheet (Android) and save
   dialog (Windows) a data backup is handed to; **package_info_plus** for the
-  installed version
+  installed version; **url_launcher** to open the privacy policy and Help &
+  feedback in the browser
 
 The database is a single SQLite file, `golfy.sqlite`, kept in the app's private
 documents directory — nothing is ever sent over the network. On Android each
@@ -288,6 +298,21 @@ restore closes the round open in Hole Entry; open it again from Rounds.
 The format is documented in [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md), the
 contract both Export and Restore keep.
 
+## Privacy
+
+Golfy collects nothing. Everything stays on the device, and the Android app
+has no permission to use the internet. Nothing leaves unless you send it: a
+backup you export, or a problem report you file. The full policy is
+[`PRIVACY.md`](PRIVACY.md), and **Settings → About → Privacy policy** opens it.
+
+## Help & feedback
+
+**Settings → About → Help & feedback** opens a new
+[GitHub issue](https://github.com/aellington89/golfy/issues) with your Golfy
+version and platform already filled in. Say what happened and what you
+expected. Your version is also shown under **Settings → About → Version**.
+Issues are public, so leave out anything you don't want published.
+
 ## Build & run
 
 All Flutter commands run from `app/`. See [`app/README.md`](app/README.md) for
@@ -297,7 +322,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 867 passing tests
+flutter test                           # 885 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
@@ -326,7 +351,10 @@ golfy/
 │   │   ├── shell/       # AppShell + bottom-nav state
 │   │   ├── app.dart     # MaterialApp root
 │   │   └── main.dart    # entry point
-│   ├── tool/            # release version calculator (no app code)
+│   ├── branding/        # launcher icon + splash source art (SVG); the Android
+│   │                    #   and Windows icon resources are generated from it
+│   ├── tool/            # release version calculator, APK permission check
+│   │                    #   (no app code)
 │   └── test/            # widget + DAO + schema-constraint tests
 ├── .github/
 │   ├── workflows/       # CI build+test, and the tag-driven signed release
@@ -336,9 +364,13 @@ golfy/
 ├── CHANGELOG.md         # Keep a Changelog; the input to the next version
 ├── RELEASING.md         # how a release is cut and its version derived
 ├── BACKUP_FORMAT.md     # the backup file format — a contract, read before changing
-├── docs/plans/          # design notes written before a non-trivial feature
+├── PRIVACY.md           # the privacy policy every build links to — never move it
 └── README.md            # you are here
 ```
+
+Implementation plans for non-trivial features (written before the work,
+finished with what was actually built) live in the
+[wiki's Plans page](https://github.com/aellington89/golfy/wiki/Plans), not in the repo.
 
 ## History
 
@@ -352,4 +384,7 @@ now lives in `app/lib/data/tables/`.
 
 ## License
 
-Private project — no license granted. Reach out before reuse.
+Private project — no license granted. Reach out before reuse, through a
+[GitHub issue](https://github.com/aellington89/golfy/issues). The open-source
+packages Golfy is built with are listed, with their licenses, under
+**Settings → About → Open-source licenses**.

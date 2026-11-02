@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -198,7 +199,8 @@ void main() {
       find.byKey(const ValueKey('round_score_5')),
     );
     expect(badge.data, '-2');
-    expect(badge.style?.color, Colors.green.shade700);
+    // The under-par band — the light theme's green (#73).
+    expect(badge.style?.color, const Color(0xFF006E1C));
   });
 
   testWidgets('partial round shows the score for entered holes only',
@@ -445,5 +447,75 @@ void main() {
 
       expect(find.byIcon(Icons.straighten), findsNothing);
     });
+  });
+
+  // #73: what TalkBack reads. The row merges into one item, so its label
+  // carries the spoken score and hole count rather than "-2" and "18/18".
+  group('screen reader', () {
+    testWidgets('a round row reads its score to par and holes in words',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(wrap());
+      await emitRounds(tester, [
+        makeRound(id: 5, holesEntered: 18, totalScore: 70, totalPar: 72),
+        makeRound(id: 6, holesEntered: 9, totalScore: 36, totalPar: 36),
+      ]);
+
+      expect(find.bySemanticsLabel(RegExp('2 under par')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('18 of 18 holes')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('even par')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('9 of 18 holes')), findsOneWidget);
+      // The drawn text is unchanged.
+      expect(find.text('-2'), findsOneWidget);
+      expect(find.text('18/18'), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('an event header is a heading that reads its result',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      final event = makeEvent(id: 3, finishPosition: 3, tied: true);
+      await tester.pumpWidget(wrap());
+      await emitRounds(tester, [makeRound(id: 1, event: event)]);
+
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('event_header_3'))),
+        isSemantics(
+          label: 'Club Championship (Season 1)\ntied for 3rd',
+          isHeader: true,
+        ),
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('the casual group header is a heading too', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(wrap());
+      await emitRounds(tester, [makeRound(id: 1)]);
+
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('event_header_casual'))),
+        isSemantics(label: 'No event', isHeader: true),
+      );
+      semantics.dispose();
+    });
+  });
+
+  // #73: swipe-to-delete has a named action TalkBack can reach, and it asks
+  // first just as the swipe does.
+  testWidgets('a round row offers "Delete round" as an action',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(wrap());
+    await emitRounds(tester, [makeRound(id: 5, holesEntered: 3)]);
+
+    tester.semantics.customAction(
+      find.semantics.byLabel(RegExp('Pebble — Round 1')),
+      const CustomSemanticsAction(label: 'Delete round'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete round?'), findsOneWidget);
+    semantics.dispose();
   });
 }

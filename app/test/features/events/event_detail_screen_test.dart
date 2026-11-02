@@ -257,4 +257,45 @@ void main() {
     // The embedded EventPicker shows the pre-selected event's title.
     expect(find.text('Club Championship (Season 1)'), findsWidgets);
   });
+
+  // #73: the result line and each scoring row read as one item, in words.
+  testWidgets('the result and scoring rows read in words', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final event = makeEvent(id: 9, missedCut: true);
+    await tester.pumpWidget(wrap(9));
+    await emit(
+      tester,
+      events: [event],
+      eventRounds: [makeRound(id: 1, event: event)],
+      stats: const EventStats(
+        roundsScored: 1,
+        holesPlayed: 18,
+        avgScorePerRound: 72.0,
+        avgScoreVsPar: 0.0,
+        bestRound: BestRound(
+          roundId: 1,
+          courseName: 'Pebble',
+          date: '2026-05-25',
+          toPar: 0,
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Result\nmissed the cut'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('event_stat_avg_vs_par'))),
+      isSemantics(label: 'Avg score vs. par\neven par'),
+    );
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('event_stat_best'))),
+      isSemantics(
+        label: 'Best round\nPebble · May 25, 2026\neven par',
+      ),
+    );
+    expect(
+      tester.getSemantics(find.text('Event scoring')),
+      isSemantics(label: 'Event scoring', isHeader: true),
+    );
+    semantics.dispose();
+  });
 }

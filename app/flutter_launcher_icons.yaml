@@ -1,0 +1,30 @@
+# Launcher icon generator config (#71). Run from app/:
+#   dart run flutter_launcher_icons
+# The sources are in branding/; see branding/README.md before changing them.
+# The generated Android mipmaps / drawables and the Windows .ico are committed
+# and shouldn't be hand-edited.
+flutter_launcher_icons:
+  # `true` keeps the resource name ic_launcher, which AndroidManifest.xml
+  # already points at, so the manifest doesn't change.
+  android: true
+  ios: false
+  # Legacy (pre-Android-8) icon: the composed, rounded tile.
+  image_path: branding/icon.png
+  # Adaptive icon (Android 8+), and the themed icon (Android 13+).
+  adaptive_icon_background: branding/icon_background.png
+  adaptive_icon_foreground: branding/icon_foreground.png
+  adaptive_icon_monochrome: branding/icon_monochrome.png
+  # The layers are drawn on the full 108dp canvas with the mark already inside
+  # the safe zone. The tool's default 16% inset would shrink the foreground
+  # and monochrome a second time, pulling the flag off its fairways.
+  adaptive_icon_foreground_inset: 0
+  # Stated outright: build.gradle.kts takes minSdk from flutter.minSdkVersion,
+  # which the tool can't read.
+  min_sdk_android: 21
+  # Windows is NOT generated here. The tool writes a single 256 px image into
+  # the .ico, which Windows then has to scale down for the 16-48 px taskbar,
+  # title-bar and Explorer icons. windows/runner/resources/app_icon.ico is
+  # built from branding/icon.svg instead, with each size rendered on its own
+  # (branding/README.md).
+  windows:
+    generate: false

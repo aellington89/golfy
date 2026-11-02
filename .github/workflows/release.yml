@@ -102,6 +102,10 @@ jobs:
           test "$SIZE" -lt 83886080              # < 80 MB
           cp "$APK" "build/golfy-${GITHUB_REF_NAME}.apk"
 
+      - name: Assert release APK permissions    # #72: PRIVACY.md says Golfy asks for none
+        # No allow-list: the debug build's INTERNET must not reach a release.
+        run: bash tool/assert_permissions.sh build/app/outputs/flutter-apk/app-release.apk
+
       - name: Upload APK artifact (dry-run only)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7

@@ -36,6 +36,7 @@ class EventsScreen extends ConsumerWidget {
         loading: () => null,
         error: (_, _) => null,
         data: (events) => FloatingActionButton(
+          tooltip: 'New event',
           onPressed: () => _openAddEventDialog(context, events),
           child: const Icon(Icons.add),
         ),
@@ -177,19 +178,24 @@ class _EventTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final avg = stats.avgVsPar!;
     final best = stats.bestToPar!;
-    return Row(
+    // The dots are only visual separators; a screen reader hears "3 rounds,
+    // average 1.2 over par, best round 2 under par". A Wrap, so a large text
+    // size breaks the line between segments instead of overflowing (#73).
+    return Wrap(
       children: [
-        Flexible(child: Text(countText, overflow: TextOverflow.ellipsis)),
-        const Text(' · '),
+        Text(countText),
+        const ExcludeSemantics(child: Text(' · ')),
         Text(
           formatSignedAverage(avg),
           key: ValueKey('event_tile_avg_${event.id}'),
+          semanticsLabel: 'average ${spokenSignedAverage(avg)}',
           style: TextStyle(color: avgScoreVsParColor(avg, scheme)),
         ),
-        const Text(' · '),
+        const ExcludeSemantics(child: Text(' · ')),
         Text(
           'Best ${formatRelativeToPar(best)}',
           key: ValueKey('event_tile_best_${event.id}'),
+          semanticsLabel: 'best round ${spokenRelativeToPar(best)}',
           style: TextStyle(color: scoreToParColor(best, scheme)),
         ),
       ],

@@ -32,10 +32,13 @@ class ParSelector extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 3, label: Text('3')),
-            ButtonSegment(value: 4, label: Text('4')),
-            ButtonSegment(value: 5, label: Text('5')),
+          // "Par 4, selected" to a screen reader, not a bare "4" (#73).
+          segments: [
+            for (final par in const [3, 4, 5])
+              ButtonSegment(
+                value: par,
+                label: Text('$par', semanticsLabel: '$labelText $par'),
+              ),
           ],
           selected: {value},
           onSelectionChanged: (sel) => onChanged(sel.first),

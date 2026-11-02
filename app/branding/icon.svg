@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Golfy LEGACY / Windows icon: icon_background.svg + icon_foreground.svg
+  composed and cropped to the 72dp the adaptive icon shows (viewBox 171..853
+  of the 1024 = 108dp canvas), as a rounded tile.
+
+  The rounding is drawn into the shapes rather than done with a clipPath,
+  because Qt's SVG renderer ignores clipPath. The fairway curves are the ones
+  between x = 171 and 853 in icon_background.svg, closed along the tile's
+  rounded bottom. The foreground is a straight copy. Keep all three files in
+  step when editing. See README.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="171 171 682 682">
+  <defs>
+    <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1024">
+      <stop offset="0" stop-color="#1E88E5"/>
+      <stop offset="1" stop-color="#1565C0"/>
+    </linearGradient>
+  </defs>
+  <!-- Background layer. -->
+  <rect x="171" y="171" width="682" height="682" rx="150" fill="url(#sky)"/>
+  <path d="M171,540 C330,490 450,520 560,555 C680,592 780,560 853,538 L853,703 A150,150 0 0,1 703,853 L321,853 A150,150 0 0,1 171,703 Z" fill="#43A047"/>
+  <path d="M171,640 C320,610 460,628 600,660 C720,688 800,665 853,652 L853,703 A150,150 0 0,1 703,853 L321,853 A150,150 0 0,1 171,703 Z" fill="#2E7D32"/>
+  <!-- Foreground layer. -->
+  <ellipse cx="512" cy="700" rx="230" ry="60" fill="#66BB6A"/>
+  <ellipse cx="388" cy="730" rx="34" ry="9" fill="#388E3C"/>
+  <circle cx="380" cy="700" r="34" fill="#FFFFFF"/>
+  <ellipse cx="500" cy="706" rx="40" ry="13" fill="#1B3A1E"/>
+  <rect x="484" y="230" width="32" height="478" rx="8" fill="#FFFFFF"/>
+  <path d="M516,236 C600,262 690,296 760,330 C690,364 600,398 516,424 Z" fill="#FBC02D"/>
+</svg>
