@@ -8,6 +8,31 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-01
+
+A release about using Golfy without looking at it closely. It now works with
+TalkBack ([#73]): scores are read in words ("2 over par", "tied for 3rd"), each
+scorecard hole is one spoken sentence, every button says what it does, and
+section titles are headings you can jump between. With the phone's text at its
+largest, every screen now wraps or stacks instead of running off the edge, and
+Hole Entry's small controls are big enough for a fingertip on Android. Light
+mode's green and amber score colours are darker, so they meet the contrast that
+accessibility guidelines ask of text.
+
+Settings also says which Golfy you have ([#72]). A new **About** section shows
+the installed version, the open-source licenses, Golfy's new privacy policy and
+a way to report a problem on GitHub with your version already filled in. Those
+links open in your browser; the app still asks for no permissions and never
+goes online itself. On Windows, Settings finally has a back arrow, so leaving
+it no longer means closing the app.
+
+It also carries the dependency batch that collected on `deps/patch` since
+v0.9.0, merged up to `master` in [#145]: the code generator and the Android
+build toolchain, neither of which changes how the app behaves.
+
+The schema does **not** move: still v9, and no migration runs on upgrade. The
+release is a **minor**, for the `### Added` and `### Changed` entries below.
+
 ### Added
 
 - **Settings shows which Golfy you have, and where to get help** ([#72]).
@@ -91,6 +116,17 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   `docs/plans/` (#59, #69 to #73) moved to the repo's
   [wiki](https://github.com/aellington89/golfy/wiki/Plans), and `docs/` is gone. The READMEs link
   there; each wiki page links back to its last version in the repo.
+
+- **`build_runner` moves from 2.16.2 to 2.17.1** ([#141]; merged up in
+  [#145]), taking `build` 5.0.0, `build_config` 1.4.0, `drift_dev` 2.35.2 and
+  `source_gen` 4.3.1 with it. All dev dependencies: they run drift's codegen
+  and are not part of the app. `drift` itself stays at 2.35.0, and the
+  committed `*.g.dart` output is unchanged.
+
+- **The Android build toolchain moves to AGP 9.5.0, Kotlin 2.4.21 and
+  Gradle 9.8.2** ([#144]; merged up in [#145]), from 9.4.1, 2.4.20 and 9.8.0.
+  `flutter analyze --suggestions` reports the combination compatible with the
+  pinned Flutter SDK, and CI builds the debug and signed release APKs with it.
 
 ## [0.9.0] - 2026-10-24
 
@@ -1179,7 +1215,8 @@ Phase 1 — data layer and navigation shell.
 - Re-platformed from the original PySide6 prototype to Flutter ([#2]); the
   legacy Python sources were removed once the schema was reimplemented in drift.
 
-[Unreleased]: https://github.com/aellington89/golfy/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/aellington89/golfy/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/aellington89/golfy/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/aellington89/golfy/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/aellington89/golfy/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/aellington89/golfy/compare/v0.7.0...v0.7.1
@@ -1257,4 +1294,7 @@ Phase 1 — data layer and navigation shell.
 [#133]: https://github.com/aellington89/golfy/pull/133
 [#134]: https://github.com/aellington89/golfy/pull/134
 [#138]: https://github.com/aellington89/golfy/issues/138
+[#141]: https://github.com/aellington89/golfy/pull/141
 [#143]: https://github.com/aellington89/golfy/pull/143
+[#144]: https://github.com/aellington89/golfy/pull/144
+[#145]: https://github.com/aellington89/golfy/pull/145

@@ -25,9 +25,18 @@ a finished feel in v0.0.3 (system theming, empty states everywhere, editing of
 completed rounds). **v0.1.0** is the first stable release: a signed APK you can
 sideload and upgrade in place.
 
-## Status — v0.9.0
+## Status — v0.10.0
 
-**v0.9.0** is the latest release, and it gives Golfy its own face. The stock
+**v0.10.0** is the latest release, and it makes Golfy usable with TalkBack and
+at the largest font size. Scores are read in words, each scorecard hole is one
+spoken sentence, every button says what it does, and every screen wraps or
+stacks at the largest text instead of running off the edge. Hole Entry's small
+controls are a fingertip's size on Android, and light mode's score colours meet
+WCAG AA contrast. Settings gains an **About** section with the installed
+version, open-source licenses, a privacy policy and a link to report a problem,
+and on Windows it finally has a back arrow. The schema stays at v9.
+
+**v0.9.0** gave Golfy its own face. The stock
 Flutter icon is replaced on Android and Windows by a flag on the green, adaptive
 on Android 8+ and themed-icon aware on Android 13+, and Android shows that flag
 on a light or dark launch screen while the app starts. The launcher and the
@@ -322,7 +331,7 @@ the full developer workflow. Quick start:
 cd app
 flutter pub get
 dart run build_runner build            # regenerate drift / DAO mixins
-flutter test                           # 885 passing tests
+flutter test                           # 1083 passing tests
 flutter run -d windows                 # desktop
 flutter run -d <android-device-id>     # Android
 ```
