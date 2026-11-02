@@ -12,6 +12,7 @@ import 'course_template_sheet.dart';
 import '../../shell/app_drawer.dart';
 import '../../shell/tab_index_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/two_line_title.dart';
 import '../rounds/active_round_provider.dart';
 import 'hole_card.dart';
 import 'hole_draft.dart';
@@ -250,7 +251,11 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
                 ? 'Hole $holeNumber saved · course updated'
                 : 'Hole $holeNumber saved',
           ),
-          duration: const Duration(seconds: 1),
+          // A second is enough to see it, not for TalkBack to finish saying
+          // it; with a screen reader on it stays the default 4 s (#73).
+          duration: MediaQuery.accessibleNavigationOf(context)
+              ? const Duration(seconds: 4)
+              : const Duration(seconds: 1),
         ),
       );
     } catch (e) {
@@ -406,6 +411,9 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
+        // Grows with the text size so the title's second line isn't clipped
+        // (#73).
+        toolbarHeight: TwoLineTitle.toolbarHeight(context),
         title: _AppBarTitle(roundAsync: roundAsync),
         actions: [
           PopupMenuButton<_CourseAction>(
@@ -435,6 +443,7 @@ class _HoleEntryScreenState extends ConsumerState<HoleEntryScreen> {
           dirty: _dirty,
           label: 'Holes saved',
           onTapHole: _goToPage,
+          textScaler: MediaQuery.textScalerOf(context),
         ),
       ),
       floatingActionButton: allSaved
@@ -506,22 +515,7 @@ class _AppBarTitle extends StatelessWidget {
     final dateLabel = _formatDate(round.round.date);
     final eventName = round.event?.name;
     final subtitle = eventName == null ? dateLabel : '$dateLabel · $eventName';
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          round.courseName,
-          style: Theme.of(context).textTheme.titleLarge,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodySmall,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
+    return TwoLineTitle(title: round.courseName, subtitle: subtitle);
   }
 
   static String _formatDate(String iso) {

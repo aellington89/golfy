@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../data/database.dart';
 import '../../data/models/round_with_course.dart';
 import '../../data/repository_provider.dart';
+import '../../widgets/stepper_field.dart';
 import '../courses/course_picker.dart';
 import '../events/event_picker.dart';
 
@@ -225,49 +226,33 @@ class _EditRoundDialogState extends ConsumerState<EditRoundDialog> {
                   : (e) => setState(() => _event = e),
             ),
             const SizedBox(height: 12),
-            InkWell(
-              onTap: _submitting ? null : _pickDate,
-              borderRadius: BorderRadius.circular(4),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
+            // A button to a screen reader, like the pickers above (#73).
+            Semantics(
+              button: true,
+              child: InkWell(
+                onTap: _submitting ? null : _pickDate,
+                borderRadius: BorderRadius.circular(4),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Date',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(_displayFormat.format(_date)),
                 ),
-                child: Text(_displayFormat.format(_date)),
               ),
             ),
             const SizedBox(height: 12),
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Round number',
-                border: const OutlineInputBorder(),
-                errorText: _roundNumberError,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    key: const ValueKey('round_number_dec'),
-                    onPressed: _submitting || _roundNumber <= 1
-                        ? null
-                        : _decrementRoundNumber,
-                    icon: const Icon(Icons.remove),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        '$_roundNumber',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    key: const ValueKey('round_number_inc'),
-                    onPressed: _submitting ? null : _incrementRoundNumber,
-                    icon: const Icon(Icons.add),
-                  ),
-                ],
-              ),
+            StepperField(
+              label: 'Round number',
+              value: _roundNumber,
+              errorText: _roundNumberError,
+              decreaseKey: const ValueKey('round_number_dec'),
+              increaseKey: const ValueKey('round_number_inc'),
+              onDecrease: _submitting || _roundNumber <= 1
+                  ? null
+                  : _decrementRoundNumber,
+              onIncrease: _submitting ? null : _incrementRoundNumber,
             ),
             const SizedBox(height: 12),
             TextFormField(

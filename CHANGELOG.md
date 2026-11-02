@@ -19,7 +19,46 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   in. Both links open in your browser, never inside Golfy, so the app still
   asks for no permissions and never goes online itself.
 
+- **Golfy works with TalkBack** ([#73]). Scores are read in words: "2 over
+  par" and "even par" rather than "+2" and "E", "tied for 3rd" rather than
+  "T-3", and "no data" rather than "em dash". Each scorecard hole is one
+  sentence ("Hole 4, par 4. Score 5, bogey, 1 over par. Fairway missed…"),
+  each score-distribution row says its count and share, and a label and its
+  value are read together. Every button says what it does, including the new
+  round, event and course buttons, the score and round-number steppers
+  ("Decrease score"), and the hole chips ("Hole 4, saved"). Section titles
+  are headings, so you can jump between them. Swiping a round away and
+  long-pressing a tee or pin set to rename it are also in TalkBack's actions
+  menu, as **Delete round** and **Rename tee set**. Moving to another hole
+  announces it, and the steppers announce each new number.
+
+### Changed
+
+- **Score colours are easier to read in light mode** ([#73]). The green for
+  under par and the amber for one over were too pale on a light background
+  for the contrast that accessibility guidelines ask of text. Both are darker
+  now; red, and every dark-mode colour, are unchanged. Two grey captions (the
+  yardage set on a round, and the course editor's note on yardage sets) are
+  darker too.
+
+- **Hole Entry's small controls are bigger on Android** ([#73]). The
+  Penalty chip, the buttons that remove a shot or a putt, the club and lie
+  menus, and the buttons that fix a problem with a hole were smaller than
+  the 48 dp a fingertip needs. On Windows they are as before.
+
+- **The scorecard's Delete button is last** ([#73]). It came before Edit
+  scores and Edit round details; now the two edits come first.
+
 ### Fixed
+
+- **Every screen fits the largest font size** ([#73]). With the phone's text
+  at its largest, rows ran off the edge of the screen on Hole Entry, the
+  scorecard, the Rounds and Events lists, an event's page and the course
+  editor, and the second line of the title on Hole Entry, the scorecard and
+  the course editor was cut off. They now wrap or stack instead, and the
+  title bar and the strip of hole chips grow with the text. The "Hole saved"
+  message also stays up for four seconds instead of one while TalkBack is
+  on, long enough to be read out.
 
 - **Settings can be left on Windows** ([#72]). It showed a menu button where
   the back arrow belongs, and Windows has no system back, so the only way out
@@ -38,6 +77,20 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   new dependency, and it adds no permission. The About section and a
   backup's manifest read the installed version through one helper, so they
   always agree; the manifest's string is unchanged.
+
+- **Accessibility is tested on every screen** ([#73]). `test/a11y/` pumps
+  each screen in the app's real theme and runs flutter_test's contrast,
+  labelled-control and 48 dp tap-target guidelines in light and dark, and
+  checks every screen for overflow or clipped text at 1.3× and 2× text on a
+  360 dp phone. A unit test holds every score colour to WCAG AA against the
+  real colour scheme. The three − / + steppers are one `StepperField`, and
+  the three two-line app bar titles one `TwoLineTitle`. The house rules are
+  in `app/README.md` under Accessibility.
+
+- **Implementation plans live in the wiki** ([#143]). The six plans under
+  `docs/plans/` (#59, #69 to #73) moved to the repo's
+  [wiki](https://github.com/aellington89/golfy/wiki/Plans), and `docs/` is gone. The READMEs link
+  there; each wiki page links back to its last version in the repo.
 
 ## [0.9.0] - 2026-10-24
 
@@ -1190,6 +1243,7 @@ Phase 1 — data layer and navigation shell.
 [#70]: https://github.com/aellington89/golfy/issues/70
 [#71]: https://github.com/aellington89/golfy/issues/71
 [#72]: https://github.com/aellington89/golfy/issues/72
+[#73]: https://github.com/aellington89/golfy/issues/73
 [#111]: https://github.com/aellington89/golfy/pull/111
 [#112]: https://github.com/aellington89/golfy/pull/112
 [#114]: https://github.com/aellington89/golfy/issues/114
@@ -1203,3 +1257,4 @@ Phase 1 — data layer and navigation shell.
 [#133]: https://github.com/aellington89/golfy/pull/133
 [#134]: https://github.com/aellington89/golfy/pull/134
 [#138]: https://github.com/aellington89/golfy/issues/138
+[#143]: https://github.com/aellington89/golfy/pull/143

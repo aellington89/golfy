@@ -93,4 +93,35 @@ void main() {
       expect(hasRecordedResult(_event(missedCut: true)), isTrue);
     });
   });
+
+  group('spokenEventResult', () {
+    test('a win is "won"', () {
+      expect(spokenEventResult(_event(finishPosition: 1)), 'won');
+    });
+
+    test('a plain position is "finished" plus its ordinal', () {
+      expect(spokenEventResult(_event(finishPosition: 2)), 'finished 2nd');
+      expect(spokenEventResult(_event(finishPosition: 11)), 'finished 11th');
+    });
+
+    test('a tie reads "tied for", not the badge\'s "T-"', () {
+      expect(
+        spokenEventResult(_event(finishPosition: 3, tied: true)),
+        'tied for 3rd',
+      );
+      // Tied for first is not a win.
+      expect(
+        spokenEventResult(_event(finishPosition: 1, tied: true)),
+        'tied for 1st',
+      );
+    });
+
+    test('a missed cut', () {
+      expect(spokenEventResult(_event(missedCut: true)), 'missed the cut');
+    });
+
+    test('nothing recorded', () {
+      expect(spokenEventResult(_event()), 'not recorded');
+    });
+  });
 }

@@ -131,13 +131,17 @@ class _CourseHoleCardState extends State<CourseHoleCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
+            // A Wrap, so a large text size moves the chip under the title
+            // rather than overflowing (#73).
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 4,
               children: [
                 Text(
                   'Hole ${widget.holeNumber}',
                   style: theme.textTheme.titleMedium,
                 ),
-                const Spacer(),
                 if (widget.showStatus)
                   widget.isDirty
                       ? Chip(

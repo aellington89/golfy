@@ -27,6 +27,7 @@ class RoundsScreen extends ConsumerWidget {
         loading: () => null,
         error: (_, _) => null,
         data: (rounds) => FloatingActionButton(
+          tooltip: 'New round',
           onPressed: () => _openNewRoundDialog(context, rounds),
           child: const Icon(Icons.add),
         ),
@@ -167,8 +168,16 @@ class _EventHeader extends StatelessWidget {
 
   /// The icon + name (+ result badge) row shared by the casual and real-event
   /// headers. Extracted so only the real-event variant is wrapped in the
-  /// tap-through [InkWell].
+  /// tap-through [InkWell]. A heading for screen readers, so TalkBack can jump
+  /// from one event's rounds to the next (#73).
   Widget _content(ThemeData theme, Event? event) {
+    return Semantics(
+      header: true,
+      child: _contentRow(theme, event),
+    );
+  }
+
+  Widget _contentRow(ThemeData theme, Event? event) {
     return Row(
       children: [
         Icon(

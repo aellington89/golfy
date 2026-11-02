@@ -17,8 +17,8 @@ class GolfyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Golfy',
-      theme: _golfyTheme(Brightness.light),
-      darkTheme: _golfyTheme(Brightness.dark),
+      theme: golfyTheme(Brightness.light),
+      darkTheme: golfyTheme(Brightness.dark),
       // Follow the OS light/dark setting; there's no in-app toggle for v0.1.0.
       themeMode: ThemeMode.system,
       home: const AppShell(),
@@ -29,7 +29,11 @@ class GolfyApp extends StatelessWidget {
 /// Builds the app theme for a given [brightness] from the golf palette, so the
 /// light and dark schemes stay visually consistent. This helper is the one seam
 /// a future Material 3 dynamic-color source would slot into.
-ThemeData _golfyTheme(Brightness brightness) {
+///
+/// Visible for testing so the accessibility suite (#73) checks screens in the
+/// theme the app really ships, not a stand-in.
+@visibleForTesting
+ThemeData golfyTheme(Brightness brightness) {
   return ThemeData(
     useMaterial3: true,
     colorScheme: golfyColorScheme(brightness),

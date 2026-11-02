@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -39,59 +40,100 @@ class RoundRow extends ConsumerWidget {
       confirmDismiss: (_) =>
           confirmDeleteRound(context, courseName: round.courseName),
       onDismissed: (_) => deleteRoundAndClearActive(ref, round.round.id),
-      child: ListTile(
-        onTap: () {
-          ref.read(activeRoundIdProvider.notifier).set(round.round.id);
-          ref.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
+      // Swipe-to-delete as a named action TalkBack lists, asking first just as
+      // the swipe does (#73).
+      child: Semantics(
+        customSemanticsActions: {
+          const CustomSemanticsAction(label: 'Delete round'): () async {
+            final confirmed = await confirmDeleteRound(
+              context,
+              courseName: round.courseName,
+            );
+            if (confirmed) await deleteRoundAndClearActive(ref, round.round.id);
+          },
         },
-        title: Text(
-          '${round.courseName} — Round ${round.round.roundNumber}',
-        ),
-        subtitle: _RoundSubtitle(
-          date: formattedDate,
-          yardageSet: round.yardageSetLabel,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (round.holesEntered > 0) ...[
-              Text(
-                formatRelativeToPar(round.relativeToPar),
-                key: ValueKey('round_score_${round.round.id}'),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: scoreToParColor(round.relativeToPar, theme.colorScheme),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-            Text(
-              '${round.holesEntered}/18',
-              style: theme.textTheme.bodyMedium,
+        child: _tile(context, ref, theme, formattedDate),
+      ),
+    );
+  }
+
+  Widget _tile(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    String formattedDate,
+  ) {
+    final score = round.holesEntered > 0
+        ? Text(
+            formatRelativeToPar(round.relativeToPar),
+            key: ValueKey('round_score_${round.round.id}'),
+            semanticsLabel: spokenRelativeToPar(round.relativeToPar),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: scoreToParColor(round.relativeToPar, theme.colorScheme),
+              fontWeight: FontWeight.bold,
             ),
+          )
+        : null;
+    final holes = Text(
+      '${round.holesEntered}/18',
+      semanticsLabel: '${round.holesEntered} of 18 holes',
+      style: theme.textTheme.bodyMedium,
+    );
+    // At a large text size the score and hole count leave the trailing edge
+    // for a line under the date, so the title keeps room to be read rather
+    // than wrapping a word per line (#73).
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3;
+    final subtitle = _RoundSubtitle(
+      date: formattedDate,
+      yardageSet: round.yardageSetLabel,
+    );
+
+    return ListTile(
+      onTap: () {
+        ref.read(activeRoundIdProvider.notifier).set(round.round.id);
+        ref.read(tabIndexProvider.notifier).set(ShellTabs.holeEntry);
+      },
+      title: Text(
+        '${round.courseName} — Round ${round.round.roundNumber}',
+      ),
+      subtitle: largeText
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                subtitle,
+                Wrap(spacing: 12, children: [?score, holes]),
+              ],
+            )
+          : subtitle,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!largeText) ...[
+            if (score != null) ...[score, const SizedBox(width: 12)],
+            holes,
             const SizedBox(width: 4),
-            IconButton(
-              key: ValueKey('round_edit_button_${round.round.id}'),
-              icon: const Icon(Icons.edit_outlined),
-              iconSize: 20,
-              tooltip: 'Edit round',
-              onPressed: () => openEditRoundDialog(context, ref, round),
-            ),
-            IconButton(
-              key: ValueKey('scorecard_button_${round.round.id}'),
-              icon: const Icon(Icons.scoreboard_outlined),
-              iconSize: 20,
-              tooltip: 'View scorecard',
-              onPressed: () {
-                Navigator.of(context, rootNavigator: true).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ScorecardScreen(roundId: round.round.id),
-                  ),
-                );
-              },
-            ),
           ],
-        ),
+          IconButton(
+            key: ValueKey('round_edit_button_${round.round.id}'),
+            icon: const Icon(Icons.edit_outlined),
+            iconSize: 20,
+            tooltip: 'Edit round',
+            onPressed: () => openEditRoundDialog(context, ref, round),
+          ),
+          IconButton(
+            key: ValueKey('scorecard_button_${round.round.id}'),
+            icon: const Icon(Icons.scoreboard_outlined),
+            iconSize: 20,
+            tooltip: 'View scorecard',
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ScorecardScreen(roundId: round.round.id),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -129,14 +171,20 @@ class _RoundSubtitle extends StatelessWidget {
       children: [
         Flexible(child: Text(date, overflow: TextOverflow.ellipsis)),
         const SizedBox(width: 6),
-        Icon(Icons.straighten, size: 14, color: theme.colorScheme.outline),
+        // onSurfaceVariant, not outline: outline is a border colour and reads
+        // at about 4:1 as text, under WCAG AA (#73).
+        Icon(
+          Icons.straighten,
+          size: 14,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 3),
         Flexible(
           child: Text(
             setName,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),

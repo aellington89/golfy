@@ -154,4 +154,32 @@ void main() {
       expect(result.where((c) => c.isAce).map((c) => c.label), ['Ace']);
     });
   });
+
+  group('spokenSignedAverage', () {
+    test('null is "no data", not "em dash"', () {
+      expect(spokenSignedAverage(null), 'no data');
+    });
+
+    test('rounds like formatSignedAverage, so speech matches the screen', () {
+      expect(spokenSignedAverage(1.24), '1.2 over par');
+      expect(spokenSignedAverage(-0.36), '0.4 under par');
+      expect(spokenSignedAverage(2.0), '2.0 over par');
+    });
+
+    test('an average that rounds to zero is even par', () {
+      expect(spokenSignedAverage(0.04), 'even par');
+      expect(spokenSignedAverage(-0.04), 'even par');
+    });
+  });
+
+  group('spokenStat', () {
+    test('the no-data dash reads as "no data"', () {
+      expect(spokenStat(formatPercent(null)), 'no data');
+    });
+
+    test('anything else reads as shown', () {
+      expect(spokenStat('62.5%'), '62.5%');
+      expect(spokenStat('3'), '3');
+    });
+  });
 }

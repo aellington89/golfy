@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golfy_app/data/database.dart';
@@ -576,5 +577,22 @@ void main() {
       await pump(tester, courses: const []);
       expect(find.text('This course no longer exists.'), findsOneWidget);
     });
+  });
+
+  // #73: renaming a set was a long press only; it is also a named action on
+  // the chip, so a screen reader can reach it.
+  testWidgets('a set chip offers "Rename tee set" as an action',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pump(tester, tees: [tee(9, 'Blue')]);
+
+    tester.semantics.customAction(
+      find.semantics.byLabel('Blue'),
+      const CustomSemanticsAction(label: 'Rename tee set'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rename tee set'), findsOneWidget);
+    semantics.dispose();
   });
 }

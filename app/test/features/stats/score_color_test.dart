@@ -1,6 +1,20 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:golfy_app/app.dart';
 import 'package:golfy_app/features/stats/score_color.dart';
+
+/// The light-theme green and amber (#73): tone 40 of each hue.
+const underParLight = Color(0xFF006E1C);
+const oneOverLight = Color(0xFF8F4E00);
+
+/// WCAG 2 contrast ratio between two colours, from 1:1 to 21:1.
+double contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+}
 
 void main() {
   // Green-seeded schemes mirroring the app's golf palette; `scheme.error` is
@@ -16,9 +30,9 @@ void main() {
 
   group('scoreToParColor (light scheme)', () {
     test('under par is green (one shade for any amount under)', () {
-      expect(scoreToParColor(-1, light), Colors.green.shade700);
-      expect(scoreToParColor(-2, light), Colors.green.shade700);
-      expect(scoreToParColor(-9, light), Colors.green.shade700);
+      expect(scoreToParColor(-1, light), underParLight);
+      expect(scoreToParColor(-2, light), underParLight);
+      expect(scoreToParColor(-9, light), underParLight);
     });
 
     test('even par is null so the caller uses the default text colour', () {
@@ -26,7 +40,7 @@ void main() {
     });
 
     test('exactly one over par is amber', () {
-      expect(scoreToParColor(1, light), Colors.amber.shade800);
+      expect(scoreToParColor(1, light), oneOverLight);
     });
 
     test('two or more over par is the theme error colour', () {
@@ -69,8 +83,8 @@ void main() {
     });
 
     test('any negative average is green', () {
-      expect(avgScoreVsParColor(-0.3, light), Colors.green.shade700);
-      expect(avgScoreVsParColor(-1.5, light), Colors.green.shade700);
+      expect(avgScoreVsParColor(-0.3, light), underParLight);
+      expect(avgScoreVsParColor(-1.5, light), underParLight);
       expect(avgScoreVsParColor(-1.5, dark), Colors.green.shade400);
     });
 
@@ -79,5 +93,38 @@ void main() {
       expect(avgScoreVsParColor(0.04, light), isNull); // rounds to 0.0
       expect(avgScoreVsParColor(-0.04, dark), isNull);
     });
+  });
+
+  // #73: every band must meet WCAG AA for normal text (4.5:1) on the surfaces
+  // scores are drawn on — the scaffold surface (the rounds and events lists)
+  // and surfaceContainerLow (Material 3 cards: the scorecard, the dashboard,
+  // the event scoring card) — in the scheme the app really ships.
+  group('score bands meet WCAG AA contrast', () {
+    for (final brightness in Brightness.values) {
+      final scheme = golfyColorScheme(brightness);
+      final surfaces = {
+        'surface': scheme.surface,
+        'surfaceContainerLow': scheme.surfaceContainerLow,
+      };
+      final bands = {
+        'under par': scoreToParColor(-1, scheme)!,
+        // Even has no colour of its own; the text falls back to onSurface.
+        'even': scoreToParColor(0, scheme) ?? scheme.onSurface,
+        'one over': scoreToParColor(1, scheme)!,
+        'two or more over': scoreToParColor(2, scheme)!,
+        'average under par': avgScoreVsParColor(-0.5, scheme)!,
+        'average over par': avgScoreVsParColor(0.5, scheme)!,
+      };
+      for (final band in bands.entries) {
+        for (final surface in surfaces.entries) {
+          test('${brightness.name}: ${band.key} on ${surface.key}', () {
+            expect(
+              contrast(band.value, surface.value),
+              greaterThanOrEqualTo(4.5),
+            );
+          });
+        }
+      }
+    }
   });
 }

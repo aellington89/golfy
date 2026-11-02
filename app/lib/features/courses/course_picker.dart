@@ -55,10 +55,14 @@ class CoursePicker extends ConsumerWidget {
           style: TextStyle(color: theme.colorScheme.error),
         ),
       ),
-      data: (courses) => InkWell(
-        onTap: () => _openPicker(context, courses),
-        borderRadius: BorderRadius.circular(4),
-        child: field,
+      // A button to a screen reader: "Course, Augusta, button" (#73).
+      data: (courses) => Semantics(
+        button: true,
+        child: InkWell(
+          onTap: () => _openPicker(context, courses),
+          borderRadius: BorderRadius.circular(4),
+          child: field,
+        ),
       ),
     );
   }
