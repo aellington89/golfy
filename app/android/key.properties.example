@@ -1,19 +1,27 @@
 # Release signing configuration for the Android app.
 #
 # Copy this file to `key.properties` (same directory), fill in real values, and
-# keep BOTH the keystore (*.jks) and `key.properties` out of version control
-# (already covered by android/.gitignore). When `key.properties` is absent the
-# release build falls back to debug signing, so this template is only needed to
-# produce a real, distributable signed build.
+# keep BOTH the keystores (*.jks) and `key.properties` out of version control
+# (already covered by android/.gitignore). It holds two keys, and either can be
+# left out: a build whose key is missing falls back to debug signing, so this
+# template is only needed to produce a real, distributable signed build.
 #
-# Generate a keystore once with:
+#   app-signing key  signs the sideload APK   (flutter build apk --release)
+#   upload key       signs the Play bundle    (flutter build appbundle --release)
+#
+# See "Release signing" in app/README.md for how the two relate.
+
+# --- App-signing key -----------------------------------------------------------
+#
+# Generate it once with:
 #   keytool -genkey -v -keystore golfy-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias golfy
 #
 # !! UPGRADE-CRITICAL !!  Back up the keystore file and these credentials
 # securely. The SAME keystore must sign every future release — a different
 # signing certificate blocks in-place `adb install -r` updates and forces an
-# uninstall that wipes all user data. See the "Release signing" sections in
-# README.md and app/README.md.
+# uninstall that wipes all user data. Google Play holds a copy once it is
+# enrolled in Play App Signing, but the sideload APK still needs this one. See
+# the "Release signing" sections in README.md and app/README.md.
 
 # Password for the keystore file.
 storePassword=changeme
@@ -21,6 +29,22 @@ storePassword=changeme
 keyPassword=changeme
 # The alias passed to keytool via -alias.
 keyAlias=golfy
-# Path to the keystore. Absolute, or relative to the android/ directory.
+# Path to the keystore. Absolute, or relative to the android/app/ directory.
 # On Windows use forward slashes, e.g. C:/Users/you/keys/golfy-release.jks
 storeFile=/path/to/golfy-release.jks
+
+# --- Upload key (Google Play) --------------------------------------------------
+#
+# Signs only the App Bundle uploaded to Google Play, which checks it and then
+# signs the app with the app-signing key above. Keep it distinct from that key.
+# Generate it once with:
+#   keytool -genkey -v -keystore golfy-upload.jks -keyalg RSA -keysize 4096 -validity 10000 -alias upload
+#
+# Back it up too. Unlike the app-signing key it can be replaced if lost, but
+# only by asking Play support to reset it.
+
+uploadStorePassword=changeme
+uploadKeyPassword=changeme
+uploadKeyAlias=upload
+# Same rules as storeFile above.
+uploadStoreFile=/path/to/golfy-upload.jks
