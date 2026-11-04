@@ -4574,18 +4574,16 @@ abstract class _$GolfyDatabase extends GeneratedDatabase {
   ]);
 }
 
-typedef $$CoursesTableCreateCompanionBuilder =
-    CoursesCompanion Function({
-      Value<int> id,
-      required String name,
-      required String gameTitle,
-    });
-typedef $$CoursesTableUpdateCompanionBuilder =
-    CoursesCompanion Function({
-      Value<int> id,
-      Value<String> name,
-      Value<String> gameTitle,
-    });
+typedef $$CoursesTableCreateCompanionBuilder = CoursesCompanion Function({
+  Value<int> id,
+  required String name,
+  required String gameTitle,
+});
+typedef $$CoursesTableUpdateCompanionBuilder = CoursesCompanion Function({
+  Value<int> id,
+  Value<String> name,
+  Value<String> gameTitle,
+});
 
 final class $$CoursesTableReferences
     extends BaseReferences<_$GolfyDatabase, $CoursesTable, Course> {
@@ -4967,12 +4965,11 @@ class $$CoursesTableTableManager
               $$CoursesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$CoursesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> name = const Value.absent(),
-                Value<String> gameTitle = const Value.absent(),
-              }) => CoursesCompanion(id: id, name: name, gameTitle: gameTitle),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> gameTitle = const Value.absent(),
+          }) => CoursesCompanion(id: id, name: name, gameTitle: gameTitle),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
@@ -5010,10 +5007,11 @@ class $$CoursesTableTableManager
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (teeSetsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           Course,
                           $CoursesTable,
-                          TeeSet
+                          TeeSet,
+                          $TeeSetsTable
                         >(
                           currentTable: table,
                           referencedTable: $$CoursesTableReferences
@@ -5024,17 +5022,16 @@ class $$CoursesTableTableManager
                                 table,
                                 p0,
                               ).teeSetsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.courseId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'course_id',
                           typedResults: items,
                         ),
                       if (pinSetsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           Course,
                           $CoursesTable,
-                          PinSet
+                          PinSet,
+                          $PinSetsTable
                         >(
                           currentTable: table,
                           referencedTable: $$CoursesTableReferences
@@ -5045,14 +5042,17 @@ class $$CoursesTableTableManager
                                 table,
                                 p0,
                               ).pinSetsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.courseId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'course_id',
                           typedResults: items,
                         ),
                       if (roundsRefs)
-                        await $_getPrefetchedData<Course, $CoursesTable, Round>(
+                        await $_getPrefetchedDataByColumns<
+                          Course,
+                          $CoursesTable,
+                          Round,
+                          $RoundsTable
+                        >(
                           currentTable: table,
                           referencedTable: $$CoursesTableReferences
                               ._roundsRefsTable(db),
@@ -5062,17 +5062,16 @@ class $$CoursesTableTableManager
                                 table,
                                 p0,
                               ).roundsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.courseId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'course_id',
                           typedResults: items,
                         ),
                       if (courseHolesRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           Course,
                           $CoursesTable,
-                          CourseHole
+                          CourseHole,
+                          $CourseHolesTable
                         >(
                           currentTable: table,
                           referencedTable: $$CoursesTableReferences
@@ -5083,10 +5082,8 @@ class $$CoursesTableTableManager
                                 table,
                                 p0,
                               ).courseHolesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.courseId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'course_id',
                           typedResults: items,
                         ),
                     ];
@@ -5116,18 +5113,16 @@ typedef $$CoursesTableProcessedTableManager =
         bool courseHolesRefs,
       })
     >;
-typedef $$TeeSetsTableCreateCompanionBuilder =
-    TeeSetsCompanion Function({
-      Value<int> id,
-      required int courseId,
-      required String name,
-    });
-typedef $$TeeSetsTableUpdateCompanionBuilder =
-    TeeSetsCompanion Function({
-      Value<int> id,
-      Value<int> courseId,
-      Value<String> name,
-    });
+typedef $$TeeSetsTableCreateCompanionBuilder = TeeSetsCompanion Function({
+  Value<int> id,
+  required int courseId,
+  required String name,
+});
+typedef $$TeeSetsTableUpdateCompanionBuilder = TeeSetsCompanion Function({
+  Value<int> id,
+  Value<int> courseId,
+  Value<String> name,
+});
 
 final class $$TeeSetsTableReferences
     extends BaseReferences<_$GolfyDatabase, $TeeSetsTable, TeeSet> {
@@ -5512,22 +5507,16 @@ class $$TeeSetsTableTableManager
               $$TeeSetsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$TeeSetsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> courseId = const Value.absent(),
-                Value<String> name = const Value.absent(),
-              }) => TeeSetsCompanion(id: id, courseId: courseId, name: name),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int courseId,
-                required String name,
-              }) => TeeSetsCompanion.insert(
-                id: id,
-                courseId: courseId,
-                name: name,
-              ),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> courseId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+          }) => TeeSetsCompanion(id: id, courseId: courseId, name: name),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int courseId,
+            required String name,
+          }) => TeeSetsCompanion.insert(id: id, courseId: courseId, name: name),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
@@ -5567,17 +5556,15 @@ class $$TeeSetsTableTableManager
                         >
                       >(state) {
                         if (courseId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.courseId,
-                                    referencedTable: $$TeeSetsTableReferences
-                                        ._courseIdTable(db),
-                                    referencedColumn: $$TeeSetsTableReferences
-                                        ._courseIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.courseId,
+                            referencedTable: $$TeeSetsTableReferences
+                                ._courseIdTable(db),
+                            referencedColumn: $$TeeSetsTableReferences
+                                ._courseIdTable(db)
+                                .id,
+                          ) as T;
                         }
 
                         return state;
@@ -5585,7 +5572,12 @@ class $$TeeSetsTableTableManager
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (roundsRefs)
-                        await $_getPrefetchedData<TeeSet, $TeeSetsTable, Round>(
+                        await $_getPrefetchedDataByColumns<
+                          TeeSet,
+                          $TeeSetsTable,
+                          Round,
+                          $RoundsTable
+                        >(
                           currentTable: table,
                           referencedTable: $$TeeSetsTableReferences
                               ._roundsRefsTable(db),
@@ -5595,17 +5587,16 @@ class $$TeeSetsTableTableManager
                                 table,
                                 p0,
                               ).roundsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.teeSetId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'tee_set_id',
                           typedResults: items,
                         ),
                       if (courseYardsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           TeeSet,
                           $TeeSetsTable,
-                          CourseYard
+                          CourseYard,
+                          $CourseYardsTable
                         >(
                           currentTable: table,
                           referencedTable: $$TeeSetsTableReferences
@@ -5616,17 +5607,16 @@ class $$TeeSetsTableTableManager
                                 table,
                                 p0,
                               ).courseYardsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.teeSetId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'tee_set_id',
                           typedResults: items,
                         ),
                       if (teeToPinYardsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           TeeSet,
                           $TeeSetsTable,
-                          TeeToPinYard
+                          TeeToPinYard,
+                          $TeeToPinYardsTable
                         >(
                           currentTable: table,
                           referencedTable: $$TeeSetsTableReferences
@@ -5637,10 +5627,8 @@ class $$TeeSetsTableTableManager
                                 table,
                                 p0,
                               ).teeToPinYardsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.teeSetId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'tee_set_id',
                           typedResults: items,
                         ),
                     ];
@@ -5670,18 +5658,16 @@ typedef $$TeeSetsTableProcessedTableManager =
         bool teeToPinYardsRefs,
       })
     >;
-typedef $$PinSetsTableCreateCompanionBuilder =
-    PinSetsCompanion Function({
-      Value<int> id,
-      required int courseId,
-      required String name,
-    });
-typedef $$PinSetsTableUpdateCompanionBuilder =
-    PinSetsCompanion Function({
-      Value<int> id,
-      Value<int> courseId,
-      Value<String> name,
-    });
+typedef $$PinSetsTableCreateCompanionBuilder = PinSetsCompanion Function({
+  Value<int> id,
+  required int courseId,
+  required String name,
+});
+typedef $$PinSetsTableUpdateCompanionBuilder = PinSetsCompanion Function({
+  Value<int> id,
+  Value<int> courseId,
+  Value<String> name,
+});
 
 final class $$PinSetsTableReferences
     extends BaseReferences<_$GolfyDatabase, $PinSetsTable, PinSet> {
@@ -5997,22 +5983,16 @@ class $$PinSetsTableTableManager
               $$PinSetsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$PinSetsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> courseId = const Value.absent(),
-                Value<String> name = const Value.absent(),
-              }) => PinSetsCompanion(id: id, courseId: courseId, name: name),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int courseId,
-                required String name,
-              }) => PinSetsCompanion.insert(
-                id: id,
-                courseId: courseId,
-                name: name,
-              ),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> courseId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+          }) => PinSetsCompanion(id: id, courseId: courseId, name: name),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int courseId,
+            required String name,
+          }) => PinSetsCompanion.insert(id: id, courseId: courseId, name: name),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
@@ -6050,17 +6030,15 @@ class $$PinSetsTableTableManager
                         >
                       >(state) {
                         if (courseId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.courseId,
-                                    referencedTable: $$PinSetsTableReferences
-                                        ._courseIdTable(db),
-                                    referencedColumn: $$PinSetsTableReferences
-                                        ._courseIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.courseId,
+                            referencedTable: $$PinSetsTableReferences
+                                ._courseIdTable(db),
+                            referencedColumn: $$PinSetsTableReferences
+                                ._courseIdTable(db)
+                                .id,
+                          ) as T;
                         }
 
                         return state;
@@ -6068,7 +6046,12 @@ class $$PinSetsTableTableManager
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (roundsRefs)
-                        await $_getPrefetchedData<PinSet, $PinSetsTable, Round>(
+                        await $_getPrefetchedDataByColumns<
+                          PinSet,
+                          $PinSetsTable,
+                          Round,
+                          $RoundsTable
+                        >(
                           currentTable: table,
                           referencedTable: $$PinSetsTableReferences
                               ._roundsRefsTable(db),
@@ -6078,17 +6061,16 @@ class $$PinSetsTableTableManager
                                 table,
                                 p0,
                               ).roundsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.pinSetId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'pin_set_id',
                           typedResults: items,
                         ),
                       if (teeToPinYardsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           PinSet,
                           $PinSetsTable,
-                          TeeToPinYard
+                          TeeToPinYard,
+                          $TeeToPinYardsTable
                         >(
                           currentTable: table,
                           referencedTable: $$PinSetsTableReferences
@@ -6099,10 +6081,8 @@ class $$PinSetsTableTableManager
                                 table,
                                 p0,
                               ).teeToPinYardsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.pinSetId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'pin_set_id',
                           typedResults: items,
                         ),
                     ];
@@ -6131,24 +6111,22 @@ typedef $$PinSetsTableProcessedTableManager =
         bool teeToPinYardsRefs,
       })
     >;
-typedef $$EventsTableCreateCompanionBuilder =
-    EventsCompanion Function({
-      Value<int> id,
-      required String name,
-      Value<int> season,
-      Value<int?> finishPosition,
-      Value<bool> tied,
-      Value<bool> missedCut,
-    });
-typedef $$EventsTableUpdateCompanionBuilder =
-    EventsCompanion Function({
-      Value<int> id,
-      Value<String> name,
-      Value<int> season,
-      Value<int?> finishPosition,
-      Value<bool> tied,
-      Value<bool> missedCut,
-    });
+typedef $$EventsTableCreateCompanionBuilder = EventsCompanion Function({
+  Value<int> id,
+  required String name,
+  Value<int> season,
+  Value<int?> finishPosition,
+  Value<bool> tied,
+  Value<bool> missedCut,
+});
+typedef $$EventsTableUpdateCompanionBuilder = EventsCompanion Function({
+  Value<int> id,
+  Value<String> name,
+  Value<int> season,
+  Value<int?> finishPosition,
+  Value<bool> tied,
+  Value<bool> missedCut,
+});
 
 final class $$EventsTableReferences
     extends BaseReferences<_$GolfyDatabase, $EventsTable, Event> {
@@ -6408,15 +6386,20 @@ class $$EventsTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (roundsRefs)
-                    await $_getPrefetchedData<Event, $EventsTable, Round>(
+                    await $_getPrefetchedDataByColumns<
+                      Event,
+                      $EventsTable,
+                      Round,
+                      $RoundsTable
+                    >(
                       currentTable: table,
                       referencedTable: $$EventsTableReferences._roundsRefsTable(
                         db,
                       ),
                       managerFromTypedResult: (p0) =>
                           $$EventsTableReferences(db, table, p0).roundsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.eventId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'event_id',
                       typedResults: items,
                     ),
                 ];
@@ -6441,36 +6424,34 @@ typedef $$EventsTableProcessedTableManager =
       Event,
       PrefetchHooks Function({bool roundsRefs})
     >;
-typedef $$RoundsTableCreateCompanionBuilder =
-    RoundsCompanion Function({
-      Value<int> id,
-      required String date,
-      required int courseId,
-      Value<int> roundNumber,
-      Value<int?> teeSetId,
-      Value<int?> pinSetId,
-      Value<String?> weather,
-      Value<int?> windSpeedMph,
-      Value<String?> difficulty,
-      Value<String?> notes,
-      Value<String?> migrationCanary,
-      Value<int?> eventId,
-    });
-typedef $$RoundsTableUpdateCompanionBuilder =
-    RoundsCompanion Function({
-      Value<int> id,
-      Value<String> date,
-      Value<int> courseId,
-      Value<int> roundNumber,
-      Value<int?> teeSetId,
-      Value<int?> pinSetId,
-      Value<String?> weather,
-      Value<int?> windSpeedMph,
-      Value<String?> difficulty,
-      Value<String?> notes,
-      Value<String?> migrationCanary,
-      Value<int?> eventId,
-    });
+typedef $$RoundsTableCreateCompanionBuilder = RoundsCompanion Function({
+  Value<int> id,
+  required String date,
+  required int courseId,
+  Value<int> roundNumber,
+  Value<int?> teeSetId,
+  Value<int?> pinSetId,
+  Value<String?> weather,
+  Value<int?> windSpeedMph,
+  Value<String?> difficulty,
+  Value<String?> notes,
+  Value<String?> migrationCanary,
+  Value<int?> eventId,
+});
+typedef $$RoundsTableUpdateCompanionBuilder = RoundsCompanion Function({
+  Value<int> id,
+  Value<String> date,
+  Value<int> courseId,
+  Value<int> roundNumber,
+  Value<int?> teeSetId,
+  Value<int?> pinSetId,
+  Value<String?> weather,
+  Value<int?> windSpeedMph,
+  Value<String?> difficulty,
+  Value<String?> notes,
+  Value<String?> migrationCanary,
+  Value<int?> eventId,
+});
 
 final class $$RoundsTableReferences
     extends BaseReferences<_$GolfyDatabase, $RoundsTable, Round> {
@@ -7157,56 +7138,48 @@ class $$RoundsTableTableManager
                         >
                       >(state) {
                         if (courseId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.courseId,
-                                    referencedTable: $$RoundsTableReferences
-                                        ._courseIdTable(db),
-                                    referencedColumn: $$RoundsTableReferences
-                                        ._courseIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.courseId,
+                            referencedTable: $$RoundsTableReferences
+                                ._courseIdTable(db),
+                            referencedColumn: $$RoundsTableReferences
+                                ._courseIdTable(db)
+                                .id,
+                          ) as T;
                         }
                         if (teeSetId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.teeSetId,
-                                    referencedTable: $$RoundsTableReferences
-                                        ._teeSetIdTable(db),
-                                    referencedColumn: $$RoundsTableReferences
-                                        ._teeSetIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.teeSetId,
+                            referencedTable: $$RoundsTableReferences
+                                ._teeSetIdTable(db),
+                            referencedColumn: $$RoundsTableReferences
+                                ._teeSetIdTable(db)
+                                .id,
+                          ) as T;
                         }
                         if (pinSetId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.pinSetId,
-                                    referencedTable: $$RoundsTableReferences
-                                        ._pinSetIdTable(db),
-                                    referencedColumn: $$RoundsTableReferences
-                                        ._pinSetIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.pinSetId,
+                            referencedTable: $$RoundsTableReferences
+                                ._pinSetIdTable(db),
+                            referencedColumn: $$RoundsTableReferences
+                                ._pinSetIdTable(db)
+                                .id,
+                          ) as T;
                         }
                         if (eventId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.eventId,
-                                    referencedTable: $$RoundsTableReferences
-                                        ._eventIdTable(db),
-                                    referencedColumn: $$RoundsTableReferences
-                                        ._eventIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.eventId,
+                            referencedTable: $$RoundsTableReferences
+                                ._eventIdTable(db),
+                            referencedColumn: $$RoundsTableReferences
+                                ._eventIdTable(db)
+                                .id,
+                          ) as T;
                         }
 
                         return state;
@@ -7214,10 +7187,11 @@ class $$RoundsTableTableManager
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (holeResultsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           Round,
                           $RoundsTable,
-                          HoleResult
+                          HoleResult,
+                          $HoleResultsTable
                         >(
                           currentTable: table,
                           referencedTable: $$RoundsTableReferences
@@ -7228,10 +7202,8 @@ class $$RoundsTableTableManager
                                 table,
                                 p0,
                               ).holeResultsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.roundId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'round_id',
                           typedResults: items,
                         ),
                     ];
@@ -7805,17 +7777,15 @@ class $$HoleResultsTableTableManager
                     >
                   >(state) {
                     if (roundId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.roundId,
-                                referencedTable: $$HoleResultsTableReferences
-                                    ._roundIdTable(db),
-                                referencedColumn: $$HoleResultsTableReferences
-                                    ._roundIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.roundId,
+                        referencedTable: $$HoleResultsTableReferences
+                            ._roundIdTable(db),
+                        referencedColumn: $$HoleResultsTableReferences
+                            ._roundIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -7823,10 +7793,11 @@ class $$HoleResultsTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (holeShotsRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       HoleResult,
                       $HoleResultsTable,
-                      HoleShot
+                      HoleShot,
+                      $HoleShotsTable
                     >(
                       currentTable: table,
                       referencedTable: $$HoleResultsTableReferences
@@ -7837,10 +7808,8 @@ class $$HoleResultsTableTableManager
                             table,
                             p0,
                           ).holeShotsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.holeResultId == item.id,
-                          ),
+                      currentColumn: 'id',
+                      referencedColumn: 'hole_result_id',
                       typedResults: items,
                     ),
                 ];
@@ -8142,17 +8111,15 @@ class $$CourseHolesTableTableManager
                     >
                   >(state) {
                     if (courseId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.courseId,
-                                referencedTable: $$CourseHolesTableReferences
-                                    ._courseIdTable(db),
-                                referencedColumn: $$CourseHolesTableReferences
-                                    ._courseIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.courseId,
+                        referencedTable: $$CourseHolesTableReferences
+                            ._courseIdTable(db),
+                        referencedColumn: $$CourseHolesTableReferences
+                            ._courseIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -8436,17 +8403,15 @@ class $$CourseYardsTableTableManager
                     >
                   >(state) {
                     if (teeSetId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.teeSetId,
-                                referencedTable: $$CourseYardsTableReferences
-                                    ._teeSetIdTable(db),
-                                referencedColumn: $$CourseYardsTableReferences
-                                    ._teeSetIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.teeSetId,
+                        referencedTable: $$CourseYardsTableReferences
+                            ._teeSetIdTable(db),
+                        referencedColumn: $$CourseYardsTableReferences
+                            ._teeSetIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -8828,30 +8793,26 @@ class $$TeeToPinYardsTableTableManager
                     >
                   >(state) {
                     if (teeSetId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.teeSetId,
-                                referencedTable: $$TeeToPinYardsTableReferences
-                                    ._teeSetIdTable(db),
-                                referencedColumn: $$TeeToPinYardsTableReferences
-                                    ._teeSetIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.teeSetId,
+                        referencedTable: $$TeeToPinYardsTableReferences
+                            ._teeSetIdTable(db),
+                        referencedColumn: $$TeeToPinYardsTableReferences
+                            ._teeSetIdTable(db)
+                            .id,
+                      ) as T;
                     }
                     if (pinSetId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.pinSetId,
-                                referencedTable: $$TeeToPinYardsTableReferences
-                                    ._pinSetIdTable(db),
-                                referencedColumn: $$TeeToPinYardsTableReferences
-                                    ._pinSetIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.pinSetId,
+                        referencedTable: $$TeeToPinYardsTableReferences
+                            ._pinSetIdTable(db),
+                        referencedColumn: $$TeeToPinYardsTableReferences
+                            ._pinSetIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -8879,28 +8840,26 @@ typedef $$TeeToPinYardsTableProcessedTableManager =
       TeeToPinYard,
       PrefetchHooks Function({bool teeSetId, bool pinSetId})
     >;
-typedef $$HoleShotsTableCreateCompanionBuilder =
-    HoleShotsCompanion Function({
-      Value<int> id,
-      required int holeResultId,
-      required int shotNumber,
-      Value<String?> club,
-      Value<int?> distanceYards,
-      Value<String?> lie,
-      Value<String?> result,
-      Value<int?> distanceFeet,
-    });
-typedef $$HoleShotsTableUpdateCompanionBuilder =
-    HoleShotsCompanion Function({
-      Value<int> id,
-      Value<int> holeResultId,
-      Value<int> shotNumber,
-      Value<String?> club,
-      Value<int?> distanceYards,
-      Value<String?> lie,
-      Value<String?> result,
-      Value<int?> distanceFeet,
-    });
+typedef $$HoleShotsTableCreateCompanionBuilder = HoleShotsCompanion Function({
+  Value<int> id,
+  required int holeResultId,
+  required int shotNumber,
+  Value<String?> club,
+  Value<int?> distanceYards,
+  Value<String?> lie,
+  Value<String?> result,
+  Value<int?> distanceFeet,
+});
+typedef $$HoleShotsTableUpdateCompanionBuilder = HoleShotsCompanion Function({
+  Value<int> id,
+  Value<int> holeResultId,
+  Value<int> shotNumber,
+  Value<String?> club,
+  Value<int?> distanceYards,
+  Value<String?> lie,
+  Value<String?> result,
+  Value<int?> distanceFeet,
+});
 
 final class $$HoleShotsTableReferences
     extends BaseReferences<_$GolfyDatabase, $HoleShotsTable, HoleShot> {
@@ -9216,17 +9175,15 @@ class $$HoleShotsTableTableManager
                     >
                   >(state) {
                     if (holeResultId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.holeResultId,
-                                referencedTable: $$HoleShotsTableReferences
-                                    ._holeResultIdTable(db),
-                                referencedColumn: $$HoleShotsTableReferences
-                                    ._holeResultIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.holeResultId,
+                        referencedTable: $$HoleShotsTableReferences
+                            ._holeResultIdTable(db),
+                        referencedColumn: $$HoleShotsTableReferences
+                            ._holeResultIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
