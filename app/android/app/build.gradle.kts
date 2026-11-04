@@ -30,12 +30,19 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Permanent. Once a build is uploaded to Google Play, even to internal
+        // testing, this id belongs to that developer account for good, and it
+        // is also the key to every installed copy's database: a new id is a new
+        // app that cannot see the old one's data (#23, #24, #74, #138).
         applicationId = "com.golfy.golfy_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Pinned rather than inherited from the Flutter SDK, so a Flutter upgrade
+        // can't move them silently (#74). Google Play requires new apps and
+        // updates to target API 36 from 2026-08-31; the floor rises every
+        // August, so raise targetSdk before then, after reading that Android
+        // version's behaviour changes. Re-check both whenever the pinned Flutter
+        // SDK moves, in case Flutter raises its own minimum above minSdk.
+        minSdk = 24
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // Default launcher label; the debug build type overrides it below.
