@@ -23,6 +23,9 @@
 # doesn't ship: see "Google Play (App Bundle)" in README.md. The SDK is
 # ANDROID_SDK_ROOT or ANDROID_HOME, else sdk.dir from android/local.properties.
 set -euo pipefail
+# grep -P needs a UTF-8 or single-byte locale. Git Bash on Windows starts
+# without one, so pin it; where C.UTF-8 doesn't exist this falls back to C.
+export LC_ALL=C.UTF-8
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
   echo "usage: BUNDLETOOL=<bundletool.jar> bash tool/verify_bundle.sh <aab> [upload-cert-sha256]" >&2
@@ -101,7 +104,10 @@ fi
 
 echo "== Bundle"
 "$java" -jar "$BUNDLETOOL" validate --bundle="$aab" > /dev/null
-package=$("$java" -jar "$BUNDLETOOL" dump manifest --bundle="$aab" --xpath=/manifest/@package | tr -d '\r')
+# Git Bash would rewrite the XPath into a Windows path (C:/Program
+# Files/Git/manifest/...); MSYS2_ARG_CONV_EXCL stops it, and Linux ignores it.
+package=$(MSYS2_ARG_CONV_EXCL='--xpath=' "$java" -jar "$BUNDLETOOL" dump manifest \
+  --bundle="$aab" --xpath=/manifest/@package | tr -d '\r')
 echo "  package  $package"
 [ "$package" = "com.golfy.golfy_app" ] || fail "$aab is $package, not com.golfy.golfy_app"
 

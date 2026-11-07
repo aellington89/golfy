@@ -11,6 +11,9 @@
 # Run from app/ by flutter-build.yml (debug APK, which may also have INTERNET
 # for Flutter's own tooling) and by release.yml (release APK, which may not).
 set -euo pipefail
+# grep -P needs a UTF-8 or single-byte locale. Git Bash on Windows starts
+# without one, so pin it; where C.UTF-8 doesn't exist this falls back to C.
+export LC_ALL=C.UTF-8
 
 apk=$1
 shift
