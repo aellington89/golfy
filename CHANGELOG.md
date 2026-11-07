@@ -8,6 +8,21 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ## [Unreleased]
 
+### Internal
+
+- **Golfy can be built for Google Play** ([#74]). `flutter build appbundle
+  --release` produces the Android App Bundle Play requires, signed with a
+  new upload key, while `flutter build apk --release` keeps signing the
+  sideload APK with the upgrade-critical release key. A bundle is never
+  signed with the release key. `app/README.md` documents enrolling in Play App
+  Signing with that same release key, so that Play installs and sideload
+  installs share one certificate and can update over each other. `minSdk` 24 and `targetSdk` 36 are now pinned
+  instead of inherited from the Flutter SDK (they are the values it already
+  gave, so the app is unchanged), the application id's permanence is spelt
+  out where it is set, and `tool/verify_bundle.sh` checks a bundle's signer,
+  package, SDK levels, permissions and 16 KB page alignment before upload.
+  CI doesn't build the bundle yet; that is #75.
+
 ## [0.10.0] - 2026-11-01
 
 A release about using Golfy without looking at it closely. It now works with
@@ -1281,6 +1296,7 @@ Phase 1 — data layer and navigation shell.
 [#71]: https://github.com/aellington89/golfy/issues/71
 [#72]: https://github.com/aellington89/golfy/issues/72
 [#73]: https://github.com/aellington89/golfy/issues/73
+[#74]: https://github.com/aellington89/golfy/issues/74
 [#111]: https://github.com/aellington89/golfy/pull/111
 [#112]: https://github.com/aellington89/golfy/pull/112
 [#114]: https://github.com/aellington89/golfy/issues/114

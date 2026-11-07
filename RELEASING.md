@@ -42,7 +42,9 @@ bump, and the largest one wins.
 | `### Internal` / `### Deferred` only, or empty | NONE | NONE |
 
 The build number (`+N`) always goes up by one. It is Android's `versionCode`,
-and Play rejects an upload whose version code does not increase.
+and Play rejects an upload whose version code does not increase. The sideload
+APK and the Google Play bundle share one application id, so they share that
+sequence too: a build number shipped on either is spent on both.
 
 Two rules deserve their own paragraph:
 
@@ -246,6 +248,10 @@ preview instead of the tag check.
    previous version. In-place upgrade is the entire reason the release keystore
    is guarded — see [Release signing](app/README.md#release-signing).
 2. **Publish the draft GitHub Release.** CI creates it as a draft on purpose.
+   Optionally, until [#75](https://github.com/aellington89/golfy/issues/75)
+   automates it, build the Google Play bundle from the tag, check it and upload
+   it to the internal testing track by hand — see
+   [Google Play (App Bundle)](app/README.md#google-play-app-bundle).
 3. **Fast-forward `deps/patch` back onto `master`** so it does not accumulate
    conflicts:
    `git switch deps/patch && git merge --ff-only master && git push`.

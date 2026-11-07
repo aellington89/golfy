@@ -8,15 +8,31 @@ plugins {
 }
 
 // Release signing is configured via `android/key.properties` (kept out of
-// version control). When that file is absent — CI, a fresh clone, or
-// `flutter run --release` without the keystore — the release build falls back
-// to debug signing so it still succeeds. The real keystore is upgrade-critical:
-// it must be backed up and reused for every release, or in-place updates break
-// and users lose their data (#24, #19).
+// version control), which holds up to two keys:
+//
+// - the app-signing key (storeFile, keyAlias, …) signs the sideload APK. It is
+//   upgrade-critical: it must be backed up and reused for every release, or
+//   in-place updates break and users lose their data (#24, #19).
+// - the upload key (uploadStoreFile, uploadKeyAlias, …) signs the App Bundle
+//   for Google Play, which checks it and re-signs the app with the app-signing
+//   key (Play App Signing, #74).
+//
+// A key that isn't configured — CI, a fresh clone, or `flutter run --release`
+// without the keystore — falls back to debug signing so the build still
+// succeeds.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+val hasAppSigningKey = keystoreProperties.containsKey("storeFile")
+val hasUploadKey = keystoreProperties.containsKey("uploadStoreFile")
+
+// AGP gives an APK and a bundle of the same variant one signingConfig, so the
+// tasks Gradle was asked to run are the only place the two can be told apart.
+// `flutter build appbundle` runs bundleRelease.
+val isBundleBuild = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(':').startsWith("bundle")
 }
 
 android {
@@ -30,12 +46,19 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Permanent. Once a build is uploaded to Google Play, even to internal
+        // testing, this id belongs to that developer account for good, and it
+        // is also the key to every installed copy's database: a new id is a new
+        // app that cannot see the old one's data (#23, #24, #74, #138).
         applicationId = "com.golfy.golfy_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Pinned rather than inherited from the Flutter SDK, so a Flutter upgrade
+        // can't move them silently (#74). Google Play requires new apps and
+        // updates to target API 36 from 2026-08-31; the floor rises every
+        // August, so raise targetSdk before then, after reading that Android
+        // version's behaviour changes. Re-check both whenever the pinned Flutter
+        // SDK moves, in case Flutter raises its own minimum above minSdk.
+        minSdk = 24
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // Default launcher label; the debug build type overrides it below.
@@ -45,27 +68,39 @@ android {
     }
 
     signingConfigs {
+        // Each is populated from key.properties when its key is configured and
+        // left empty otherwise (the release build type falls back to debug
+        // signing below).
         create("release") {
-            // Populated from key.properties when present; left empty otherwise
-            // (the release build type falls back to debug signing below).
-            if (keystorePropertiesFile.exists()) {
+            if (hasAppSigningKey) {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
+        create("upload") {
+            if (hasUploadKey) {
+                keyAlias = keystoreProperties["uploadKeyAlias"] as String
+                keyPassword = keystoreProperties["uploadKeyPassword"] as String
+                storeFile = file(keystoreProperties["uploadStoreFile"] as String)
+                storePassword = keystoreProperties["uploadStorePassword"] as String
+            }
+        }
     }
 
     buildTypes {
         release {
-            // Sign with the real release keystore when configured (key.properties),
-            // otherwise fall back to debug signing so CI and `flutter run --release`
-            // keep working without the secret keystore.
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            // An App Bundle is only ever signed with the upload key, and an APK
+            // only with the app-signing key. A bundle never falls back to the
+            // app-signing key: the first bundle Play receives registers its
+            // signer as the upload key, which would quietly undo the separation.
+            // A debug-signed bundle, by contrast, Play refuses outright.
+            signingConfig = when {
+                isBundleBuild && hasUploadKey -> signingConfigs.getByName("upload")
+                isBundleBuild -> signingConfigs.getByName("debug")
+                hasAppSigningKey -> signingConfigs.getByName("release")
+                else -> signingConfigs.getByName("debug")
             }
         }
         debug {

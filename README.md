@@ -341,7 +341,11 @@ flutter run -d <android-device-id>     # Android
 > [Release signing](app/README.md#release-signing). A different signing
 > certificate on a later release blocks in-place updates and forces an
 > uninstall that wipes user data, so the keystore must be backed up and reused
-> for every release. Releases are cut by pushing a `v*` tag: CI builds the signed
+> for every release. The Google Play App Bundle is signed with a separate
+> **upload key** instead, and Play signs what it serves with the same
+> certificate as the sideload APK — see
+> [Google Play (App Bundle)](app/README.md#google-play-app-bundle). Releases are
+> cut by pushing a `v*` tag: CI builds the signed
 > APK and drafts a GitHub Release — see
 > [Continuous integration](app/README.md#continuous-integration). The version
 > on that tag is **derived from what merged**, not picked by hand, and CI
@@ -362,8 +366,8 @@ golfy/
 │   │   └── main.dart    # entry point
 │   ├── branding/        # launcher icon + splash source art (SVG); the Android
 │   │                    #   and Windows icon resources are generated from it
-│   ├── tool/            # release version calculator, APK permission check
-│   │                    #   (no app code)
+│   ├── tool/            # release version calculator, APK permission check,
+│   │                    #   Play bundle check (no app code)
 │   └── test/            # widget + DAO + schema-constraint tests
 ├── .github/
 │   ├── workflows/       # CI build+test, and the tag-driven signed release

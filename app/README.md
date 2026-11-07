@@ -35,7 +35,8 @@ dart run build_runner watch             # regenerate on file change
 
 On Android, debug builds (`flutter run`, `flutter build apk --debug`) install as
 `com.golfy.golfy_app.debug` with a "(debug)" launcher label, while
-`flutter build apk --release` installs the canonical `com.golfy.golfy_app`. The
+`flutter build apk --release` installs the canonical `com.golfy.golfy_app` (as
+does the Google Play bundle from `flutter build appbundle --release`). The
 two sandbox to separate databases and install side-by-side; if you still have a
 pre-suffix combined debug install, clear it once with
 `adb uninstall com.golfy.golfy_app`.
@@ -94,8 +95,10 @@ app/flutter_native_splash.yaml     # splash generator config
 app/tool/                          # release tooling — not part of the app
 ├── release_rules.dart             # pure version rules (imports nothing)
 ├── next_version.dart              # CLI: next version, and the CI tag guard
-└── assert_permissions.sh          # CI: an APK asks for no permission PRIVACY.md
-                                   #   doesn't mention (#72)
+├── assert_permissions.sh          # CI: an APK asks for no permission PRIVACY.md
+│                                  #   doesn't mention (#72)
+└── verify_bundle.sh               # a Play App Bundle's signer, package, SDK levels,
+                                   #   permissions and 16 KB alignment (#74)
 
 app/test/
 ├── database_test.dart             # schema-level constraint tests (FK, UNIQUE, CHECK)
@@ -569,27 +572,105 @@ Accessibility Scanner over the changed screens in light and dark.
 ## Release signing
 
 Debug builds are signed with the local Android debug key. **Release** builds are
-signed with a real keystore configured via `android/key.properties` (git-ignored).
-When that file is absent — CI, a fresh clone, or `flutter run --release` — the
-release build falls back to debug signing, so it still succeeds; it just isn't
-distributable.
+signed with real keys configured via `android/key.properties` (git-ignored),
+and which key depends on what is being built (#74):
+
+| Build | Signed with | What checks it |
+|---|---|---|
+| `flutter build apk --release`, the sideload APK | the **app-signing key**, `golfy-release.jks` (alias `golfy`) | every device it is installed or updated on |
+| `flutter build appbundle --release`, the Google Play bundle | the **upload key**, `golfy-upload.jks` (alias `upload`) | Google Play only, which then signs the app it serves with the app-signing key |
+
+So a Play install and a sideload install carry the same certificate and can
+update over each other, while the key that leaves this machine for Play is one
+that can be replaced. A key that isn't configured — CI, a fresh clone, or
+`flutter run --release` — falls back to debug signing, so the build still
+succeeds; it just isn't distributable. A bundle never falls back to the
+app-signing key.
 
 To produce a real signed release build:
 
-1. Generate a keystore once (then guard it — see the warning):
+1. Generate each keystore once (then guard them — see the warning):
    ```powershell
    keytool -genkey -v -keystore golfy-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias golfy
+   keytool -genkey -v -keystore golfy-upload.jks -keyalg RSA -keysize 4096 -validity 10000 -alias upload
    ```
 2. Copy [`android/key.properties.example`](android/key.properties.example) to
-   `android/key.properties` and fill in the alias, passwords, and `storeFile`.
-3. `flutter build apk --release` now signs with that keystore — verify with
-   `apksigner verify --print-certs <apk>`.
+   `android/key.properties` and fill in the aliases, passwords, and store
+   paths. Either key's block can be left out. A relative path resolves against
+   `android/app/`.
+3. `flutter build apk --release` now signs with the app-signing key — verify
+   with `apksigner verify --print-certs <apk>` — and
+   `flutter build appbundle --release` with the upload key; see
+   [Google Play (App Bundle)](#google-play-app-bundle) to verify that.
 
-> **The release keystore is upgrade-critical.** Android only allows an in-place
-> update (`adb install -r`, store updates) when the new build is signed with the
-> **same** certificate. Lose or rotate the keystore and every existing install
-> must be uninstalled first — wiping all user data. Back up `golfy-release.jks`
-> **and** `key.properties` somewhere durable and reuse them for every release.
+> **The app-signing keystore is upgrade-critical.** Android only allows an
+> in-place update (`adb install -r`, store updates) when the new build is signed
+> with the **same** certificate. Lose or rotate the keystore and every existing
+> install must be uninstalled first — wiping all user data. Back up
+> `golfy-release.jks` **and** `key.properties` somewhere durable and reuse them
+> for every release. Google Play keeps a copy once Golfy is enrolled in Play App
+> Signing, but that is no backup: the sideload APK is still signed here.
+>
+> Back up `golfy-upload.jks` the same way. Losing it is recoverable, by asking
+> Play support to reset the upload key, but it isn't instant.
+
+### Google Play (App Bundle)
+
+Google Play only accepts an Android App Bundle (`.aab`), from which it builds
+and signs an APK per device. Build it with:
+
+```powershell
+flutter build appbundle --release    # build/app/outputs/bundle/release/app-release.aab
+```
+
+Always build bundles this way: the signing key is chosen from the Gradle tasks
+requested (`bundleRelease`), so an IDE's "Generate Signed Bundle" wizard
+bypasses it.
+
+Then check it with [`tool/verify_bundle.sh`](tool/verify_bundle.sh) before
+uploading. `apksigner` can't read a bundle, so the script checks the bundle's
+own signature with the JDK, and has
+[bundletool](https://github.com/google/bundletool/releases) — not part of the
+Android SDK; 1.18.3 is the version this was written against — turn it into the
+universal APK a device would get to check that: package, `minSdk`/`targetSdk`,
+permissions (as `release.yml` does for the sideload APK) and the 16 KB
+page-size alignment Play requires. From Git Bash:
+
+```bash
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" BUNDLETOOL=<path>/bundletool-all-1.18.3.jar \
+  bash tool/verify_bundle.sh build/app/outputs/bundle/release/app-release.aab <upload-key-sha256>
+```
+
+The SHA-256 is optional; without it the script prints the signer for you to
+compare. Get it with `keytool -list -v -keystore golfy-upload.jks`.
+
+**Enrolling in Play App Signing** — once, when the app is created in the Play
+Console, and before any release reaches open testing or production (after
+that, the app-signing key can't be swapped):
+
+1. Create the app in the Play Console. The package name is fixed by the first
+   bundle uploaded, and it is permanent: see the comment on `applicationId` in
+   [`android/app/build.gradle.kts`](android/app/build.gradle.kts).
+2. On the Console's **App integrity** page, in its app-signing settings, choose
+   to **use an existing app signing key from a Java keystore**, rather than let
+   Google generate one. A Google-generated key would give Play installs a
+   certificate that sideload installs don't have, and the two could never
+   update over each other. Follow the Console's instructions to export
+   `golfy-release.jks` with its PEPK tool and upload the encrypted result.
+3. Register the upload key there too, from its certificate:
+   `keytool -export -rfc -keystore golfy-upload.jks -alias upload -file upload_certificate.pem`.
+4. Upload a verified bundle to the **internal testing** track.
+5. Check that the **app signing key** SHA-256 the Console shows is the one
+   `apksigner verify --print-certs` prints for the sideload APK, and the
+   **upload key** SHA-256 is `golfy-upload.jks`'s.
+
+**`targetSdk` must keep up with Play.** It is pinned in
+[`android/app/build.gradle.kts`](android/app/build.gradle.kts) rather than taken
+from the Flutter SDK, and Play raises its floor every August 31 (API 36 from
+2026). Raise it before then, after reading that Android version's behaviour
+changes, along with `play_target_sdk_floor` in `tool/verify_bundle.sh`. When the
+pinned Flutter SDK moves, check that Flutter's own minimum hasn't overtaken
+`minSdk`.
 
 ### CI release builds
 
@@ -600,6 +681,10 @@ signing config on the runner from four repository secrets —
 signed APK without the keystore ever entering the repo. **These secrets are not a
 backup:** keep the offline copy of `golfy-release.jks` and its passwords, since
 losing them blocks every future in-place update.
+
+CI doesn't build the Google Play bundle yet: build, verify and upload it by
+hand as above until #75 automates it. The upload key will need secrets of its
+own then — never the `ANDROID_*` ones, which are the app-signing key.
 
 ## Continuous integration
 
