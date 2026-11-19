@@ -34,7 +34,7 @@ bump, and the largest one wins.
 
 | In `[Unreleased]` | Pre-1.0 (`0.y.z`) | Post-1.0 (`1.y.z` and up) |
 |---|---|---|
-| `### Fixed` and/or `### Security` only | PATCH | PATCH |
+| `### Fixed`, `### Security` and/or `### Dependencies` only | PATCH | PATCH |
 | `### Added`, `### Changed` or `### Deprecated` | MINOR | MINOR |
 | `### Removed` | MINOR, with a migration note | **MAJOR** |
 | an entry opening `**BREAKING:**` | MINOR, with a migration note | **MAJOR** |
@@ -106,14 +106,16 @@ existed.
 The test is one question: **would someone running the installed APK notice?**
 If no, it goes under `### Internal` — CI, tooling, tests, docs, dependency
 bumps, behaviour-neutral refactors. If yes, it goes in a real section; a
-performance fix that is actually felt belongs under `### Fixed`.
+performance fix that is actually felt belongs under `### Fixed`. The shared
+process's `### Dependencies` (a patch) is for the rare dependency update worth
+shipping on its own; routine bumps stay under `### Internal` here.
 
 `### Internal` and `### Deferred` are local extensions and contribute no bump.
 Sections are written in this order, and anything outside the set is an error
 rather than something the calculator quietly skips:
 
-> Added · Changed · Deprecated · Removed · Fixed · Security · Internal ·
-> Deferred
+> Added · Changed · Deprecated · Removed · Fixed · Security · Dependencies ·
+> Internal · Deferred
 
 ## Running the calculator
 

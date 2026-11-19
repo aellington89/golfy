@@ -15,7 +15,7 @@
 //
 //   an entry that starts **Breaking:**, or a ### Removed section   major
 //   ### Added, ### Changed, or ### Deprecated                      minor
-//   ### Fixed or ### Security                                      patch
+//   ### Fixed, ### Security, or ### Dependencies                   patch
 //   ### Internal or ### Deferred, or nothing                       no release
 //
 // A repository can add floors in .github/release.json: a change under a path raises the bump to
@@ -37,6 +37,7 @@ export const SECTIONS = {
   Removed: 'major',
   Fixed: 'patch',
   Security: 'patch',
+  Dependencies: 'patch',
   Internal: 'none',
   Deferred: 'none',
 }
