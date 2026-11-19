@@ -12,8 +12,8 @@ All Flutter commands run from `app/`; app/README.md has the full developer workf
 - `flutter pub get`, then `dart run build_runner build` after changing drift tables or DAOs.
 - `flutter analyze` and `flutter test`: what CI's Linux job runs.
 - `flutter run -d windows`, or `flutter run -d <android-device-id>`.
-- `dart run tool/next_version.dart`: the next version, derived from CHANGELOG.md and the drift
-  schema. RELEASING.md explains the rules.
+- `node scripts/dev-process/release.mjs next`, from the root: the next version, derived from
+  CHANGELOG.md and the drift schema floor. RELEASING.md explains the rules.
 
 ## Layout
 
@@ -31,15 +31,15 @@ This project follows the shared development process in `~/.claude/dev_process` (
 additions, and where it differs from the shared process, are in `docs/PROCESS.md`. The skills
 read these facts:
 
-| Fact              | Value                                                                                                                             |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Default branch    | `master`                                                                                                                          |
-| Verify            | `flutter analyze` and `flutter test` in `app/`, then `node scripts/dev-process/check-process.mjs` in the root                     |
-| Unit tests        | `flutter test` in `app/`                                                                                                          |
-| End-to-end tests  | n/a: none yet; the golden path is checked on a device before a release (RELEASING.md)                                             |
-| Run the app       | `flutter run -d windows` in `app/`, or `-d <android-device-id>`                                                                   |
-| Format            | `dart format .` in `app/`                                                                                                         |
-| Next version      | `dart run tool/next_version.dart` in `app/`                                                                                       |
-| Prepare a release | RELEASING.md, "Cutting the release": a `release/vX.Y.Z` branch that rolls CHANGELOG.md and bumps `version:` in `app/pubspec.yaml` |
-| User guide        | README.md: back up and restore, privacy, and help                                                                                 |
-| Roadmap           | GitHub milestones, which group issues by theme; they aren't release containers (RELEASING.md)                                     |
+| Fact              | Value                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default branch    | `master`                                                                                                                                   |
+| Verify            | `flutter analyze` and `flutter test` in `app/`, then `node scripts/dev-process/check-process.mjs` in the root                              |
+| Unit tests        | `flutter test` in `app/`                                                                                                                   |
+| End-to-end tests  | n/a: none yet; the golden path is checked on a device before a release (RELEASING.md)                                                      |
+| Run the app       | `flutter run -d windows` in `app/`, or `-d <android-device-id>`                                                                            |
+| Format            | `dart format .` in `app/`                                                                                                                  |
+| Next version      | `node scripts/dev-process/release.mjs next` in the root (with the drift schema floor in `.github/release.json`)                            |
+| Prepare a release | `node scripts/dev-process/release.mjs prepare`, then `version:` in `app/pubspec.yaml` to `X.Y.Z+N`, one build number higher (RELEASING.md) |
+| User guide        | README.md: back up and restore, privacy, and help                                                                                          |
+| Roadmap           | GitHub milestones named `Phase N`; a feature is `<N>.<n> · <name>` in its phase (RELEASING.md, "When to cut")                              |

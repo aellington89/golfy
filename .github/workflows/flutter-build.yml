@@ -3,14 +3,8 @@ name: Flutter Build
 
 on:
   push:
-    # deps/patch is the standing integration branch Dependabot targets, so it
-    # is built on its own too: merging a bump into it must stay green before
-    # the batch is merged up to master.
-    branches: [master, deps/patch]
-  pull_request:
-    # Without deps/patch here, Dependabot's PRs (based on it per
-    # .github/dependabot.yml) would carry no checks whatsoever.
-    branches: [master, deps/patch]
+    branches: [master]
+  pull_request:                   # every PR: issue branches and Dependabot's, all against master
   workflow_dispatch:
 
 concurrency:
@@ -113,3 +107,29 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check the dev process files
         run: node scripts/dev-process/check-process.mjs
+
+  dependabot:                     # merges low-risk Dependabot updates once every job passes
+    # Low risk: development dependencies' patch and minor updates, and non-major GitHub Actions
+    # updates. Production packages, the drift and Gradle groups, and every major wait for a
+    # person (docs/PROCESS.md, Upgrades).
+    name: Merge low-risk Dependabot update
+    needs: [build, build-windows, process]
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v2
+      - name: Squash-merge when low risk
+        if: >-
+          steps.meta.outputs.update-type != 'version-update:semver-major' &&
+          steps.meta.outputs.dependency-group != 'drift' &&
+          steps.meta.outputs.dependency-group != 'gradle' &&
+          (steps.meta.outputs.dependency-type == 'direct:development' ||
+           steps.meta.outputs.package-ecosystem == 'github_actions')
+        run: gh pr merge --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}

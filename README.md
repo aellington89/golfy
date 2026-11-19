@@ -371,7 +371,7 @@ golfy/
 │   └── test/            # widget + DAO + schema-constraint tests
 ├── .github/
 │   ├── workflows/       # CI build+test, and the tag-driven signed release
-│   └── dependabot.yml   # dependency PRs, based on the deps/patch branch
+│   └── dependabot.yml   # dependency PRs against master; CI merges the low-risk ones
 ├── .gitattributes       # LF-pin generated Windows plugin glue
 ├── .gitignore
 ├── CHANGELOG.md         # Keep a Changelog; the input to the next version

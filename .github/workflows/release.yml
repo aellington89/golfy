@@ -48,17 +48,41 @@ jobs:
         run: flutter pub get
 
       # #86: refuse a tag that disagrees with the repo before spending ten
-      # minutes building it. Checks the tag against app/pubspec.yaml at that
-      # commit, the CHANGELOG heading and link references, a build number that
-      # must increase (Android rejects a versionCode that does not), and the
-      # drift snapshots against schemaVersion. See RELEASING.md.
-      - name: Verify release metadata (tag push only)
+      # minutes building it. See RELEASING.md, "What CI enforces".
+      - name: Verify the version against the changelog (tag push only)
         if: startsWith(github.ref, 'refs/tags/')
-        run: dart run tool/next_version.dart --verify-release "$GITHUB_REF_NAME"
+        working-directory: .
+        run: node scripts/dev-process/release.mjs verify "$GITHUB_REF_NAME"
+
+      - name: Verify the release metadata (tag push only)
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: .
+        run: |
+          tag="$GITHUB_REF_NAME"; ver="${tag#v}"; problems=0
+          fail() { echo "::error::$1"; problems=$((problems + 1)); }
+          version=$(sed -n 's/^version: *//p' app/pubspec.yaml)
+          [ "${version%%+*}" = "$ver" ] || fail "$tag doesn't match app/pubspec.yaml ($version)"
+          grep -qF "[$ver]: " CHANGELOG.md || fail "CHANGELOG.md has no [$ver]: link reference"
+          grep -qF "/compare/$tag...HEAD" CHANGELOG.md ||
+            fail "CHANGELOG.md's [Unreleased]: link doesn't compare from $tag...HEAD"
+          previous=$(git tag --list 'v*.*.*' --sort=-v:refname | grep -vx "$tag" | head -1 || true)
+          if [ -n "$previous" ]; then
+            before=$(git show "$previous:app/pubspec.yaml" | sed -n 's/^version: *//p')
+            [ "${version##*+}" -gt "${before##*+}" ] ||
+              fail "the build number must rise: $version isn't past $previous's $before"
+          fi
+          schema=$(sed -n 's/.*int get schemaVersion => \([0-9]*\);.*/\1/p' app/lib/data/database.dart)
+          for n in $(seq 1 "$schema"); do
+            [ -f "app/drift_schemas/drift_schema_v$n.json" ] || fail "drift_schema_v$n.json is missing"
+          done
+          [ ! -f "app/drift_schemas/drift_schema_v$((schema + 1)).json" ] ||
+            fail "a drift snapshot is newer than schemaVersion $schema"
+          [ "$problems" -eq 0 ] || exit 1
 
       - name: Preview the next version (dry-run only)
         if: github.event_name == 'workflow_dispatch'
-        run: dart run tool/next_version.dart
+        working-directory: .
+        run: node scripts/dev-process/release.mjs next
 
       - name: Test gate
         run: flutter test

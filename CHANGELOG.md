@@ -10,6 +10,17 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
 
 ### Internal
 
+- **Golfy follows the shared dev process**
+  ([`aellington89/dev_process`](https://github.com/aellington89/dev_process)): a
+  branch and a pull request per issue, squash-merged, with the shared issue
+  forms, PR titles, and PR template. `tool/next_version.dart` gives way to the
+  shared calculator, `node scripts/dev-process/release.mjs` — the same rules,
+  with the drift schema floor in `.github/release.json` — and the release
+  workflow checks a tag with it and with a metadata step that keeps every other
+  check. Dependabot opens its pull requests against `master`, and CI merges the
+  low-risk ones, so the `test` and `deps/patch` branches retire. `CLAUDE.md`,
+  `docs/PROCESS.md`, and `docs/ARCHITECTURE.md` describe the project, its
+  process, and how it fits together.
 - **Golfy can be built for Google Play** ([#74]). `flutter build appbundle
   --release` produces the Android App Bundle Play requires, signed with a
   new upload key, while `flutter build apk --release` keeps signing the
