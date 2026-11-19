@@ -105,3 +105,11 @@ jobs:
           # confirm path on first run; recent Flutter emits to .../x64/runner/Debug
           path: app/build/windows/x64/runner/Debug/
           if-no-files-found: error
+
+  process:                        # the shared dev process's contract (docs/PROCESS.md)
+    name: Process check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the dev process files
+        run: node scripts/dev-process/check-process.mjs
