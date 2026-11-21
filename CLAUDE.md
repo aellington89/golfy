@@ -43,3 +43,4 @@ read these facts:
 | Prepare a release | `node scripts/dev-process/release.mjs prepare`, then `version:` in `app/pubspec.yaml` to `X.Y.Z+N`, one build number higher (RELEASING.md) |
 | User guide        | README.md: back up and restore, privacy, and help                                                                                          |
 | Roadmap           | GitHub milestones named `Phase N`; a feature is `<N>.<n> · <name>` in its phase (RELEASING.md, "When to cut")                              |
+| GitHub project    | https://github.com/users/aellington89/projects/30                                                                                          |
