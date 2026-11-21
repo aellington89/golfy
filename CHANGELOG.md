@@ -40,6 +40,13 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   `cupertino_ui`, which need Flutter 3.47, the SDK CI already pins. The
   lockfile is resolved against that pinned SDK, so `test_api` stays at the
   0.7.12 that `flutter_test` requires. Nothing you can see in the app changes.
+- **Android Gradle Plugin 9.5.0 → 9.5.2 and Gradle 9.8.2 → 9.9.1** ([#167]).
+  These are the Android build tools. Gradle 9.9.1 fixes three advisories in
+  Gradle itself. One is a critical flaw in version catalogs, which Golfy
+  doesn't use. The other two are about the Gradle daemon on the machine that
+  runs the build. Gradle's built-in Kotlin moves to 2.4.21, the version the
+  build already uses for the Kotlin plugin, and none of Gradle 9.9's breaking
+  changes touch Golfy's build scripts. Nothing you can see in the app changes.
 
 ## [0.10.0] - 2026-11-01
 
@@ -1333,3 +1340,4 @@ Phase 1 — data layer and navigation shell.
 [#144]: https://github.com/aellington89/golfy/pull/144
 [#145]: https://github.com/aellington89/golfy/pull/145
 [#165]: https://github.com/aellington89/golfy/pull/165
+[#167]: https://github.com/aellington89/golfy/pull/167
