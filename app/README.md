@@ -93,8 +93,6 @@ app/flutter_launcher_icons.yaml    # launcher icon generator config
 app/flutter_native_splash.yaml     # splash generator config
 
 app/tool/                          # release tooling — not part of the app
-├── release_rules.dart             # pure version rules (imports nothing)
-├── next_version.dart              # CLI: next version, and the CI tag guard
 ├── assert_permissions.sh          # CI: an APK asks for no permission PRIVACY.md
 │                                  #   doesn't mention (#72)
 └── verify_bundle.sh               # a Play App Bundle's signer, package, SDK levels,
@@ -141,7 +139,7 @@ app/test/
 │   │                              #   about_links (#69, #70, #72)
 │   ├── dashboard/                 # dashboard_screen
 │   └── stats/                     # score_format, score_color, stat_format
-├── tool/                          # release_rules (version derivation + tag guards)
+├── tool/                          # drift_trio (the drift packages move together)
 └── widgets/                       # shared-widget tests (empty_state, par_selector,
                                    #   hole_nav_bar, stepper_field, two_line_title)
 ```
@@ -688,8 +686,7 @@ own then — never the `ANDROID_*` ones, which are the app-signing key.
 
 ## Continuous integration
 
-Every push and pull request to `master` — and to the `deps/patch` dependency
-branch described below — runs
+Every pull request, and every push to `master`, runs
 [`.github/workflows/flutter-build.yml`](../.github/workflows/flutter-build.yml):
 
 - **Linux job** — `flutter analyze`, the full `flutter test` suite, and
@@ -700,14 +697,20 @@ branch described below — runs
   SQLite, and the committed `*.g.dart` files mean CI never runs `build_runner`.
 - **Windows job** — `flutter build windows --debug` (build-only; the test suite
   runs once, on the Linux job).
+- **Process check** — `node scripts/dev-process/check-process.mjs`: the files
+  synced from the shared dev process are unchanged, and `CLAUDE.md` and
+  `docs/PROCESS.md` are complete.
+- **Dependabot merge** — merges a low-risk Dependabot update once the jobs
+  above pass (see [Dependency updates](#dependency-updates)).
 
 Releases are handled by a separate workflow,
 [`.github/workflows/release.yml`](../.github/workflows/release.yml): pushing a
-`v*.*.*` tag first checks the tag against the repo — `dart run
-tool/next_version.dart --verify-release` compares it with
-[`pubspec.yaml`](pubspec.yaml) at that commit, the `CHANGELOG.md` heading and
-link references, the previous release's build number and the drift schema
-snapshots, and fails before anything is built if they disagree. It then runs
+`v*.*.*` tag first checks the tag against the repo —
+`node scripts/dev-process/release.mjs verify` checks the version against the
+changelog, and the workflow's own step compares it with
+[`pubspec.yaml`](pubspec.yaml) at that commit, the `CHANGELOG.md` link
+references, the previous release's build number and the drift schema
+snapshots — and fails before anything is built if they disagree. It then runs
 the test suite, builds a **signed** release APK from the
 `ANDROID_*` secrets (see [Release signing](#release-signing)), and asserts it
 is release-signed, within an 80 MB sanity ceiling for the fat universal APK,
@@ -719,8 +722,8 @@ it to dry-run the signing pipeline before tagging; it also prints what the
 next version would be.
 
 **Which version to tag is not a judgement call.** It is derived from the
-`## [Unreleased]` section of the changelog and the drift `schemaVersion` —
-`dart run tool/next_version.dart` prints it with its reasoning. The whole
+`## [Unreleased]` section of the changelog and the drift schema floor —
+`node scripts/dev-process/release.mjs next` prints it with its reasoning. The whole
 procedure, including what belongs in each changelog section, is in
 [`RELEASING.md`](../RELEASING.md).
 
@@ -735,15 +738,11 @@ the Dart packages in [`pubspec.yaml`](pubspec.yaml) and the actions used by both
 workflows weekly, and the Android Gradle plugins in
 [`android/settings.gradle.kts`](android/settings.gradle.kts) monthly.
 
-Its pull requests are based on **`deps/patch`**, a standing branch off `master`,
-not on `master` itself. Bumps collect there under the CI run above and are
-merged up to `master` as a single batch when a patch release is cut, which keeps
-dependency churn out of feature branches and turns a dozen small merges into
-one. The branch is long-lived — don't delete it after merging up; Dependabot
-fails its configuration check if the target branch is missing. Fast-forward it
-back onto `master` once the batch lands (`git switch deps/patch && git merge
---ff-only master && git push`), so it doesn't accumulate conflicts against work
-that shipped in the meantime.
+Its pull requests target `master`, titled `Upgrade: bump …`, and run the CI
+above like any other pull request. When every job passes, the last job merges
+the low-risk ones by itself: development dependencies' patch and minor updates,
+and non-major GitHub Actions updates. The rest wait for a person: production
+packages, the drift and Gradle groups (below), and every major.
 
 Three details worth knowing before you review one:
 
