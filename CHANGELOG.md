@@ -33,6 +33,13 @@ Versions track the `version:` field in [`app/pubspec.yaml`](app/pubspec.yaml).
   out where it is set, and `tool/verify_bundle.sh` checks a bundle's signer,
   package, SDK levels, permissions and 16 KB page alignment before upload.
   CI doesn't build the bundle yet; that is #75.
+- **`flutter_riverpod` 3.4.3 → 3.5.0** ([#165]). It's a minor release of
+  upstream fixes, among them `StreamProvider` no longer keeping a dependency's
+  subscription open after a rebuild. The deprecations and the new exception
+  type touch nothing Golfy calls. The package now depends on `material_ui` and
+  `cupertino_ui`, which need Flutter 3.47, the SDK CI already pins. The
+  lockfile is resolved against that pinned SDK, so `test_api` stays at the
+  0.7.12 that `flutter_test` requires. Nothing you can see in the app changes.
 
 ## [0.10.0] - 2026-11-01
 
@@ -1325,3 +1332,4 @@ Phase 1 — data layer and navigation shell.
 [#143]: https://github.com/aellington89/golfy/pull/143
 [#144]: https://github.com/aellington89/golfy/pull/144
 [#145]: https://github.com/aellington89/golfy/pull/145
+[#165]: https://github.com/aellington89/golfy/pull/165
