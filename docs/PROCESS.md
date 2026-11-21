@@ -1,8 +1,9 @@
 # Golfy process
 
 Golfy follows the shared development process in `~/.claude/dev_process/PROCESS.md`: a branch
-and a pull request per issue, squash merges, the shared issue forms and PR titles, and the
-shared version calculator. This page adds only what's specific to Golfy, and records where it
+per pull request, with pull requests sized for review (most issues take one), squash merges, the
+shared issue forms and PR titles, triage onto the GitHub project, and the shared version
+calculator. This page adds only what's specific to Golfy, and records where it
 still does things its own way. The facts the process needs, such as commands and the default
 branch, are in the Dev process table in `CLAUDE.md`, and the architecture is in
 [ARCHITECTURE.md](ARCHITECTURE.md).
