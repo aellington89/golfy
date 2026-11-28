@@ -57,7 +57,11 @@ jobs:
         if: env.HAS_PROCESS_KEY == 'true'
         run: node .dev-process/bin/dev-process.mjs install
       - uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
+        env:
+          # The same model and effort as claude-review.yml, which says why.
+          CLAUDE_CODE_EFFORT_LEVEL: high
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --model opus
           additional_permissions: |
             actions: read

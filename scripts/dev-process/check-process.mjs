@@ -101,7 +101,11 @@ const tableRows = (lines) =>
 // A value that is nothing but a template placeholder, such as `<command>`.
 const isPlaceholder = (value) => /^<[^<>]+>$/.test(value.replace(/`/g, '').trim())
 
-function checkFacts(root, problems) {
+// The contract's checks, each adding its problems to `problems`. They're exported so
+// dev_process's self-check can hold dev_process itself to them, without a .dev-process.json.
+
+/** CLAUDE.md imports the conventions, and its Dev process table gives every fact a value. */
+export function checkFacts(root, problems) {
   if (!existsSync(join(root, 'CLAUDE.md'))) {
     problems.push('CLAUDE.md: missing; start its Dev process section from the template')
     return
@@ -125,7 +129,8 @@ function checkFacts(root, problems) {
   }
 }
 
-function checkNotes(root, problems) {
+/** docs/PROCESS.md has every heading of its template, in order, with no placeholder left. */
+export function checkNotes(root, problems) {
   if (!existsSync(join(root, NOTES))) {
     problems.push(`${NOTES}: missing; start it from templates/process-notes.md`)
     return
@@ -148,7 +153,8 @@ function checkNotes(root, problems) {
   }
 }
 
-function checkChangelog(root, problems) {
+/** CHANGELOG.md has an Unreleased section. */
+export function checkChangelog(root, problems) {
   if (!existsSync(join(root, 'CHANGELOG.md'))) {
     problems.push('CHANGELOG.md: missing; start it from templates/changelog.md')
   } else if (!/^## \[Unreleased\]\s*$/m.test(read(root, 'CHANGELOG.md'))) {
