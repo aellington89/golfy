@@ -49,9 +49,9 @@ jobs:
       - uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         if: env.READY == 'true'
         env:
-          # Claude reads the review-pr skill here instead of invoking it, so the model and effort in
-          # its frontmatter don't apply on their own: the effort is set here, the model in
-          # claude_args. Keep both equal to the skill's.
+          # CI has no session whose model and effort to keep, so the workflow sets them: the effort
+          # here, the model in claude_args. Keep both equal to claude.yml and to PROCESS.md's pick
+          # for /review-pr.
           CLAUDE_CODE_EFFORT_LEVEL: high
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

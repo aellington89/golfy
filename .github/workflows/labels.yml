@@ -9,7 +9,10 @@ on:
     paths: [.github/labels.json, .github/labels.project.json]
   workflow_dispatch:
 
+# Listing a permission sets the others to none, so contents: read is what lets the checkout read a
+# private repository.
 permissions:
+  contents: read
   issues: write
 
 jobs:
